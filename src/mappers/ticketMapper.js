@@ -9,6 +9,7 @@ class TicketMapper {
       "3": "planejado",
       "4": "pendente",
       "5": "solucionado",
+      "6": "fechado",
       "7": "atrasado",
     };
   }

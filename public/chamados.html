@@ -22,9 +22,12 @@
 
   <main class="pf-main">
     <section class="pf-filters-card pf-card">
-      <div class="pf-filters-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div class="pf-filters-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h1 style="margin: 0;">Lista de Chamados</h1>
-        <button id="toggleFiltersBtn" class="pf-button" style="background: rgba(25, 197, 255, 0.15); color: var(--pf-primary); box-shadow: none; border: 1px solid rgba(25, 197, 255, 0.4); padding: 0.35rem 0.75rem; font-size: 0.8rem;">Mostrar Filtros</button>
+        <button id="toggleFiltersBtn" class="pf-button"
+          style="background: rgba(25, 197, 255, 0.15); color: var(--pf-primary); box-shadow: none; border: 1px solid rgba(25, 197, 255, 0.4); padding: 0.35rem 0.75rem; font-size: 0.8rem;">Mostrar
+          Filtros</button>
       </div>
 
       <div id="filtersContainer" style="display: none;">
@@ -60,7 +63,8 @@
           </div>
         </div>
         <div style="display: flex; justify-content: flex-end; margin-top: 1rem; gap: 0.5rem;">
-          <button id="clearFiltersBtn" class="pf-button" style="background: rgba(255, 77, 79, 0.15); color: var(--pf-accent-red); box-shadow: none; border: 1px solid rgba(255, 77, 79, 0.4);">Limpar</button>
+          <button id="clearFiltersBtn" class="pf-button"
+            style="background: rgba(255, 77, 79, 0.15); color: var(--pf-accent-red); box-shadow: none; border: 1px solid rgba(255, 77, 79, 0.4);">Limpar</button>
           <button id="loadTickets" class="pf-button">Buscar Chamados</button>
         </div>
         <p class="pf-hint">
@@ -105,7 +109,7 @@
     const clearBtn = document.getElementById("clearFiltersBtn");
     const toggleFiltersBtn = document.getElementById("toggleFiltersBtn");
     const filtersContainer = document.getElementById("filtersContainer");
-    
+
     const filterIdInput = document.getElementById("filterId");
     const filterStatusSelect = document.getElementById("filterStatus");
     const filterTecnicoInput = document.getElementById("filterTecnico");
@@ -128,7 +132,7 @@
 
       // PRIORIDADE 1: Se estiver atrasado, usa estilo de perigo/vermelho
       if (isAtrasado || normalized.includes("venc") || normalized.includes("fora") || normalized.includes("atrasado")) {
-        span.classList.add("pf-badge--danger");   
+        span.classList.add("pf-badge--danger");
       }
       // PRIORIDADE 2: Sucesso para Novo/Solucionado/No Prazo
       else if (normalized.includes("novo") || normalized.includes("solucionado") || normalized.includes("prazo")) {
@@ -136,11 +140,11 @@
       }
       // PRIORIDADE 3: Alerta para Pendente/Atenção
       else if (normalized.includes("pendente") || normalized.includes("aten")) {
-        span.classList.add("pf-badge--warning"); 
+        span.classList.add("pf-badge--warning");
       }
       // PADRÃO: Info para o resto
       else {
-        span.classList.add("pf-badge--info"); 
+        span.classList.add("pf-badge--info");
       }
 
       // Se o status for o marcador genérico "atrasado" mas for um ticket com status real,
@@ -151,7 +155,7 @@
 
     function renderTickets(data) {
       body.innerHTML = "";
-      
+
       const filterId = filterIdInput.value.trim().toLowerCase();
       const filterStatus = filterStatusSelect.value.toLowerCase();
       const filterTecnico = filterTecnicoInput.value.trim().toLowerCase();
@@ -162,11 +166,11 @@
         const tTecnico = String(ticket.nomeTecnico || "").toLowerCase();
 
         const matchId = !filterId || tId.includes(filterId);
-        
+
         // Se não houver filtro de status (ou for vazio/"todos"), matchStatus é true
-        const matchStatus = !filterStatus || 
-                           (filterStatus === "atrasado" ? (ticket.isAtrasado || tStatus === "atrasado") : tStatus === filterStatus);
-                           
+        const matchStatus = !filterStatus ||
+          (filterStatus === "atrasado" ? (ticket.isAtrasado || tStatus === "atrasado") : tStatus === filterStatus);
+
         const matchTecnico = !filterTecnico || tTecnico.includes(filterTecnico);
 
         return matchId && matchStatus && matchTecnico;
@@ -251,7 +255,7 @@
       try {
         const res = await fetch(url, {
           headers: {
-            "Authorization": "Bearer minha_chave_secreta_123"
+            "Authorization": "Bearer Perfill0102*ArildoBi"
           }
         });
         if (!res.ok) {

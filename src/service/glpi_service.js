@@ -10,8 +10,10 @@ class GlpiTickets {
             "planejado": 3,
             "pendente": 4,
             "solucionado": 5,
+            "fechado": 6,
             "atrasado": 7,
         };
+        this.techniciansCache = new Map();
     }
 
     async getGlpiTickets(status) {
@@ -39,6 +41,14 @@ class GlpiTickets {
         }
 
         return processedTickets;
+    }
+
+    async getTicketsByStatusFromDirectEndpoint(endPoint) {
+        const result = await glpi_client.glpiRequestData(endPoint, "GET");
+        const ticketsArray = Array.isArray(result) ? result : (result?.data && Array.isArray(result.data) ? result.data : null);
+        if (!ticketsArray) return [];
+        const processedTickets = ticketMapper.processTickets(ticketsArray);
+        return this.addTechniciansToTickets(processedTickets);
     }
 
     async getTicketsByStatus(status) {
@@ -124,31 +134,32 @@ class GlpiTickets {
             ),
         ];
 
-        // busca técnicos
-        const techniciansResponses = await Promise.all(
-            technicianIds.map(async (id) => {
-                try {
-                    const user = await glpi_client.glpiRequestData(`/user/${id}`);
-                    // O cliente agora retorna os dados diretamente em 'user'
-                    return { id, name: user?.name || "Não encontrado" };
-                } catch {
-                    return { id, name: "Não encontrado" };
-                }
-            })
-        );
+        // filtra técnicos que já estão no cache
+        const missingIds = technicianIds.filter(id => !this.techniciansCache.has(id));
 
-        // cria mapa de técnicos
-        const techniciansMap = new Map();
+        // busca técnicos faltantes
+        if (missingIds.length > 0) {
+            const techniciansResponses = await Promise.all(
+                missingIds.map(async (id) => {
+                    try {
+                        const user = await glpi_client.glpiRequestData(`/user/${id}`);
+                        return { id, name: user?.name || "Não encontrado" };
+                    } catch {
+                        return { id, name: "Não encontrado" };
+                    }
+                })
+            );
 
-        techniciansResponses.forEach((tech) => {
-            techniciansMap.set(tech.id, tech.name);
-        });
+            techniciansResponses.forEach((tech) => {
+                this.techniciansCache.set(tech.id, tech.name);
+            });
+        }
 
-        // adiciona técnico aos tickets
+        // adiciona técnico aos tickets usando o cache
         return tickets.map((ticket) => ({
             ...ticket,
             nomeTecnico:
-                techniciansMap.get(ticket.idTecnicoAtribuido) || "Não Atribuido",
+                this.techniciansCache.get(ticket.idTecnicoAtribuido) || "Não Atribuido",
         }));
     }
 }

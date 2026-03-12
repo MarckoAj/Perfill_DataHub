@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
-import routes from "../routes/routes.js";
-import errorMiddleware from "../middlewares/errorMiddleware.js";
+import biRoutes from "../routes/biRoutes.js";
 
 const customExpress = () => {
   const app = express();
@@ -10,6 +9,7 @@ const customExpress = () => {
   app.use(express.json());
   app.use(express.static("public"));
 
+  app.use("/api/bi", biRoutes);
   app.use("/api", routes);
 
   app.use(errorMiddleware);
