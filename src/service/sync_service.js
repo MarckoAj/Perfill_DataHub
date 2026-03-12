@@ -5,7 +5,7 @@ import glpi_client from "../clients/glpi_client.js";
 
 class SyncService {
   constructor() {
-    this.batchSize = 2000;
+    this.batchSize = 1000;
   }
 
   /**
@@ -48,7 +48,7 @@ class SyncService {
       if (tickets.length < this.batchSize) {
         hasMore = false;
       } else {
-        currentRange += this.batchSize;
+        currentRange += tickets.length;
       }
     }
 

@@ -28,27 +28,27 @@ class TicketRepository {
 
     for (const t of tickets) {
       const values = [
-        t.ticketId,
-        t.nomeCliente,
-        t.titulo,
-        t.descricao,
-        t.dataCriacao,
-        t.status,
-        t.dataFechamento,
-        t.dataAtualizacao,
-        t.categoriaSla,
-        t.tempoSla,
-        t.statusSla,
-        t.motivoPausa,
-        t.idTecnicoAtribuido,
-        t.nomeTecnico,
-        t.isAtrasado || false,
+        parseInt(t.ticketId) || null,
+        t.nomeCliente ? String(t.nomeCliente).substring(0, 255) : null,
+        t.titulo ? String(t.titulo).substring(0, 255) : null,
+        t.descricao ? String(t.descricao) : null,
+        t.dataCriacao || null,
+        t.status ? String(t.status).substring(0, 50) : null,
+        t.dataFechamento || null,
+        t.dataAtualizacao || null,
+        t.categoriaSla ? String(t.categoriaSla).substring(0, 100) : null,
+        t.tempoSla ? String(t.tempoSla).substring(0, 100) : null,
+        t.statusSla ? String(t.statusSla).substring(0, 50) : null,
+        t.motivoPausa ? String(t.motivoPausa).substring(0, 255) : null,
+        t.idTecnicoAtribuido ? parseInt(t.idTecnicoAtribuido) : null,
+        t.nomeTecnico ? String(t.nomeTecnico).substring(0, 255) : null,
+        t.isAtrasado ? 1 : 0,
       ];
 
       try {
         await pool.query(query, values);
       } catch (error) {
-        console.error(`Erro ao salvar ticket ${t.ticketId}:`, error);
+        console.error(`Erro ao salvar ticket ${t.ticketId} (valores: ${values.length}):`, error.sqlMessage);
       }
     }
   }
