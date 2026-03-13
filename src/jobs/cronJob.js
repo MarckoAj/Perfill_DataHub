@@ -2,8 +2,8 @@ import cron from "node-cron";
 import syncService from "../service/sync_service.js";
 
 const startJobs = () => {
-  // Roda todos os dias às 02:00 da madrugada
-  cron.schedule("0 2 * * *", async () => {
+  // Roda de 30 em 30 minutos
+  cron.schedule("*/30 * * * *", async () => {
     console.log("Iniciando rotina automática de sincronização diária...");
     try {
       await syncService.syncStatus("fechado");

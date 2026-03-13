@@ -78,45 +78,26 @@
     <section class="pf-card">
       <h2>Conectando o Power BI</h2>
       <ol class="pf-steps">
-        <li>Abrir o Power BI Desktop.</li>
+        <li>Abrir o Power BI Desktop e criar um relatório em branco.</li>
         <li>
-          Clicar em <strong>Obter Dados</strong> &gt;
-          <strong>Web</strong>.
-        </li>
-        <li>
-          Informar a URL do endpoint BI, por exemplo:
-          <code>https://perfillbi.onrender.com/api/bi/tickets?startDate=2026-03-01&amp;endDate=2026-03-11</code>.
+          Selecionar a opção <strong>=> Colar dados em uma tabela em branco</strong>
         </li>
         <li>
-          Configurar o <strong>Cabeçalho HTTP</strong>:
-          <ul>
-            <li>No Power BI, em "Obter Dados > Web", clique em <strong>Avançado</strong>.</li>
-            <li>Adicione um cabeçalho chamado <code>Authorization</code>.</li>
-            <li>O valor deve ser <code>Bearer sua_chave_definida_no_env</code>.</li>
-          </ul>
+          Abrir o <strong>editor avançado Power Query</strong>
         </li>
-          <ul>
-            <li>
-              <strong>startDate</strong> representa a data inicial da consulta.
-            </li>
-            <li>
-              <strong>endDate</strong> representa a data final da consulta.
-            </li>
-            <li>
-              Para buscar todos os chamados, não informe os parâmetros de data.
-            </li>
-            <li>
-              Exemplo:
-              <code>https://SeuServidor/api/bi/tickets</code>
-            </li>
-          </ul>
+        <li>
+          Colar código para conexão com cabeçalho incluindo Bearer token.
         </li>
-        <li>Confirmar e aguardar o carregamento dos dados.</li>
-        <li>Modelar e criar os relatórios normalmente no Power BI.</li>
       </ol>
+      <div style="margin: 20px 0;">
+        <a href="/docs/tutorial_conectar_api_powerbi.pdf" class="pf-button" target="_blank" download>
+          Baixar Tutorial em PDF
+        </a>
+      </div>
+
       <p class="pf-note">
-        O domínio oficial é <code>https://perfillbi.onrender.com</code>. 
-        Certifique-se de configurar o token <code>API_AUTH_TOKEN</code> no Render.
+        A API esta configurada para atualizações automaticas a cada 30 min mas pode ser feita manualmente acessando a rota no navegador: <br>
+        <a href="https://perfillbi.onrender.com/api/bi/sync" target="_blank">https://perfillbi.onrender.com/api/bi/sync</a>
       </p>
     </section>
 
