@@ -23,7 +23,8 @@ export const getTicketsForBi = asyncHandler(async (req, res) => {
 });
 
 export const getTicketsStats = asyncHandler(async (req, res) => {
-  const stats = await ticketRepository.getStats();
+  const { startDate, endDate } = req.query;
+  const stats = await ticketRepository.getStats(startDate, endDate);
   res.status(200).json(stats);
 });
 

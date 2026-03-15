@@ -87,8 +87,8 @@ class TicketRepository {
     }
   }
 
-  async getStats() {
-    const query = `
+  async getStats(startDate, endDate) {
+    let query = `
       SELECT 
         CAST(SUM(CASE WHEN LOWER(status) = 'novo' THEN 1 ELSE 0 END) AS UNSIGNED) as novos,
         CAST(SUM(CASE WHEN LOWER(status) = 'planejado' THEN 1 ELSE 0 END) AS UNSIGNED) as planejados,
@@ -100,8 +100,15 @@ class TicketRepository {
       FROM tickets
     `;
 
+    const params = [];
+    if (startDate || endDate) {
+      query += " WHERE dataCriacao >= ? AND dataCriacao <= ?";
+      params.push(startDate || '2000-01-01');
+      params.push(endDate || '2099-12-31');
+    }
+
     try {
-      const [rows] = await pool.query(query);
+      const [rows] = await pool.query(query, params);
       return rows[0] || { novos: 0, planejados: 0, atribuidos: 0, solucionados: 0, atrasados: 0, pendentes: 0, fechados: 0 };
     } catch (error) {
       console.error("Erro ao buscar estatísticas do banco:", error);

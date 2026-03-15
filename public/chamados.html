@@ -172,6 +172,7 @@
     const countLabel = document.getElementById("ticketsCount");
 
     let allTicketsData = [];
+    let preloadedClosedTickets = [];
     let currentPage = 1;
     const itemsPerPage = 100;
     let closedMode = false; // paginação server-side exclusiva para "Fechado"
@@ -231,7 +232,7 @@
         // Se o filtro for vazio/"todos", não exibe apenas Fechados (Solucionados continuam visíveis)
         let matchStatus;
         if (!filterStatus || filterStatus === "todos") {
-          matchStatus = tStatus !== "fechado";
+          matchStatus = tStatus !== "fechado" && tStatus !== "encerrado";
         } else if (filterStatus === "atrasado") {
           matchStatus = ticket.isAtrasado || tStatus === "atrasado";
         } else {
@@ -341,17 +342,14 @@
         allTicketsData = await resOpen.json();
         renderTickets(allTicketsData);
 
-        // Fase 2: Carrega os Fechados em Background (apenas 100 pré-carregados)
+        // Fase 2: Pré-carrega até 100 Fechados em background (não exibe até usuário selecionar o filtro)
         const closedUrl = `/api/bi/tickets?statusGroup=fechado&limit=100&${params.toString()}`;
         fetch(closedUrl, {
           headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
         }).then(res => res.json()).then(closedTickets => {
             if (Array.isArray(closedTickets)) {
-                allTicketsData = [...allTicketsData, ...closedTickets];
-                // Ordenar por data de criação DESC
-                allTicketsData.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
-                renderTickets(allTicketsData);
-                console.log("Fase 2: Chamados fechados carregados em background.");
+                preloadedClosedTickets = closedTickets;
+                console.log("Fase 2: 100 chamados fechados pré-carregados em background.");
             }
         }).catch(err => console.error("Erro no background fetch de fechados:", err));
 
@@ -463,8 +461,16 @@
     }
 
     async function loadStats() {
+      const start = document.getElementById("startDate").value;
+      const end = document.getElementById("endDate").value;
+
+      const params = new URLSearchParams();
+      if (start) params.append("startDate", start);
+      if (end) params.append("endDate", end);
+
       try {
-        const res = await fetch("/api/bi/stats", {
+        const url = params.toString() ? `/api/bi/stats?${params.toString()}` : "/api/bi/stats";
+        const res = await fetch(url, {
           headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
         });
         if (!res.ok) throw new Error("Erro ao buscar stats");
