@@ -1,5 +1,5 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import glpiTickets from "../service/glpi_service.js";
+import glpiTickets from "../services/glpi_service.js";
 import ticketRepository from "../repositories/ticketRepository.js";
 
 export const getTicketsByStatus = asyncHandler(async (req, res) => {
@@ -27,7 +27,7 @@ export const getTicketsStats = asyncHandler(async (req, res) => {
   res.status(200).json(stats);
 });
 
-import syncService from "../service/sync_service.js";
+import syncService from "../services/sync_service.js";
 export const syncBiManual = asyncHandler(async (req, res) => {
   // Dispara a sincronização de forma assíncrona (não prende a resposta HTTP)
   syncService.syncStatus("fechado").then(() => console.log("Sincronização manual finalizada com sucesso."))

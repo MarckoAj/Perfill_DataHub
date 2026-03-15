@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import syncService from "../service/sync_service.js";
+import syncService from "../services/sync_service.js";
 
 const startJobs = () => {
   // Roda a cada 4 horas

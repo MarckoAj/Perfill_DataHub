@@ -1,7 +1,7 @@
 import glpiTickets from "./glpi_service.js";
 import ticketRepository from "../repositories/ticketRepository.js";
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
-import glpi_client from "../clients/glpi_client.js";
+import glpi_client from "../integrations/glpi_client.js";
 
 class SyncService {
   constructor() {

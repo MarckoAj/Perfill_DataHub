@@ -1,5 +1,5 @@
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
-import glpi_client from "../clients/glpi_client.js";
+import glpi_client from "../integrations/glpi_client.js";
 import ticketMapper from "../mappers/ticketMapper.js";
 
 class GlpiTickets {
