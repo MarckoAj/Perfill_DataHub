@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Perfill GLPI - Cadastrar Operador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Reutilizando CSS existente -->
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+        .pf-register-card {
+            max-width: 450px;
+            margin: 4rem auto;
+            padding: 2rem;
+            animation: pfFadeIn 0.3s ease-out;
+        }
+
+        @keyframes pfFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="pf-body">
+    <!-- Script de Proteção: Executa antes de carregar o HTML todo -->
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) {
+            window.location.href = "/login.html";
+        }
+    </script>
+
+    <header class="pf-header">
+        <div class="pf-header-left">
+            <div class="pf-logo">Perfill</div>
+            <span class="pf-header-title">Cadastrar Operador</span>
+        </div>
+        <nav class="pf-nav">
+            <a href="/chamados.html" class="pf-nav-link">Voltar aos Chamados</a>
+            <a href="/status.html" class="pf-nav-link" style="color: #4ade80;">Status</a>
+        </nav>
+    </header>
+
+    <main class="pf-main">
+        <div class="pf-card pf-register-card">
+            <h2 style="margin-top: 0; margin-bottom: 1.5rem; text-align: center;">Novo Operador</h2>
+
+            <form id="registerForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="pf-field">
+                    <label for="username">Usuário</label>
+                    <input type="text" id="username" placeholder="Digite o usuário" required autofocus autocomplete="off" />
+                </div>
+
+                <div class="pf-field">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" placeholder="Digite a nova senha" required />
+                    <p class="pf-hint" style="margin-top: 5px; font-size: 0.75rem;">Mínimo de 4 caracteres.</p>
+                </div>
+
+                <div id="message" style="display: none; padding: 0.75rem; border-radius: 4px; font-size: 0.85rem; text-align: center; margin-top: 0.5rem;"></div>
+
+                <button type="submit" id="submitBtn" class="pf-button" style="width: 100%; margin-top: 0.5rem;">
+                    Criar Operador
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        const form = document.getElementById("registerForm");
+        const messageDiv = document.getElementById("message");
+        const submitBtn = document.getElementById("submitBtn");
+
+        function showMessage(text, type) {
+            messageDiv.style.display = "block";
+            messageDiv.textContent = text;
+            if (type === "success") {
+                messageDiv.style.background = "rgba(40, 167, 69, 0.15)";
+                messageDiv.style.color = "#4ade80";
+                messageDiv.style.border = "1px solid rgba(74, 222, 128, 0.3)";
+            } else {
+                messageDiv.style.background = "rgba(255, 77, 79, 0.15)";
+                messageDiv.style.color = "var(--pf-accent-red)";
+                messageDiv.style.border = "1px solid rgba(255, 77, 79, 0.3)";
+            }
+        }
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+
+            if (password.length < 4) {
+                showMessage("A senha deve ter pelo menos 4 caracteres.", "error");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Processando...";
+            messageDiv.style.display = "none";
+
+            try {
+                const res = await fetch("/api/auth/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("token")
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showMessage("Usuário criado com sucesso!", "success");
+                    form.reset();
+                } else {
+                    showMessage(data.error || "Erro ao cadastrar usuário.", "error");
+                }
+            } catch (error) {
+                console.error("Erro:", error);
+                showMessage("Erro de comunicação com o servidor.", "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Criar Operador";
+            }
+        });
+    </script>
+</body>
+
+</html>

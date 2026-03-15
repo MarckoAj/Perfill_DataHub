@@ -1,4 +1,4 @@
-import urls from "../repositories/urlsRep.js";
+import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import dotenv from "dotenv";
 
 
@@ -37,7 +37,7 @@ class GlpiService {
 
     async getGlpiHeader() {
         const baseHeader = { 'Content-Type': 'application/json', "Authorization": `user_token ${this.USER_TOKEN}` }
-        const initSessionUrl = `${urls.glpiBaseUrl()}/initSession`
+        const initSessionUrl = `${glpiUrlBuilder.glpiBaseUrl()}/initSession`
         try {
             const response = await this.request(initSessionUrl, "GET", baseHeader)
 
@@ -57,7 +57,7 @@ class GlpiService {
     }
 
     async glpiRequestData(endPoint, method, body, ID = null) {
-        const baseUrl = `${urls.glpiBaseUrl()}/${endPoint}`;
+        const baseUrl = `${glpiUrlBuilder.glpiBaseUrl()}/${endPoint}`;
         const url = ID === null ? baseUrl : `${baseUrl}/${ID}`;
 
         const header = await this.glpiHeader;
@@ -68,9 +68,9 @@ class GlpiService {
 
         const response = await this.request(url, method, header, body);
 
-        // Se a resposta for o objeto bruto do fetch (erro), retornamos nulo
-        if (response instanceof Response) {
-            console.error(`Erro na requisição GLPI (${response.status}):`, endPoint);
+        // Se a requisição não foi bem-sucedida, loga o erro e retorna null
+        if (!response || response.data === undefined) {
+            console.error(`Erro na requisição GLPI: ${endPoint}`);
             return null;
         }
 

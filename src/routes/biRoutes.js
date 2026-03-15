@@ -1,5 +1,5 @@
 import express from "express";
-import { getTicketsForBi, syncBiManual } from "../controllers/glpiController.js";
+import { getTicketsForBi, syncBiManual, getTicketsStats } from "../controllers/glpiController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -9,5 +9,6 @@ router.get("/sync", syncBiManual);
 
 router.use(authMiddleware);
 router.get("/tickets", getTicketsForBi);
+router.get("/stats", getTicketsStats);
 
 export default router;

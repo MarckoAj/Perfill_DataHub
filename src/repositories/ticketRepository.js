@@ -53,23 +53,58 @@ class TicketRepository {
     }
   }
 
-  async getAllTickets(startDate, endDate) {
+  async getAllTickets(startDate, endDate, statusGroup = 'todos', limit = 100, offset = 0) {
     let query = "SELECT * FROM tickets";
     const params = [];
+    const conditions = [];
 
     if (startDate || endDate) {
-      query += " WHERE dataCriacao >= ? AND dataCriacao <= ?";
+      conditions.push("dataCriacao >= ? AND dataCriacao <= ?");
       params.push(startDate || '2000-01-01');
       params.push(endDate || '2099-12-31');
     }
 
-    query += " ORDER BY dataCriacao DESC";
+    if (statusGroup === 'aberto') {
+      // Exibe todos, MENOS os Fechados. Logo, Solucionados e Novos ficam aqui.
+      conditions.push("LOWER(status) NOT IN ('fechado')");
+    } else if (statusGroup === 'fechado') {
+      conditions.push("LOWER(status) IN ('fechado')");
+    }
+
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+
+    query += " ORDER BY dataCriacao DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
     try {
       const [rows] = await pool.query(query, params);
       return rows;
     } catch (error) {
       console.error("Erro ao buscar tickets do banco:", error);
+      throw error;
+    }
+  }
+
+  async getStats() {
+    const query = `
+      SELECT 
+        CAST(SUM(CASE WHEN LOWER(status) = 'novo' THEN 1 ELSE 0 END) AS UNSIGNED) as novos,
+        CAST(SUM(CASE WHEN LOWER(status) = 'planejado' THEN 1 ELSE 0 END) AS UNSIGNED) as planejados,
+        CAST(SUM(CASE WHEN LOWER(status) IN ('atribuido', 'atribuído') THEN 1 ELSE 0 END) AS UNSIGNED) as atribuidos,
+        CAST(SUM(CASE WHEN LOWER(status) = 'solucionado' THEN 1 ELSE 0 END) AS UNSIGNED) as solucionados,
+        CAST(SUM(CASE WHEN isAtrasado = 1 THEN 1 ELSE 0 END) AS UNSIGNED) as atrasados,
+        CAST(SUM(CASE WHEN LOWER(status) = 'pendente' THEN 1 ELSE 0 END) AS UNSIGNED) as pendentes,
+        CAST(SUM(CASE WHEN LOWER(status) = 'fechado' THEN 1 ELSE 0 END) AS UNSIGNED) as fechados
+      FROM tickets
+    `;
+
+    try {
+      const [rows] = await pool.query(query);
+      return rows[0] || { novos: 0, planejados: 0, atribuidos: 0, solucionados: 0, atrasados: 0, pendentes: 0, fechados: 0 };
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas do banco:", error);
       throw error;
     }
   }

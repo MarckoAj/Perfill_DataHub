@@ -9,9 +9,22 @@ export const getTicketsByStatus = asyncHandler(async (req, res) => {
 });
 
 export const getTicketsForBi = asyncHandler(async (req, res) => {
-  const { startDate, endDate } = req.query;
-  const tickets = await ticketRepository.getAllTickets(startDate, endDate);
+  const { startDate, endDate, statusGroup, limit, offset } = req.query;
+  
+  const tickets = await ticketRepository.getAllTickets(
+    startDate, 
+    endDate, 
+    statusGroup || 'todos', 
+    parseInt(limit) || 100, 
+    parseInt(offset) || 0
+  );
+  
   res.status(200).json(tickets);
+});
+
+export const getTicketsStats = asyncHandler(async (req, res) => {
+  const stats = await ticketRepository.getStats();
+  res.status(200).json(stats);
 });
 
 import syncService from "../service/sync_service.js";

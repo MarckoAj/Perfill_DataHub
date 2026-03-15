@@ -4,7 +4,7 @@ dotenv.config();
 
 const GLPI_BASE_URL = process.env.GLPI_BASE_URL;
 
-class Urls {
+class GlpiUrlBuilder {
   glpiBaseUrl() {
     return `${GLPI_BASE_URL}/apirest.php`;
   }
@@ -84,4 +84,5 @@ class Urls {
     return `search/Ticket?${params.toString()}`;
   }
 }
-export default new Urls();
+
+export default new GlpiUrlBuilder();

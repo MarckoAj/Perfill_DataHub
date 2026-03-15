@@ -1,4 +1,4 @@
-import urls from "../repositories/urlsRep.js";
+import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpi_client from "../clients/glpi_client.js";
 import ticketMapper from "../mappers/ticketMapper.js";
 
@@ -18,7 +18,7 @@ class GlpiTickets {
 
     async getGlpiTickets(status) {
         const urlStatus = this.glpiTicketStatus[status];
-        const endPoint = urls.requestGlpiEndpointByStatus(urlStatus);
+        const endPoint = glpiUrlBuilder.requestGlpiEndpointByStatus(urlStatus);
 
         const result = await glpi_client.glpiRequestData(endPoint, "GET");
 

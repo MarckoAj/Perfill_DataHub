@@ -1,6 +1,6 @@
 import glpiTickets from "./glpi_service.js";
 import ticketRepository from "../repositories/ticketRepository.js";
-import urls from "../repositories/urlsRep.js";
+import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpi_client from "../clients/glpi_client.js";
 
 class SyncService {
@@ -16,7 +16,7 @@ class SyncService {
     
     // 1. Pega o total de registros via header Content-Range
     const statusId = glpiTickets.glpiTicketStatus[statusName];
-    const endPoint = urls.requestGlpiEndpointByStatus(statusId);
+    const endPoint = glpiUrlBuilder.requestGlpiEndpointByStatus(statusId);
     
     // Faz uma pequena requisição só para pegar o total
     const result = await glpi_client.glpiRequestData(endPoint, "GET");

@@ -17,10 +17,58 @@
     <nav class="pf-nav">
       <a href="/index.html" class="pf-nav-link">Guia</a>
       <a href="/chamados.html" class="pf-nav-link pf-nav-link--active">Chamados</a>
+      <a href="/register.html" class="pf-nav-link" style="color: var(--pf-primary);">Novo Operador</a>
+      <a href="/status.html" class="pf-nav-link" style="color: #4ade80;">Status</a>
+      <a href="#" onclick="logout()" class="pf-nav-link" style="color: var(--pf-error); font-weight: 600;">Sair</a>
     </nav>
   </header>
 
   <main class="pf-main">
+  <!-- Script de Proteção: Executa antes de carregar o HTML todo -->
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      window.location.href = "/login.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/login.html";
+    }
+  </script>
+
+  <main class="pf-main">
+    <!-- Grid de Métricas (Dashboard) -->
+    <div class="pf-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <div class="pf-card" style="background: #4ade80; color: #fff; padding: 1.25rem; text-align: left; position: relative;">
+        <div id="countNovos" style="font-size: 2rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; opacity: 0.9;">Novos</div>
+      </div>
+      <div class="pf-card" style="background: #0ea5e9; color: #fff; padding: 1.25rem; text-align: left;">
+        <div id="countPlanejados" style="font-size: 2rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; opacity: 0.9;">Planejados</div>
+      </div>
+      <div class="pf-card" style="background: #8b5cf6; color: #fff; padding: 1.25rem; text-align: left;">
+        <div id="countAtribuidos" style="font-size: 2rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; opacity: 0.9;">Atribuídos</div>
+      </div>
+      <div class="pf-card" style="background: #a3a3a3; color: #fff; padding: 1.25rem; text-align: left;">
+        <div id="countSolucionados" style="font-size: 2rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; opacity: 0.9;">Solucionados</div>
+      </div>
+      <div class="pf-card" style="background: #ef4444; color: #fff; padding: 1.25rem; text-align: left;">
+        <div id="countAtrasados" style="font-size: 2rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; opacity: 0.9;">Atrasados</div>
+      </div>
+      <div class="pf-card" style="background: #f59e0b; color: #fff; padding: 1.25rem; text-align: left;">
+        <div id="countPendentes" style="font-size: 2rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; opacity: 0.9;">Pendentes</div>
+      </div>
+      <div class="pf-card" style="background: #ffffff; color: #1e293b; padding: 1.25rem; text-align: left; border: 1px solid rgba(0,0,0,0.05);">
+        <div id="countFechados" style="font-size: 1.8rem; font-weight: bold;">0</div>
+        <div style="font-size: 0.85rem; color: #64748b;">Fechados</div>
+      </div>
+    </div>
     <section class="pf-filters-card pf-card">
       <div class="pf-filters-header"
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -101,6 +149,12 @@
           </tbody>
         </table>
       </div>
+      <!-- Paginação -->
+      <div id="paginationControls" style="display: flex; justify-content: space-between; align-items: center; margin: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+        <button id="prevBtn" class="pf-button" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" disabled>Anterior</button>
+        <span id="pageIndicator" style="font-size: 0.85rem; color: var(--pf-text-secondary);">Página 1</span>
+        <button id="nextBtn" class="pf-button" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" disabled>Próximo</button>
+      </div>
     </section>
   </main>
 
@@ -118,6 +172,13 @@
     const countLabel = document.getElementById("ticketsCount");
 
     let allTicketsData = [];
+    let currentPage = 1;
+    const itemsPerPage = 100;
+    let closedMode = false; // paginação server-side exclusiva para "Fechado"
+
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const pageIndicator = document.getElementById("pageIndicator");
 
     function createStatusBadge(status, isAtrasado = false) {
       const span = document.createElement("span");
@@ -167,23 +228,38 @@
 
         const matchId = !filterId || tId.includes(filterId);
 
-        // Se não houver filtro de status (ou for vazio/"todos"), matchStatus é true
-        const matchStatus = !filterStatus ||
-          (filterStatus === "atrasado" ? (ticket.isAtrasado || tStatus === "atrasado") : tStatus === filterStatus);
+        // Se o filtro for vazio/"todos", não exibe apenas Fechados (Solucionados continuam visíveis)
+        let matchStatus;
+        if (!filterStatus || filterStatus === "todos") {
+          matchStatus = tStatus !== "fechado";
+        } else if (filterStatus === "atrasado") {
+          matchStatus = ticket.isAtrasado || tStatus === "atrasado";
+        } else {
+          matchStatus = tStatus === filterStatus;
+        }
 
         const matchTecnico = !filterTecnico || tTecnico.includes(filterTecnico);
 
         return matchId && matchStatus && matchTecnico;
       });
 
-      if (!filteredData || filteredData.length === 0) {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pagedData = filteredData.slice(startIndex, endIndex);
+
+      // Atualiza botões (modo client-side)
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = endIndex >= filteredData.length;
+      pageIndicator.textContent = `Página ${currentPage} de ${Math.max(1, Math.ceil(filteredData.length / itemsPerPage))} (${filteredData.length} exibidos)`;
+
+      if (!pagedData || pagedData.length === 0) {
         body.innerHTML =
           '<tr><td colspan="7" class="pf-table-empty">Nenhum chamado corresponde aos filtros.</td></tr>';
         countLabel.textContent = "0 registros";
         return;
       }
 
-      filteredData.forEach((ticket) => {
+      pagedData.forEach((ticket) => {
         const tr = document.createElement("tr");
 
         const tdId = document.createElement("td");
@@ -247,44 +323,235 @@
       if (start) params.append("startDate", start);
       if (end) params.append("endDate", end);
 
-      const url = `/api/bi/tickets${params.toString() ? `?${params.toString()}` : ""}`;
-
-      body.innerHTML =
-        '<tr><td colspan="6" class="pf-table-loading">Carregando chamados...</td></tr>';
+      // Limpa dados e reseta paginação (modo normal - abertos)
+      closedMode = false;
+      allTicketsData = [];
+      currentPage = 1;
+      body.innerHTML = '<tr><td colspan="7" class="pf-table-loading">Carregando chamados abertos...</td></tr>';
 
       try {
-        const res = await fetch(url, {
-          headers: {
-            "Authorization": "Bearer Perfill0102*ArildoBi"
-          }
+        // Fase 1: Carrega os Abertos (Rápido)
+        const openUrl = `/api/bi/tickets?statusGroup=aberto&limit=100&${params.toString()}`;
+        const resOpen = await fetch(openUrl, {
+          headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
         });
-        if (!res.ok) {
-          throw new Error("Erro ao buscar chamados");
-        }
-        allTicketsData = await res.json();
+        
+        if (!resOpen.ok) throw new Error("Erro ao buscar chamados abertos");
+        
+        allTicketsData = await resOpen.json();
         renderTickets(allTicketsData);
+
+        // Fase 2: Carrega os Fechados em Background (apenas 100 pré-carregados)
+        const closedUrl = `/api/bi/tickets?statusGroup=fechado&limit=100&${params.toString()}`;
+        fetch(closedUrl, {
+          headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+        }).then(res => res.json()).then(closedTickets => {
+            if (Array.isArray(closedTickets)) {
+                allTicketsData = [...allTicketsData, ...closedTickets];
+                // Ordenar por data de criação DESC
+                allTicketsData.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
+                renderTickets(allTicketsData);
+                console.log("Fase 2: Chamados fechados carregados em background.");
+            }
+        }).catch(err => console.error("Erro no background fetch de fechados:", err));
+
       } catch (error) {
         console.error(error);
-        body.innerHTML =
-          '<tr><td colspan="7" class="pf-table-error">Erro ao carregar os chamados. Verifique se a API está rodando.</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="pf-table-error">Erro ao carregar os chamados.</td></tr>';
         countLabel.textContent = "erro";
       }
     }
 
-    button.addEventListener("click", loadTickets);
+    async function loadClosedPage(page = 1) {
+      const start = document.getElementById("startDate").value;
+      const end = document.getElementById("endDate").value;
 
-    filterIdInput.addEventListener("input", () => renderTickets(allTicketsData));
-    filterStatusSelect.addEventListener("change", () => renderTickets(allTicketsData));
-    filterTecnicoInput.addEventListener("input", () => renderTickets(allTicketsData));
+      const params = new URLSearchParams();
+      if (start) params.append("startDate", start);
+      if (end) params.append("endDate", end);
+      params.append("statusGroup", "fechado");
+      params.append("limit", itemsPerPage);
+      params.append("offset", (page - 1) * itemsPerPage);
+
+      closedMode = true;
+      currentPage = page;
+      body.innerHTML = '<tr><td colspan="7" class="pf-table-loading">Carregando chamados fechados...</td></tr>';
+
+      try {
+        const url = `/api/bi/tickets?${params.toString()}`;
+        const res = await fetch(url, {
+          headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+        });
+        if (!res.ok) throw new Error("Erro ao buscar chamados fechados");
+
+        let data = await res.json();
+
+        // Aplica filtros de ID e Técnico localmente sobre a página carregada
+        const filterId = filterIdInput.value.trim().toLowerCase();
+        const filterTecnico = filterTecnicoInput.value.trim().toLowerCase();
+        const filteredPageData = data.filter(ticket => {
+          const tId = String(ticket.ticketId || "").toLowerCase();
+          const tTecnico = String(ticket.nomeTecnico || "").toLowerCase();
+          const matchId = !filterId || tId.includes(filterId);
+          const matchTecnico = !filterTecnico || tTecnico.includes(filterTecnico);
+          return matchId && matchTecnico;
+        });
+
+        body.innerHTML = "";
+
+        if (filteredPageData.length === 0) {
+          body.innerHTML =
+            '<tr><td colspan="7" class="pf-table-empty">Nenhum chamado fechado corresponde aos filtros.</td></tr>';
+          countLabel.textContent = "0 registros";
+        } else {
+          filteredPageData.forEach((ticket) => {
+            const tr = document.createElement("tr");
+
+            const tdId = document.createElement("td");
+            tdId.className = "pf-table-center";
+            tdId.textContent = ticket.ticketId ?? "-";
+
+            const tdTitulo = document.createElement("td");
+            tdTitulo.textContent = ticket.titulo ?? "-";
+
+            const tdDescricao = document.createElement("td");
+            tdDescricao.textContent = ticket.descricao ?? "-";
+
+            const tdSla = document.createElement("td");
+            tdSla.className = "pf-table-center";
+            tdSla.appendChild(createStatusBadge(ticket.statusSla ?? ""));
+
+            const tdTempo = document.createElement("td");
+            tdTempo.className = "pf-table-center";
+            const tempoSpan = document.createElement("span");
+            tempoSpan.classList.add("pf-sla-time");
+            tempoSpan.textContent = ticket.tempoSla ?? "";
+            tdTempo.appendChild(tempoSpan);
+
+            const tdStatus = document.createElement("td");
+            tdStatus.className = "pf-table-center";
+            tdStatus.appendChild(createStatusBadge(ticket.status ?? "", ticket.isAtrasado));
+
+            const tdTecnico = document.createElement("td");
+            tdTecnico.className = "pf-table-center";
+            tdTecnico.textContent = ticket.nomeTecnico || "—";
+
+            tr.appendChild(tdId);
+            tr.appendChild(tdTitulo);
+            tr.appendChild(tdDescricao);
+            tr.appendChild(tdSla);
+            tr.appendChild(tdTempo);
+            tr.appendChild(tdStatus);
+            tr.appendChild(tdTecnico);
+
+            body.appendChild(tr);
+          });
+
+          countLabel.textContent = `${filteredPageData.length} registro${filteredPageData.length > 1 ? "s" : ""}`;
+        }
+
+        // Atualiza paginação (modo fechado com paginação server-side)
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = data.length < itemsPerPage;
+        pageIndicator.textContent = `Página ${currentPage} (Fechados)`;
+
+      } catch (e) {
+        console.error(e);
+        body.innerHTML = '<tr><td colspan="7" class="pf-table-error">Erro ao carregar chamados fechados.</td></tr>';
+        countLabel.textContent = "erro";
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch("/api/bi/stats", {
+          headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+        });
+        if (!res.ok) throw new Error("Erro ao buscar stats");
+        const data = await res.json();
+        
+        document.getElementById("countNovos").textContent = data.novos || 0;
+        document.getElementById("countPlanejados").textContent = data.planejados || 0;
+        document.getElementById("countAtribuidos").textContent = data.atribuidos || 0;
+        document.getElementById("countSolucionados").textContent = data.solucionados || 0;
+        document.getElementById("countAtrasados").textContent = data.atrasados || 0;
+        document.getElementById("countPendentes").textContent = data.pendentes || 0;
+        
+        const fechados = parseInt(data.fechados) || 0;
+        document.getElementById("countFechados").textContent = fechados > 1000 ? (fechados / 1000).toFixed(1) + "K" : fechados;
+      } catch (e) {
+        console.error("Estatísticas falharam:", e);
+      }
+    }
+
+    button.addEventListener("click", () => {
+      loadTickets();
+      loadStats(); // Recarrega os totais tb
+    });
+
+    filterIdInput.addEventListener("input", () => {
+      currentPage = 1;
+      if (closedMode && filterStatusSelect.value.toLowerCase() === "fechado") {
+        loadClosedPage(1);
+      } else {
+        renderTickets(allTicketsData);
+      }
+    });
+
+    filterStatusSelect.addEventListener("change", () => {
+      currentPage = 1;
+      const value = filterStatusSelect.value.toLowerCase();
+      if (value === "fechado") {
+        loadClosedPage(1);
+      } else {
+        closedMode = false;
+        if (allTicketsData.length > 0) {
+          renderTickets(allTicketsData);
+        }
+      }
+    });
+
+    filterTecnicoInput.addEventListener("input", () => {
+      currentPage = 1;
+      if (closedMode && filterStatusSelect.value.toLowerCase() === "fechado") {
+        loadClosedPage(1);
+      } else {
+        renderTickets(allTicketsData);
+      }
+    });
 
     clearBtn.addEventListener("click", () => {
       filterIdInput.value = "";
       filterStatusSelect.value = "";
       filterTecnicoInput.value = "";
+      currentPage = 1; // Reseta página ao limpar
       if (allTicketsData.length > 0) {
         renderTickets(allTicketsData);
       }
     });
+
+    prevBtn.addEventListener("click", () => {
+      if (currentPage > 1) {
+        if (closedMode && filterStatusSelect.value.toLowerCase() === "fechado") {
+          loadClosedPage(currentPage - 1);
+        } else {
+          currentPage--;
+          renderTickets(allTicketsData);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (closedMode && filterStatusSelect.value.toLowerCase() === "fechado") {
+        loadClosedPage(currentPage + 1);
+      } else {
+        currentPage++;
+        renderTickets(allTicketsData);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
 
     let filtersVisible = false;
     toggleFiltersBtn.addEventListener("click", () => {
@@ -300,6 +567,7 @@
 
     // Carregamento automático ao abrir a página
     loadTickets();
+    loadStats();
   </script>
 </body>
 
