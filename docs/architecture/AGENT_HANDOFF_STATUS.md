@@ -78,6 +78,11 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 - Endpoint de observabilidade:
   - `GET /api/health/alerts`
   - retorna resumo (`open_alerts`, `closed_alerts`, `total_alerts`)
+- Endpoint dedicado de consulta:
+  - `GET /api/alerts`
+  - protegido por `authMiddleware`
+  - suporta filtros por `state`, `type`, `severity`
+  - suporta paginação (`limit`, `offset`) e ordenação (`sortBy`, `sortOrder`)
 
 ---
 
@@ -89,7 +94,9 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
   - `__tests__/healthRoutes.test.js`
   - `__tests__/ticketStatusMapper.test.js`
   - `__tests__/alertEngine.test.js`
+  - `__tests__/alertsRoutes.test.js`
   - cobertura de `GET /api/health/alerts` em `__tests__/healthRoutes.test.js`
+  - cobertura de autenticação e contrato de `GET /api/alerts` em `__tests__/alertsRoutes.test.js`
   - + suites existentes (`auth`, `biRoutes`, `glpiClient`).
 
 ---
@@ -104,8 +111,8 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 ## Próximas etapas recomendadas (para outro agente)
 
 ### Etapa A - Endpoints dedicados de alertas
-- Criar rotas específicas de alertas (`/api/alerts`) com filtros por estado/tipo/severidade.
-- Incluir paginação e ordenação para consumo BI/operacional.
+- Evoluir rotas de alertas para suportar busca por período e agregações operacionais.
+- Incluir endpoint de detalhe por `ticket_id` para troubleshooting rápido.
 
 ### Etapa B - Refinar persistência e histórico
 - Separar histórico completo de eventos (auditoria) do estado atual dos alertas.

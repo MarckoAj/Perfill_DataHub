@@ -74,6 +74,90 @@ class AlertRepository {
     const [rows] = await pool.query(query);
     return rows[0] || { open_alerts: 0, closed_alerts: 0, total_alerts: 0 };
   }
+
+  async getAlerts({
+    state,
+    type,
+    severity,
+    limit = 50,
+    offset = 0,
+    sortBy = "last_detected_at",
+    sortOrder = "DESC",
+  } = {}) {
+    const allowedSortBy = new Set([
+      "last_detected_at",
+      "first_detected_at",
+      "created_at",
+      "updated_at",
+      "severity",
+      "state",
+      "ticket_id",
+      "alert_type",
+    ]);
+    const normalizedSortBy = allowedSortBy.has(sortBy) ? sortBy : "last_detected_at";
+    const normalizedSortOrder = String(sortOrder).toUpperCase() === "ASC" ? "ASC" : "DESC";
+    const parsedLimit = Number.isFinite(Number(limit)) ? Math.min(Math.max(Number(limit), 1), 500) : 50;
+    const parsedOffset = Number.isFinite(Number(offset)) ? Math.max(Number(offset), 0) : 0;
+
+    const conditions = [];
+    const params = [];
+
+    if (state) {
+      conditions.push("state = ?");
+      params.push(state);
+    }
+
+    if (type) {
+      conditions.push("alert_type = ?");
+      params.push(type);
+    }
+
+    if (severity) {
+      conditions.push("severity = ?");
+      params.push(severity);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const dataQuery = `
+      SELECT
+        id,
+        ticket_id,
+        alert_type,
+        severity,
+        message,
+        state,
+        first_detected_at,
+        last_detected_at,
+        closed_at,
+        created_at,
+        updated_at
+      FROM datahub_ticket_alerts
+      ${whereClause}
+      ORDER BY ${normalizedSortBy} ${normalizedSortOrder}
+      LIMIT ? OFFSET ?
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM datahub_ticket_alerts
+      ${whereClause}
+    `;
+
+    const [rows] = await pool.query(dataQuery, [...params, parsedLimit, parsedOffset]);
+    const [countRows] = await pool.query(countQuery, params);
+    const total = Number(countRows?.[0]?.total || 0);
+
+    return {
+      data: rows,
+      pagination: {
+        total,
+        limit: parsedLimit,
+        offset: parsedOffset,
+        hasMore: parsedOffset + parsedLimit < total,
+      },
+    };
+  }
 }
 
 export default new AlertRepository();

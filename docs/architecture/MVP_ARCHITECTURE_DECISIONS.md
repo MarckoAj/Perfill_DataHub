@@ -362,6 +362,7 @@ alert engine MVP
 regras base de alerta
 persistência de alertas (datahub_ticket_alerts)
 observabilidade básica (/api/health/alerts)
+consulta dedicada de alertas (/api/alerts)
 ```
 
 Status atual:
@@ -370,11 +371,12 @@ Status atual:
 - deduplicação em memória por `ticketId + alertType`
 - gravação/fechamento de alertas via repositório dedicado
 - endpoint de resumo para monitoramento operacional
+- endpoint autenticado de listagem com filtros e paginação para consumo operacional/BI
 
 Próximo passo recomendado da etapa:
 
 ```text
-rotas dedicadas /api/alerts
-filtros/paginação
+filtros avançados por período/ticket
+endpoint de detalhe de alerta
 histórico de eventos de alerta (audit trail expandido)
 ```

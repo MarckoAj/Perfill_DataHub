@@ -2,6 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import glpiTickets from "../services/glpi_service.js";
 import ticketRepository from "../repositories/ticketRepository.js";
 import syncService from "../core/tickets/syncTicketsService.js";
+import alertRepository from "../core/alerts/alertRepository.js";
 
 export const getTicketsByStatus = asyncHandler(async (req, res) => {
   const { status } = req.params;
@@ -54,4 +55,28 @@ export const syncBiManual = asyncHandler(async (req, res) => {
       </body>
     </html>
   `);
+});
+
+export const getAlertsForApi = asyncHandler(async (req, res) => {
+  const {
+    state,
+    type,
+    severity,
+    limit,
+    offset,
+    sortBy,
+    sortOrder,
+  } = req.query;
+
+  const result = await alertRepository.getAlerts({
+    state,
+    type,
+    severity,
+    limit,
+    offset,
+    sortBy,
+    sortOrder,
+  });
+
+  res.status(200).json(result);
 });
