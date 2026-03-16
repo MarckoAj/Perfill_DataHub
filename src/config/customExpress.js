@@ -8,6 +8,7 @@ import apiHealthRoutes from "../api/routes/health.routes.js";
 import integrationRoutes from "../routes/integrationRoutes.js";
 import notFoundHandler from "../shared/errors/notFoundHandler.js";
 import errorHandler from "../shared/errors/errorHandler.js";
+import auvoRoutes from "../routes/auvoRoutes.js";
 
 const customExpress = () => {
   const app = express();
@@ -19,6 +20,7 @@ const customExpress = () => {
   app.use("/api/bi", biRoutes);
   app.use("/api/health", apiHealthRoutes);
   app.use("/api/integrations", integrationRoutes);
+  app.use("/api/auvo", auvoRoutes);
   app.use("/api", routes);
   app.use("/", healthRoutes); // Acopla /live, /health, /ready na raiz
 
