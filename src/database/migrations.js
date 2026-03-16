@@ -1,6 +1,8 @@
 import pool from "./connection.js";
 import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
+import { runAuvoMigrations } from "./migrations/auvoTables.js";
+import { runAuvoSeeds } from "./seeds/auvoSeeds.js";
 
 dotenv.config();
 
@@ -51,6 +53,10 @@ export async function runMigrations() {
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
         await pool.query(rawTicketsTableQuery);
         console.log("Migration: Tabela 'raw_glpi_tickets' verificada/criada com sucesso.");
+
+        // Executar Migrations e Seeds do AUVO
+        await runAuvoMigrations();
+        await runAuvoSeeds();
 
         // Verifica se há usuários cadastrados
         const [rows] = await pool.query("SELECT COUNT(*) as count FROM users");
