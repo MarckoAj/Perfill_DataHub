@@ -16,7 +16,7 @@
 [x] Mappers de dados
 [x] Endpoints de consulta
 [ ] Sync incremental
-[ ] Persistência RAW
+[x] Persistência RAW
 [ ] Normalização automática
 
 ---
@@ -68,7 +68,7 @@
 
 # Data Pipeline
 
-[ ] camada RAW
+[x] camada RAW
 [ ] camada normalizada
 [ ] reprocessamento de dados
 

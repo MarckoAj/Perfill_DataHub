@@ -33,11 +33,24 @@ export async function runMigrations() {
         );
     `;
 
+    const rawTicketsTableQuery = `
+        CREATE TABLE IF NOT EXISTS raw_glpi_tickets (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            external_id BIGINT NOT NULL,
+            payload_json JSON NOT NULL,
+            fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_raw_external_id (external_id),
+            INDEX idx_raw_fetched_at (fetched_at)
+        );
+    `;
+
     try {
         await pool.query(usersTableQuery);
         console.log("Migration: Tabela 'users' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
+        await pool.query(rawTicketsTableQuery);
+        console.log("Migration: Tabela 'raw_glpi_tickets' verificada/criada com sucesso.");
 
         // Verifica se há usuários cadastrados
         const [rows] = await pool.query("SELECT COUNT(*) as count FROM users");

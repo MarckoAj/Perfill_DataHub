@@ -26,19 +26,24 @@ class SyncTicketsService {
       console.log(`Buscando tickets ${currentRange} a ${currentRange + this.batchSize}...`);
 
       const rangeEndPoint = `search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=${statusId}&range=${currentRange}-${currentRange + this.batchSize}`;
-      const tickets = await glpiTickets.getTicketsByStatusFromDirectEndpoint(rangeEndPoint);
-
-      if (!tickets || tickets.length === 0) {
+      const { processedTickets, rawTickets } = await glpiTickets.getTicketsByStatusFromDirectEndpoint(rangeEndPoint);
+ 
+      if (!processedTickets || processedTickets.length === 0) {
         hasMore = false;
         break;
       }
 
-      await ticketRepository.upsertTickets(tickets);
-      const alertSummary = alertEngine.processTickets(tickets);
+      // 1. Salvar na Camada RAW
+      await ticketRepository.insertRawTickets(rawTickets);
+      
+      // 2. Salvar na Camada Normalizada
+      await ticketRepository.upsertTickets(processedTickets);
+
+      const alertSummary = alertEngine.processTickets(processedTickets);
       await alertRepository.upsertActiveAlerts(alertSummary.active);
       await alertRepository.closeAlerts(alertSummary.closed);
-
-      totalSynced += tickets.length;
+ 
+      totalSynced += processedTickets.length;
       console.log(`Sincronizados ${totalSynced} tickets.`);
       if (alertSummary.counters.opened > 0 || alertSummary.counters.closed > 0) {
         console.log(
@@ -46,10 +51,10 @@ class SyncTicketsService {
         );
       }
 
-      if (tickets.length < this.batchSize) {
+      if (processedTickets.length < this.batchSize) {
         hasMore = false;
       } else {
-        currentRange += tickets.length;
+        currentRange += processedTickets.length;
       }
     }
 

@@ -43,9 +43,13 @@ class GlpiTickets {
     async getTicketsByStatusFromDirectEndpoint(endPoint) {
         const result = await glpi_client.glpiRequestData(endPoint, "GET");
         const ticketsArray = Array.isArray(result) ? result : (result?.data && Array.isArray(result.data) ? result.data : null);
-        if (!ticketsArray) return [];
+        
+        if (!ticketsArray) return { processedTickets: [], rawTickets: [] };
+
         const processedTickets = ticketMapper.processTickets(ticketsArray);
-        return this.addTechniciansToTickets(processedTickets);
+        const withTechs = await this.addTechniciansToTickets(processedTickets);
+
+        return { processedTickets: withTechs, rawTickets: ticketsArray };
     }
 
     async getTicketsByStatus(status) {
