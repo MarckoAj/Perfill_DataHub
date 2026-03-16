@@ -348,3 +348,33 @@ Automation
 ```
 
 Isso posiciona o sistema como um **Integration Hub**, capaz de centralizar dados operacionais e automatizar decisões entre múltiplos sistemas.
+
+---
+
+## 10. Status de Execução (Mar/2026)
+
+### Etapa 4 — Automation (parcial concluída)
+
+Itens já implementados:
+
+```text
+alert engine MVP
+regras base de alerta
+persistência de alertas (datahub_ticket_alerts)
+observabilidade básica (/api/health/alerts)
+```
+
+Status atual:
+
+- `alertEngine` ativo no fluxo de sync
+- deduplicação em memória por `ticketId + alertType`
+- gravação/fechamento de alertas via repositório dedicado
+- endpoint de resumo para monitoramento operacional
+
+Próximo passo recomendado da etapa:
+
+```text
+rotas dedicadas /api/alerts
+filtros/paginação
+histórico de eventos de alerta (audit trail expandido)
+```

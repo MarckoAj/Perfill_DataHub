@@ -66,6 +66,19 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
   - ciclo de estado em memória (`open`/`closed`)
   - resumo de lote para observabilidade (`opened`, `closed`, `active`)
 
+### 7) Persistência e observabilidade de alertas
+- Repositório de alertas implementado:
+  - `src/core/alerts/alertRepository.js`
+- Persistência acoplada ao sync:
+  - `src/core/tickets/syncTicketsService.js`
+  - grava alertas ativos e fecha alertas resolvidos
+- Migração de tabela de alertas adicionada:
+  - `src/database/migrations.js`
+  - tabela `datahub_ticket_alerts`
+- Endpoint de observabilidade:
+  - `GET /api/health/alerts`
+  - retorna resumo (`open_alerts`, `closed_alerts`, `total_alerts`)
+
 ---
 
 ## Testes e validação
@@ -76,6 +89,7 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
   - `__tests__/healthRoutes.test.js`
   - `__tests__/ticketStatusMapper.test.js`
   - `__tests__/alertEngine.test.js`
+  - cobertura de `GET /api/health/alerts` em `__tests__/healthRoutes.test.js`
   - + suites existentes (`auth`, `biRoutes`, `glpiClient`).
 
 ---
@@ -89,17 +103,17 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 
 ## Próximas etapas recomendadas (para outro agente)
 
-### Etapa A - Repositório de alertas
-- Extrair queries de alertas para `src/core/alerts/alertRepository.js`.
-- Garantir idempotência de geração de alerta.
+### Etapa A - Endpoints dedicados de alertas
+- Criar rotas específicas de alertas (`/api/alerts`) com filtros por estado/tipo/severidade.
+- Incluir paginação e ordenação para consumo BI/operacional.
 
-### Etapa B - Exposição e observabilidade
-- Expor endpoints mínimos de observabilidade de alertas.
-- Evoluir health/readiness com checks opcionais de integrações externas.
+### Etapa B - Refinar persistência e histórico
+- Separar histórico completo de eventos (auditoria) do estado atual dos alertas.
+- Evoluir estratégia para manter trilha temporal de reaberturas/fechamentos.
 
 ### Etapa C - Cobertura de testes da migração
-- Adicionar testes de integração de sync + alertas.
-- Adicionar testes de contrato dos endpoints BI (sem regressão).
+- Adicionar testes de integração de sync + persistência de alertas.
+- Adicionar testes de contrato dos endpoints BI e health observability (sem regressão).
 
 ---
 

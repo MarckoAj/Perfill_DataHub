@@ -3,6 +3,7 @@ import ticketRepository from "./ticketRepository.js";
 import glpiUrlBuilder from "../../utils/glpiUrlBuilder.js";
 import glpiClient from "../../integrations/glpi/glpiClient.js";
 import alertEngine from "../alerts/alertEngine.js";
+import alertRepository from "../alerts/alertRepository.js";
 
 class SyncTicketsService {
   constructor() {
@@ -34,6 +35,8 @@ class SyncTicketsService {
 
       await ticketRepository.upsertTickets(tickets);
       const alertSummary = alertEngine.processTickets(tickets);
+      await alertRepository.upsertActiveAlerts(alertSummary.active);
+      await alertRepository.closeAlerts(alertSummary.closed);
 
       totalSynced += tickets.length;
       console.log(`Sincronizados ${totalSynced} tickets.`);
