@@ -35,26 +35,12 @@ export const syncBiManual = asyncHandler(async (req, res) => {
   syncService.syncAll().then(() => console.log("Sincronização manual finalizada com sucesso."))
     .catch((e) => console.error("Erro na sincronização manual:", e));
 
-  // Retorna um HTML simples
-  res.status(200).send(`
-    <html>
-      <head>
-        <title>Sincronização Iniciada</title>
-        <style>
-          body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f4f6f9; color: #333; }
-          .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-          h2 { color: #0284c7; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-           <h2>🔄 Sincronização Iniciada</h2>
-           <p>A sincronização com o GLPI foi iniciada em segundo plano.</p>
-           <p>Leva um curto período para as informações serem atualizadas completamente no banco de dados do BI.</p>
-        </div>
-      </body>
-    </html>
-  `);
+  // Retorna um JSON simplificado
+  res.status(200).json({
+    success: true,
+    message: "Sincronização Iniciada",
+    detail: "A sincronização com o GLPI foi iniciada em segundo plano. Leva um curto período para as informações serem atualizadas completamente no banco de dados do BI."
+  });
 });
 
 export const getAlertsForApi = asyncHandler(async (req, res) => {
