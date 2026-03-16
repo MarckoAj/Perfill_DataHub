@@ -52,6 +52,20 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
   - `src/controllers/glpiController.js`
 - Rotas BI mantidas conforme uso atual do dashboard.
 
+### 6) Alert Engine MVP integrado
+- Novo motor de alertas:
+  - `src/core/alerts/alertEngine.js`
+- Regras MVP implementadas:
+  - `new_unhandled` (ticket `novo` sem tratativa > 5 min)
+  - `paused_stale` (ticket `pendente` sem atualização > 7 dias)
+  - `sla_overdue` (`isAtrasado` ou `statusSla` vencido)
+- Integração no fluxo de sincronização:
+  - `src/core/tickets/syncTicketsService.js`
+- Comportamento:
+  - deduplicação por `ticketId:type`
+  - ciclo de estado em memória (`open`/`closed`)
+  - resumo de lote para observabilidade (`opened`, `closed`, `active`)
+
 ---
 
 ## Testes e validação
@@ -61,6 +75,7 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 - Testes relevantes criados/atualizados:
   - `__tests__/healthRoutes.test.js`
   - `__tests__/ticketStatusMapper.test.js`
+  - `__tests__/alertEngine.test.js`
   - + suites existentes (`auth`, `biRoutes`, `glpiClient`).
 
 ---
@@ -74,24 +89,15 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 
 ## Próximas etapas recomendadas (para outro agente)
 
-### Etapa A - Alert Engine dedicado
-- Criar `src/core/alerts/alertEngine.js`.
-- Definir regras MVP:
-  - atraso SLA,
-  - severidade,
-  - deduplicação,
-  - persistência de alerta.
-- Acoplar ao fluxo de sync em `src/core/tickets/syncTicketsService.js`.
-
-### Etapa B - Repositório de alertas
+### Etapa A - Repositório de alertas
 - Extrair queries de alertas para `src/core/alerts/alertRepository.js`.
 - Garantir idempotência de geração de alerta.
 
-### Etapa C - Exposição e observabilidade
+### Etapa B - Exposição e observabilidade
 - Expor endpoints mínimos de observabilidade de alertas.
 - Evoluir health/readiness com checks opcionais de integrações externas.
 
-### Etapa D - Cobertura de testes da migração
+### Etapa C - Cobertura de testes da migração
 - Adicionar testes de integração de sync + alertas.
 - Adicionar testes de contrato dos endpoints BI (sem regressão).
 

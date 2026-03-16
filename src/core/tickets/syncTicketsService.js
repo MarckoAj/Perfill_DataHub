@@ -2,6 +2,7 @@ import glpiTickets from "../../services/glpi_service.js";
 import ticketRepository from "./ticketRepository.js";
 import glpiUrlBuilder from "../../utils/glpiUrlBuilder.js";
 import glpiClient from "../../integrations/glpi/glpiClient.js";
+import alertEngine from "../alerts/alertEngine.js";
 
 class SyncTicketsService {
   constructor() {
@@ -32,9 +33,15 @@ class SyncTicketsService {
       }
 
       await ticketRepository.upsertTickets(tickets);
+      const alertSummary = alertEngine.processTickets(tickets);
 
       totalSynced += tickets.length;
       console.log(`Sincronizados ${totalSynced} tickets.`);
+      if (alertSummary.counters.opened > 0 || alertSummary.counters.closed > 0) {
+        console.log(
+          `[AlertEngine] opened=${alertSummary.counters.opened} closed=${alertSummary.counters.closed} active=${alertSummary.counters.active}`
+        );
+      }
 
       if (tickets.length < this.batchSize) {
         hasMore = false;
