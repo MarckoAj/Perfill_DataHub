@@ -1,17 +1,14 @@
 import he from "he";
 import customDate from "../utils/customDate.js";
+import ticketStatusMapper from "../core/tickets/ticketStatusMapper.js";
 
 class TicketMapper {
   constructor() {
-    this.glpiTicketStatus = {
-      "1": "novo",
-      "2": "atribuido",
-      "3": "planejado",
-      "4": "pendente",
-      "5": "solucionado",
-      "6": "fechado",
-      "7": "atrasado",
-    };
+    this.glpiTicketStatus = Object.fromEntries(
+      ticketStatusMapper
+        .getAllStatusNames()
+        .map((statusName) => [String(ticketStatusMapper.toGlpiStatusId(statusName)), statusName])
+    );
   }
   decodeHtmlEntities(str) {
     return he.decode(str);

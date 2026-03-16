@@ -1,18 +1,15 @@
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpi_client from "../integrations/glpi_client.js";
 import ticketMapper from "../mappers/ticketMapper.js";
+import ticketStatusMapper from "../core/tickets/ticketStatusMapper.js";
 
 class GlpiTickets {
     constructor() {
-        this.glpiTicketStatus = {
-            "novo": 1,
-            "atribuido": 2,
-            "planejado": 3,
-            "pendente": 4,
-            "solucionado": 5,
-            "fechado": 6,
-            "atrasado": 7,
-        };
+        this.glpiTicketStatus = Object.fromEntries(
+            ticketStatusMapper
+                .getAllStatusNames()
+                .map((statusName) => [statusName, ticketStatusMapper.toGlpiStatusId(statusName)])
+        );
         this.techniciansCache = new Map();
     }
 
