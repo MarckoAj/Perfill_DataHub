@@ -75,12 +75,42 @@ class AlertRepository {
     return rows[0] || { open_alerts: 0, closed_alerts: 0, total_alerts: 0 };
   }
 
+  async getAlertsByTicketId(ticketId) {
+    if (!ticketId) {
+      throw new Error("Ticket ID é obrigatório");
+    }
+
+    const query = `
+      SELECT
+        id,
+        ticket_id,
+        alert_type,
+        severity,
+        message,
+        state,
+        first_detected_at,
+        last_detected_at,
+        closed_at,
+        created_at,
+        updated_at
+      FROM datahub_ticket_alerts
+      WHERE ticket_id = ?
+      ORDER BY first_detected_at DESC
+    `;
+
+    const [rows] = await pool.query(query, [ticketId]);
+    return rows;
+  }
+
   async getAlerts({
     state,
     type,
     severity,
+    startDate,
+    endDate,
     limit = 50,
     offset = 0,
+    page,
     sortBy = "last_detected_at",
     sortOrder = "DESC",
   } = {}) {
@@ -97,7 +127,15 @@ class AlertRepository {
     const normalizedSortBy = allowedSortBy.has(sortBy) ? sortBy : "last_detected_at";
     const normalizedSortOrder = String(sortOrder).toUpperCase() === "ASC" ? "ASC" : "DESC";
     const parsedLimit = Number.isFinite(Number(limit)) ? Math.min(Math.max(Number(limit), 1), 500) : 50;
-    const parsedOffset = Number.isFinite(Number(offset)) ? Math.max(Number(offset), 0) : 0;
+    
+    // Suporte a paginação por page ou offset
+    let parsedOffset;
+    if (page !== undefined && page !== null) {
+      const pageNum = Number.isFinite(Number(page)) ? Math.max(Number(page), 1) : 1;
+      parsedOffset = (pageNum - 1) * parsedLimit;
+    } else {
+      parsedOffset = Number.isFinite(Number(offset)) ? Math.max(Number(offset), 0) : 0;
+    }
 
     const conditions = [];
     const params = [];
@@ -115,6 +153,16 @@ class AlertRepository {
     if (severity) {
       conditions.push("severity = ?");
       params.push(severity);
+    }
+
+    if (startDate) {
+      conditions.push("first_detected_at >= ?");
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      conditions.push("first_detected_at <= ?");
+      params.push(endDate);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -154,7 +202,9 @@ class AlertRepository {
         total,
         limit: parsedLimit,
         offset: parsedOffset,
+        page: page !== undefined && page !== null ? Math.max(Number(page), 1) : Math.floor(parsedOffset / parsedLimit) + 1,
         hasMore: parsedOffset + parsedLimit < total,
+        totalPages: Math.ceil(total / parsedLimit),
       },
     };
   }

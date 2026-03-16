@@ -62,8 +62,11 @@ export const getAlertsForApi = asyncHandler(async (req, res) => {
     state,
     type,
     severity,
+    startDate,
+    endDate,
     limit,
     offset,
+    page,
     sortBy,
     sortOrder,
   } = req.query;
@@ -72,11 +75,26 @@ export const getAlertsForApi = asyncHandler(async (req, res) => {
     state,
     type,
     severity,
+    startDate,
+    endDate,
     limit,
     offset,
+    page,
     sortBy,
     sortOrder,
   });
 
   res.status(200).json(result);
+});
+
+export const getAlertsByTicketId = asyncHandler(async (req, res) => {
+  const { ticketId } = req.params;
+
+  const alerts = await alertRepository.getAlertsByTicketId(ticketId);
+
+  res.status(200).json({
+    ticketId,
+    alerts,
+    total: alerts.length,
+  });
 });

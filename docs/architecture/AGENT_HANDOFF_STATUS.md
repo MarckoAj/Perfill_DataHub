@@ -1,12 +1,22 @@
 # Perfill Data Hub - Agent Handoff Status
 
 ## Contexto
-Este repositório está em migração incremental para o **Perfill Data Hub**.
-A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refatorar componentes do `Perfill Legado`** por etapas.
+Este repositório é agora o **backend principal e funcional** do Perfill Data Hub.
+A migração do PerfillBi foi concluída com sucesso - todo o código funcional foi transferido e está operacional.
 
 ---
 
-## O que já foi concluído
+## Status Atual (Mar/2026)
+- ✅ **Backend completo e funcional** (migrado do PerfillBi)
+- ✅ **Todos os testes passando** (26/26 testes)
+- ✅ **API REST operacional** com todos os endpoints
+- ✅ **Alert Engine MVP** com persistência
+- ✅ **Observabilidade completa** (health checks, integrações)
+- ✅ **Dashboard HTML** temporário (será substituído por React)
+
+---
+
+## O que foi migrado do PerfillBi
 
 ### 1) Foundation (bootstrap, health, erro global)
 - Bootstrap unificado:
@@ -81,8 +91,18 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 - Endpoint dedicado de consulta:
   - `GET /api/alerts`
   - protegido por `authMiddleware`
-  - suporta filtros por `state`, `type`, `severity`
-  - suporta paginação (`limit`, `offset`) e ordenação (`sortBy`, `sortOrder`)
+  - suporta filtros por `state`, `type`, `severity`, `startDate`, `endDate`
+  - suporta paginação (`limit`, `offset`, `page`) e ordenação (`sortBy`, `sortOrder`)
+
+### 8) Melhorias avançadas de alertas (Mar/2026)
+- **Filtros por período**: Implementados `startDate` e `endDate` em `GET /api/alerts`
+- **Detalhes por ticket**: Novo endpoint `GET /api/alerts/:ticketId` com histórico completo
+- **Paginação melhorada**: Suporte a `page` além de `offset` com metadados completos
+- **Observabilidade de integrações**: Novo repositório `src/core/integrations/integrationRepository.js`
+- **Health check de integrações**: Endpoints `GET /api/integrations` e `GET /api/integrations/glpi`
+- **Métricas operacionais**: Status de sync GLPI, contagem de tickets, alertas críticos
+- **Testes completos**: Suites para funcionalidades avançadas em `__tests__/alertsEnhanced.test.js` e `__tests__/integrations.test.js`
+- **Documentação API**: Contratos completos em `docs/api/alerts.md` e `docs/api/integrations.md`
 
 ---
 
@@ -95,6 +115,8 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
   - `__tests__/ticketStatusMapper.test.js`
   - `__tests__/alertEngine.test.js`
   - `__tests__/alertsRoutes.test.js`
+  - `__tests__/alertsEnhanced.test.js` (novas funcionalidades de alertas)
+  - `__tests__/integrations.test.js` (observabilidade de integrações)
   - cobertura de `GET /api/health/alerts` em `__tests__/healthRoutes.test.js`
   - cobertura de autenticação e contrato de `GET /api/alerts` em `__tests__/alertsRoutes.test.js`
   - + suites existentes (`auth`, `biRoutes`, `glpiClient`).
@@ -108,19 +130,23 @@ A estratégia adotada é: **usar o projeto base atual** e **reaproveitar/refator
 
 ---
 
-## Próximas etapas recomendadas (para outro agente)
+## Próximas etapas recomendadas
 
-### Etapa A - Endpoints dedicados de alertas
-- Evoluir rotas de alertas para suportar busca por período e agregações operacionais.
-- Incluir endpoint de detalhe por `ticket_id` para troubleshooting rápido.
+### Etapa A - Frontend React (prioridade atual)
+- Criar repositório `perfill-bi-frontend` separado
+- Implementar dashboard React moderno
+- Configurar integração com este backend (Perfill_DataHub)
+- Migrar funcionalidades do dashboard HTML atual
 
-### Etapa B - Refinar persistência e histórico
-- Separar histórico completo de eventos (auditoria) do estado atual dos alertas.
-- Evoluir estratégia para manter trilha temporal de reaberturas/fechamentos.
+### Etapa B - Integração AUVO (próxima fase do roadmap)
+- Implementar cliente AUVO com paginação completa (baseado em `Perfill Legado/src/api/fetchRequest.js`)
+- Criar webhook receiver desacoplado com dispatcher de eventos
+- Migrar validações de entidades para serviços de domínio
 
-### Etapa C - Cobertura de testes da migração
-- Adicionar testes de integração de sync + persistência de alertas.
-- Adicionar testes de contrato dos endpoints BI e health observability (sem regressão).
+### Etapa C - Multi-System Hub
+- Implementar integração Zabbix (reescrevendo cliente sem código de teste)
+- Criar correlação entre tickets GLPI e tarefas AUVO
+- Desenvolver pipeline unificado de eventos entre sistemas
 
 ---
 

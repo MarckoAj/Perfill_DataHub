@@ -5,6 +5,7 @@ import routes from "../routes/routes.js";
 import authRoutes from "../routes/authRoutes.js";
 import healthRoutes from "../routes/healthRoutes.js";
 import apiHealthRoutes from "../api/routes/health.routes.js";
+import integrationRoutes from "../routes/integrationRoutes.js";
 import notFoundHandler from "../shared/errors/notFoundHandler.js";
 import errorHandler from "../shared/errors/errorHandler.js";
 
@@ -18,6 +19,7 @@ const customExpress = () => {
   app.use("/api/auth", authRoutes);
   app.use("/api/bi", biRoutes);
   app.use("/api/health", apiHealthRoutes);
+  app.use("/api/integrations", integrationRoutes);
   app.use("/api", routes);
   app.use("/", healthRoutes); // Acopla /live, /health, /ready na raiz
 

@@ -1,15 +1,15 @@
 {
-  "name": "perfill",
+  "name": "perfill-data-hub",
   "version": "1.1.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Perfill Data Hub - Backend para integração GLPI, AUVO e Power BI",
+  "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["glpi", "power-bi", "integration", "dashboard", "perfill"],
+  "author": "Perfill Team",
   "license": "ISC",
   "type": "module",
   "dependencies": {
