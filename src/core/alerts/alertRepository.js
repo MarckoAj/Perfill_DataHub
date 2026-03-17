@@ -23,14 +23,16 @@ class AlertRepository {
         closed_at = NULL
     `;
 
+    const formatDate = (d) => d && typeof d === 'string' && d.endsWith('Z') ? d.slice(0, 19).replace('T', ' ') : d;
+
     for (const alert of alerts) {
       const values = [
         alert.ticketId,
         alert.type,
         alert.severity,
         alert.message,
-        alert.firstDetectedAt,
-        alert.lastDetectedAt,
+        formatDate(alert.firstDetectedAt),
+        formatDate(alert.lastDetectedAt),
       ];
 
       await pool.query(query, values);
@@ -49,11 +51,13 @@ class AlertRepository {
       WHERE ticket_id = ? AND alert_type = ?
     `;
 
+    const formatDate = (d) => d && typeof d === 'string' && d.endsWith('Z') ? d.slice(0, 19).replace('T', ' ') : d;
+
     for (const alert of alerts) {
       const closedAt = alert.closedAt || new Date().toISOString();
       const values = [
-        closedAt,
-        alert.lastDetectedAt || closedAt,
+        formatDate(closedAt),
+        formatDate(alert.lastDetectedAt || closedAt),
         alert.ticketId,
         alert.type,
       ];

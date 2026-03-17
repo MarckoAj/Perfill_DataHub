@@ -1,6 +1,50 @@
 import pool from "../../database/connection.js";
 
 class TaskRepository {
+  // ---- Usuários (Users) ----
+
+  async upsertUsers(users) {
+    if (!users || users.length === 0) return;
+
+    const query = `
+      INSERT INTO users_auvo (
+        userId, externalId, name, login, email, jobPosition,
+        userType, address, active, registrationDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        externalId = VALUES(externalId),
+        name = VALUES(name),
+        login = VALUES(login),
+        email = VALUES(email),
+        jobPosition = VALUES(jobPosition),
+        userType = VALUES(userType),
+        address = VALUES(address),
+        active = VALUES(active),
+        registrationDate = VALUES(registrationDate)
+    `;
+
+    for (const u of users) {
+      const values = [
+        parseInt(u.userID, 10) || null,
+        u.externalId ? String(u.externalId).substring(0, 200) : null,
+        u.name ? String(u.name).substring(0, 100) : null,
+        u.login ? String(u.login).substring(0, 100) : null,
+        u.email ? String(u.email).substring(0, 100) : null,
+        u.jobPosition ? String(u.jobPosition).substring(0, 100) : null,
+        parseInt(u.userType?.userTypeId, 10) || 1, // 1: Placeholder / Padrão (inserido nos Seeds)
+        u.address ? String(u.address).substring(0, 255) : null,
+        u.active ? 1 : 0,
+        u.registrationDate && u.registrationDate !== "" ? u.registrationDate : null
+      ];
+
+      try {
+        await pool.query(query, values);
+      } catch (error) {
+        console.error(`Erro ao salvar usuário AUVO ${u.id}:`, error.sqlMessage || error.message);
+      }
+    }
+  }
+
   // ---- Clientes (Customers) ----
 
   async upsertCustomers(customers) {
@@ -43,6 +87,32 @@ class TaskRepository {
         await pool.query(query, values);
       } catch (error) {
         console.error(`Erro ao salvar cliente AUVO ${c.id}:`, error.sqlMessage || error.message);
+      }
+    }
+  }
+
+  // ---- Segmentos (Segments) ----
+  async upsertSegments(segments) {
+    if (!segments || segments.length === 0) return;
+    const query = `INSERT INTO segments_auvo (segmentId, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = VALUES(description)`;
+    for (const s of segments) {
+      try {
+        await pool.query(query, [parseInt(s.id, 10), s.description]);
+      } catch (e) {
+        console.error(`Erro ao salvar segmento AUVO ${s.id}:`, e.message);
+      }
+    }
+  }
+
+  // ---- Grupos (Groups) ----
+  async upsertGroups(groups) {
+    if (!groups || groups.length === 0) return;
+    const query = `INSERT INTO groups_auvo (groupId, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = VALUES(description)`;
+    for (const g of groups) {
+      try {
+        await pool.query(query, [parseInt(g.id, 10), g.description]);
+      } catch (e) {
+        console.error(`Erro ao salvar grupo AUVO ${g.id}:`, e.message);
       }
     }
   }
@@ -132,6 +202,28 @@ class TaskRepository {
         await pool.query(query, values);
       } catch (error) {
         console.error(`Erro ao salvar tarefa AUVO ${t.id}:`, error.sqlMessage || error.message);
+      }
+    }
+  }
+
+  // ---- Raw Data (Dados Brutos) ----
+  async saveRawData(tableName, items) {
+    if (!items || items.length === 0) return;
+
+    const query = `
+      INSERT INTO ${tableName} (external_id, payload_json)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE
+        payload_json = VALUES(payload_json),
+        fetched_at = CURRENT_TIMESTAMP
+    `;
+
+    for (const item of items) {
+      try {
+        const id = parseInt(item.id, 10) || 0;
+        await pool.query(query, [id, JSON.stringify(item)]);
+      } catch (error) {
+        console.error(`Erro ao salvar Raw Data em ${tableName} [ID ${item.id}]:`, error.message);
       }
     }
   }

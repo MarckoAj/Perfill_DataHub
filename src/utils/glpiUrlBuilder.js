@@ -6,7 +6,7 @@ const GLPI_BASE_URL = process.env.GLPI_BASE_URL;
 
 class GlpiUrlBuilder {
   glpiBaseUrl() {
-    return `${GLPI_BASE_URL}/apirest.php`;
+    return `${GLPI_BASE_URL.replace(/\/$/, "")}/apirest.php`;
   }
 
   requestGlpiEndpointByStatus(status) {

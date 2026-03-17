@@ -16,6 +16,28 @@ export async function runMigrations() {
         );
     `;
 
+    const ticketsTableQuery = `
+        CREATE TABLE IF NOT EXISTS tickets (
+            ticketId BIGINT PRIMARY KEY,
+            nomeCliente VARCHAR(255),
+            titulo VARCHAR(255),
+            descricao TEXT,
+            dataCriacao DATETIME,
+            status VARCHAR(50),
+            dataFechamento DATETIME,
+            dataAtualizacao DATETIME,
+            categoriaSla VARCHAR(100),
+            tempoSla VARCHAR(100),
+            statusSla VARCHAR(50),
+            motivoPausa VARCHAR(255),
+            idTecnicoAtribuido INT,
+            nomeTecnico VARCHAR(255),
+            isAtrasado TINYINT DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_tickets_updated (updated_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+
     const alertsTableQuery = `
         CREATE TABLE IF NOT EXISTS datahub_ticket_alerts (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -46,13 +68,41 @@ export async function runMigrations() {
         );
     `;
 
+    const rawAuvoTasksQuery = `
+        CREATE TABLE IF NOT EXISTS raw_auvo_tasks (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            external_id BIGINT NOT NULL,
+            payload_json JSON NOT NULL,
+            fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_raw_auvo_tasks_ext (external_id),
+            INDEX idx_raw_auvo_tasks_fetch (fetched_at)
+        );
+    `;
+
+    const rawAuvoCustomersQuery = `
+        CREATE TABLE IF NOT EXISTS raw_auvo_customers (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            external_id BIGINT NOT NULL,
+            payload_json JSON NOT NULL,
+            fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_raw_auvo_cust_ext (external_id),
+            INDEX idx_raw_auvo_cust_fetch (fetched_at)
+        );
+    `;
+
     try {
         await pool.query(usersTableQuery);
         console.log("Migration: Tabela 'users' verificada/criada com sucesso.");
+        await pool.query(ticketsTableQuery);
+        console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
         await pool.query(rawTicketsTableQuery);
         console.log("Migration: Tabela 'raw_glpi_tickets' verificada/criada com sucesso.");
+        await pool.query(rawAuvoTasksQuery);
+        console.log("Migration: Tabela 'raw_auvo_tasks' verificada/criada com sucesso.");
+        await pool.query(rawAuvoCustomersQuery);
+        console.log("Migration: Tabela 'raw_auvo_customers' verificada/criada com sucesso.");
 
         // Executar Migrations e Seeds do AUVO
         await runAuvoMigrations();

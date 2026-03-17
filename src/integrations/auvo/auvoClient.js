@@ -9,15 +9,22 @@ class AuvoClient {
     this.apiToken = process.env.AUVO_API_TOKEN;
     this.token = null;
     this.tokenExpiry = null;
+    this.loginPromise = null;
   }
 
   async getAuthHeader() {
-    // Se o token existe e tem mais de 2 minutos de validade restante, reaproveita
     if (this.token && this.tokenExpiry && Date.now() < this.tokenExpiry - 120000) {
       return { Authorization: `Bearer ${this.token}` };
     }
 
-    try {
+    // Prevém gatilhos concorrentes disparando múltiplos /login na API
+    if (this.loginPromise) {
+      console.log("[AuvoClient] Aguardando autenticação já em andamento...");
+      await this.loginPromise;
+      return { Authorization: `Bearer ${this.token}` };
+    }
+
+    this.loginPromise = (async () => {
       const loginUrl = `${this.baseUrl}/login`;
       const response = await fetch(loginUrl, {
         method: "POST",
@@ -29,24 +36,28 @@ class AuvoClient {
       });
 
       if (!response.ok) {
-        throw new Error(`Erro ao autenticar no AUVO: ${response.statusText}`);
+        throw new Error(`Erro ao autenticar no AUVO: ${response.status}`);
       }
 
       const data = await response.json();
       
-      if (!data.result || !data.result.token) {
+      if (!data.result || !data.result.accessToken) {
         throw new Error("Token não retornado pela API do AUVO.");
       }
 
-      this.token = data.result.token;
-      // Define expiração para 30 minutos (1800000 ms) a partir de agora
+      this.token = data.result.accessToken;
       this.tokenExpiry = Date.now() + 1800000;
+    })();
 
-      return { Authorization: `Bearer ${this.token}` };
+    try {
+      await this.loginPromise;
     } catch (error) {
       console.error("Erro ao gerar token AUVO:", error.message);
-      return null;
+    } finally {
+      this.loginPromise = null;
     }
+
+    return { Authorization: `Bearer ${this.token}` };
   }
 
   async request(endpoint, method = "GET", body = null) {
@@ -71,10 +82,11 @@ class AuvoClient {
     }
 
     try {
+      console.log(`[AuvoClient] Hitting URL: ${url}`);
       const response = await fetch(url, options);
+      console.log(`[AuvoClient] Status: ${response.status}`);
 
       if (response.status === 401) {
-        // Força renovação do token em caso de Unauthorized inesperado
         this.token = null;
       }
 
@@ -88,15 +100,52 @@ class AuvoClient {
 
   // ==== Wrappers de Endpoints da API ====
 
+  async getApiList(endpoint, params = {}) {
+    // Força pageSize 100 por padrão nas APIs de listagem
+    const p = { pageSize: 100, ...params };
+    const queryString = new URLSearchParams(p).toString();
+    const url = `/${endpoint.replace(/^\//, "")}${queryString ? `?${queryString}` : ""}`;
+    return this.request(url, "GET");
+  }
+
+  // Método auxiliar para varrer TODAS as páginas automaticamente em endpoints secundários
+  async getApiListComplete(endpoint, params = {}) {
+    let page = 1;
+    let hasNextPage = true;
+    const completeList = [];
+
+    while (hasNextPage) {
+      // console.log(`[AuvoClient] Coletando ${endpoint} - Página ${page}...`);
+      const response = await this.getApiList(endpoint, { ...params, page });
+      const result = response?.result;
+      const items = result?.entityList || [];
+      
+      if (items.length > 0) {
+        completeList.push(...items);
+      } else if (Array.isArray(result)) { 
+        // Alguns endpoints do AUVO podem cuspir Arrays diretos na raiz se não houver paginação
+        completeList.push(...result);
+        break;
+      }
+
+      const links = result?.links || [];
+      hasNextPage = links.some(e => e.rel === "nextPage");
+      if (hasNextPage) page++;
+    }
+
+    return { result: { entityList: completeList } };
+  }
+
   async getTasks(params = {}) {
-    // Parametros comuns: dateStart, dateEnd, taskStatusID
-    const queryString = new URLSearchParams(params).toString();
+    const p = { pageSize: 100, ...params };
+    const queryString = new URLSearchParams(p).toString();
     const endpoint = `/tasks${queryString ? `?${queryString}` : ""}`;
     return this.request(endpoint, "GET");
   }
 
   async getCustomers(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
+    const p = { pageSize: 100, ...params };
+    const queryString = new URLSearchParams(p).toString();
     const endpoint = `/customers${queryString ? `?${queryString}` : ""}`;
     return this.request(endpoint, "GET");
   }
