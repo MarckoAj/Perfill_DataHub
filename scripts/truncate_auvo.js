@@ -1,4 +1,4 @@
-import pool from "./src/database/connection.js";
+import pool from "../src/database/connection.js";
 
 async function run() {
   console.log("=== LIMPANDO TABELAS AUVO ===");

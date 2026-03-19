@@ -25,7 +25,7 @@
 
 [x] Estrutura de repositórios
 [x] Persistência de tickets
-[ ] Tabelas RAW
+[x] Tabelas RAW
 [x] Versionamento de schema
 
 ---
@@ -51,9 +51,9 @@
 
 # Integração AUVO
 
-[ ] client AUVO
-[ ] mapper AUVO
-[ ] ingestão de tarefas
+[x] client AUVO
+[x] mapper AUVO (embutido no service/repo)
+[x] ingestão de tarefas
 [ ] webhook handler
 
 ---

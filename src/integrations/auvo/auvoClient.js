@@ -137,8 +137,14 @@ class AuvoClient {
   }
 
   async getTasks(params = {}) {
-    const p = { pageSize: 100, ...params };
-    const queryString = new URLSearchParams(p).toString();
+    const { pageSize = 100, ...filters } = params;
+    const query = { pageSize };
+    
+    if (Object.keys(filters).length > 0) {
+      query.paramFilter = JSON.stringify(filters);
+    }
+
+    const queryString = new URLSearchParams(query).toString();
     const endpoint = `/tasks${queryString ? `?${queryString}` : ""}`;
     return this.request(endpoint, "GET");
   }

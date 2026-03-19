@@ -165,7 +165,7 @@ class TaskRepository {
 
     for (const t of tasks) {
       const values = [
-        parseInt(t.id, 10) || null,
+        parseInt(t.taskID || t.id, 10) || null,
         parseInt(t.idUserFrom, 10) || 0,
         parseInt(t.idUserTo, 10) || 0,
         parseInt(t.priority, 10) || 1, // 1: Baixa

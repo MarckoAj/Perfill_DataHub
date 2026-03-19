@@ -121,28 +121,41 @@ class SyncTasksService {
     await this.syncCustomers();
 
     const params = {};
-    if (startDate) params.dateStart = startDate;
-    if (endDate) params.dateEnd = endDate;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
 
-    const response = await auvoClient.getTasks(params);
-    const tasks = response?.result?.entityList || [];
+    let page = 1;
+    let hasNextPage = true;
+    let totalCount = 0;
 
-    if (tasks.length === 0) {
-      console.log("Nenhuma tarefa encontrada no período para o AUVO.");
-      return;
+    while (hasNextPage) {
+      const response = await auvoClient.getTasks({ ...params, page });
+      const result = response?.result;
+      const tasks = result?.entityList || [];
+
+      if (tasks.length === 0 && page === 1) {
+        console.log("Nenhuma tarefa encontrada no período para o AUVO.");
+        return;
+      }
+
+      if (tasks.length > 0) {
+         console.log(`Processando ${tasks.length} tarefas (Página ${page})...`);
+         await taskRepository.saveRawData("raw_auvo_tasks", tasks);
+         for (const t of tasks) {
+             await this.validateAndInsertMissingEntities(t);
+         }
+         await taskRepository.upsertTasks(tasks);
+         totalCount += tasks.length;
+      }
+
+      const links = result?.links || [];
+      hasNextPage = links.some(e => e.rel === "nextPage");
+      if (hasNextPage) {
+        page++;
+      }
     }
 
-    console.log(`Buscando integridade para ${tasks.length} tarefas...`);
-
-    // Salva JSON bruto
-    await taskRepository.saveRawData("raw_auvo_tasks", tasks);
-
-    for (const t of tasks) {
-        await this.validateAndInsertMissingEntities(t);
-    }
-
-    await taskRepository.upsertTasks(tasks);
-    console.log(`Sincronização de ${tasks.length} Tarefas AUVO concluída.`);
+    console.log(`Sincronização de ${totalCount} Tarefas AUVO concluída.`);
   }
 
   async syncAllAuvo() {

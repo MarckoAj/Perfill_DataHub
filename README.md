@@ -1,56 +1,173 @@
-# Perfill BI Integration (GLPI)
+# Perfill Data Hub
 
-Esta API funciona como um middleware estratégico entre o sistema **GLPI** (Gestão de chamados) e ferramentas de **Business Intelligence** (como Power BI) ou Dashboards customizados.
+O **Perfill Data Hub** é uma plataforma de integração responsável por coletar, armazenar, normalizar e disponibilizar dados operacionais provenientes de múltiplos sistemas corporativos.
 
-Ela extrai e padroniza dados brutos, simplifica as consultas, expõe rotas seguras e de alta performance, e mapeia todas as regras de negócio em um único local, protegendo o banco original e sistemas de consumo.
+O objetivo do projeto é funcionar como um **hub central de dados operacionais**, permitindo que diferentes plataformas compartilhem informações de forma estruturada e que esses dados possam ser utilizados para **monitoramento, automações e análise em ferramentas de BI**.
 
-## 🚀 Tecnologias
+---
 
-- **Node.js** com **Express**
-- **MySQL2** (para banco de staging local)
-- **Jest** e **Supertest** (Testes automatizados e de integração)
-- **CORS**, **Dotenv**, etc.
+# Visão Geral
 
-## 📦 Arquitetura
+Em muitos ambientes de suporte e operação, sistemas diferentes trabalham de forma isolada:
 
-Este projeto foi reestruturado seguindo princípios sólidos, com separação de responsabilidades nas seguintes camadas:
+* sistemas de **Service Desk**
+* plataformas de **gestão de tarefas**
+* ferramentas de **monitoramento de infraestrutura**
 
-```text
+O Perfill Data Hub atua como uma camada intermediária que:
+
+* coleta dados desses sistemas
+* armazena os dados de forma estruturada
+* gera alertas operacionais
+* disponibiliza endpoints para consumo por outras aplicações
+
+---
+
+# Sistemas Integrados
+
+## GLPI
+
+Sistema de Service Desk utilizado para gerenciamento de chamados.
+
+A integração permite:
+
+* coleta de tickets
+* análise de status e responsáveis
+* geração de relatórios
+* integração com ferramentas de BI
+
+---
+
+## AUVO (Planejado)
+
+Sistema de gestão de tarefas de campo.
+
+A futura integração permitirá:
+
+* acompanhamento de tarefas executadas
+* correlação entre tarefas e chamados
+* geração de alertas operacionais
+
+Exemplo:
+
+tarefa AUVO finalizada
+ticket GLPI sem atualização
+
+→ gerar alerta operacional
+
+---
+
+## Zabbix (Planejado)
+
+Sistema de monitoramento de infraestrutura.
+
+A integração permitirá:
+
+* detectar falhas em dispositivos
+* correlacionar falhas com chamados existentes
+* iniciar processos automáticos de atendimento
+
+Exemplo:
+
+dispositivo offline no Zabbix
+↓
+verificar ticket no GLPI
+↓
+abrir tarefa no AUVO
+
+---
+
+# Principais Características
+
+## Plataforma de Integração
+
+O sistema foi projetado como um **Integration Hub**, permitindo conectar múltiplos sistemas operacionais em um único ponto.
+
+---
+
+## Data Pipeline
+
+Os dados coletados passam por um pipeline composto por:
+
+1. ingestão de dados
+2. armazenamento em formato bruto (RAW)
+3. normalização
+4. processamento pelas regras de negócio
+
+Isso permite:
+
+* rastreabilidade completa
+* reprocessamento de dados
+* auditoria de integrações
+
+---
+
+## Alert Engine
+
+O projeto possui um mecanismo de geração de alertas capaz de identificar situações operacionais relevantes, como:
+
+* tickets sem atualização
+* inconsistências entre plataformas
+* falhas de integração
+
+---
+
+## Endpoints para BI
+
+O sistema disponibiliza endpoints voltados para consumo por ferramentas de análise, como **Power BI**, permitindo a criação de dashboards operacionais.
+
+---
+
+## Arquitetura Modular
+
+O projeto segue uma arquitetura modular com separação clara entre camadas:
+
+* API
+* Core (regras de negócio)
+* Integrações externas
+* Repositórios de dados
+* Jobs de sincronização
+
+Essa estrutura facilita:
+
+* manutenção
+* expansão para novas integrações
+* testes automatizados
+
+---
+
+# Estrutura do Projeto
+
+Principais diretórios:
+
 src/
-├── clients/      # Integrações com sistemas externos (Ex: GLPI Client API)
-├── config/       # Configuração global da aplicação (Express)
-├── controllers/  # Recebe requisições HTTP, chama services, envia respostas HTTP
-├── mappers/      # Padroniza dados recebidos do GLPI para o formato BI ou BD
-├── middlewares/  # Camada de interceptação (autenticação, logs, manipulação de erros)
-├── repositories/ # Transações diretas e focadas com o banco de dados da aplicação
-├── routes/       # Pontos de entrada da API (/api/bi, /api/auth)
-├── service/      # Regras de Negócio, orquestração entre repositories e clients
-└── utils/        # Classes auxiliares, como Construtores de URL (GlpiUrlBuilder)
-```
 
-## 🔐 Autenticação e Segurança
+api → rotas e controllers HTTP
+core → regras de negócio
+integrations → comunicação com sistemas externos
+repositories → acesso ao banco de dados
+database → configuração e conexão com o banco
+jobs → rotinas automáticas de sincronização
+shared → utilidades e componentes compartilhados
 
-Há uma rota pública para a página inicial, mas os acessos aos endpoints de negócio (ex: Power BI e Dashboard de Chamados) estão protegidos através de **Tokens estáticos**.
-Estes tokens devem ser configurados no arquivo `.env` para proteção. 
+---
 
-## ⚙️ Como executar localmente
+# Documentação
 
-1. Faça um `git clone` deste repositório
-2. Rode `npm install` no diretório principal.
-3. Configure o arquivo `.env` baseado no `.env.example` preenchendo:
-   - Suas credenciais da API do GLPI.
-   - Suas credenciais do Banco do projeto (Aiven, local, etc).
-   - O usuário/senha e Token secreto para as rotas do Painel de BI.
-4. Execute `npm run dev` (com nodemon) ou `npm start`.
+A documentação técnica detalhada do projeto está disponível em:
 
-A aplicação escutará por padrão na porta `3000`.
+docs/
 
-## 🧪 Testes de Integração
+* architecture.md
+* data-pipeline.md
+* integrations.md
+* roadmap.md
+* implementation-status.md
 
-A aplicação conta com um suite completo na pasta `__tests__/`. Usamos o **Jest** configurado com **Supertest** para cobrir as rotas de ponta a ponta ("mockando" as dependências externas de DB e GLPI).
+---
 
-Para rodá-los, utilize o comando:
+# Objetivo do Projeto
 
-```bash
-npm test
-```
+Este projeto foi desenvolvido como uma **plataforma de integração e automação operacional**, com foco em ambientes que utilizam múltiplas ferramentas para suporte técnico, monitoramento e gestão de tarefas.
+
+A proposta é centralizar dados, gerar inteligência operacional e permitir automações entre diferentes sistemas.
