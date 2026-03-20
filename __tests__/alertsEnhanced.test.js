@@ -52,7 +52,7 @@ jest.unstable_mockModule("../src/middlewares/authMiddleware.js", () => ({
   default: (req, res, next) => next(),
 }));
 
-describe("Alerts API - Enhanced Features", () => {
+describe("API de Alertas - Recursos Avançados", () => {
   let app;
 
   beforeAll(async () => {
@@ -60,8 +60,8 @@ describe("Alerts API - Enhanced Features", () => {
     app = customExpress();
   });
 
-  describe("GET /api/alerts with filters", () => {
-    it("should support date range filtering", async () => {
+  describe("GET /api/alerts com filtros", () => {
+    it("deve suportar filtragem por intervalo de datas", async () => {
       const response = await request(app)
         .get("/api/alerts")
         .query({
@@ -83,7 +83,7 @@ describe("Alerts API - Enhanced Features", () => {
       });
     });
 
-    it("should support state and severity filtering", async () => {
+    it("deve suportar filtragem por estado e gravidade", async () => {
       const response = await request(app)
         .get("/api/alerts")
         .query({
@@ -103,7 +103,7 @@ describe("Alerts API - Enhanced Features", () => {
   });
 
   describe("GET /api/alerts/:ticketId", () => {
-    it("should return alerts for specific ticket", async () => {
+    it("deve retornar alertas para um ticket específico", async () => {
       const response = await request(app).get("/api/alerts/123");
 
       expect(response.status).toBe(200);

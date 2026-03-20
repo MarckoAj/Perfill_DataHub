@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../database/connection.js";
+import alertRepository from "../core/alerts/alertRepository.js";
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get("/health", (req, res) => {
 router.get("/ready", async (req, res) => {
     try {
         // Executa uma query simples de 1 segundo para testar o pool
-        await pool.query("SELECT 1");
+        await alertRepository.checkDatabaseConnection();
         
         return res.status(200).json({
             status: "READY",

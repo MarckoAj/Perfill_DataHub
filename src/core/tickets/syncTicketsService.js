@@ -1,5 +1,6 @@
 import glpiTickets from "../../services/glpi_service.js";
-import ticketRepository from "./ticketRepository.js";
+import glpiTicketRepository from "../../repositories/glpi/glpiTicketRepository.js";
+import glpiRawRepository from "../../repositories/glpi/glpiRawRepository.js";
 import glpiUrlBuilder from "../../utils/glpiUrlBuilder.js";
 import glpiClient from "../../integrations/glpi/glpiClient.js";
 import alertEngine from "../alerts/alertEngine.js";
@@ -34,10 +35,10 @@ class SyncTicketsService {
       }
 
       // 1. Salvar na Camada RAW
-      await ticketRepository.insertRawTickets(rawTickets);
+      await glpiRawRepository.insertRawTickets(rawTickets);
       
       // 2. Salvar na Camada Normalizada
-      await ticketRepository.upsertTickets(processedTickets);
+      await glpiTicketRepository.upsertTickets(processedTickets);
 
       const alertSummary = alertEngine.processTickets(processedTickets);
       await alertRepository.upsertActiveAlerts(alertSummary.active);
@@ -68,7 +69,7 @@ class SyncTicketsService {
       await this.syncStatus(status);
     }
 
-    await ticketRepository.resetAtrasadoFlags();
+    await glpiTicketRepository.resetAtrasadoFlags();
     await this.syncStatus("atrasado");
   }
 }

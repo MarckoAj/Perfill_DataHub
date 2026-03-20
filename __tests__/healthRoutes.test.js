@@ -11,7 +11,7 @@ jest.unstable_mockModule("../src/core/alerts/alertRepository.js", () => ({
   },
 }));
 
-describe("Health API Routes", () => {
+describe("Rotas da API de Saúde (Health)", () => {
   let app;
 
   beforeAll(async () => {
@@ -19,7 +19,7 @@ describe("Health API Routes", () => {
     app = customExpress();
   });
 
-  it("should return health status at /api/health", async () => {
+  it("deve retornar status de saúde em /api/health", async () => {
     const response = await request(app).get("/api/health");
 
     expect(response.status).toBe(200);
@@ -27,7 +27,7 @@ describe("Health API Routes", () => {
     expect(response.body).toHaveProperty("service", "perfill-data-hub");
   });
 
-  it("should return alerts summary at /api/health/alerts", async () => {
+  it("deve retornar o resumo de alertas em /api/health/alerts", async () => {
     const response = await request(app).get("/api/health/alerts");
 
     expect(response.status).toBe(200);

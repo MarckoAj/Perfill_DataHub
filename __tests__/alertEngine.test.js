@@ -1,11 +1,11 @@
 import alertEngine, { ALERT_TYPES } from "../src/core/alerts/alertEngine.js";
 
-describe("alertEngine", () => {
+describe("Motor de Alertas", () => {
   beforeEach(() => {
     alertEngine.resetState();
   });
 
-  it("should open new_unhandled alert for new stale tickets", () => {
+  it("deve abrir alerta new_unhandled para tickets novos parados", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
     const staleDate = new Date(now.getTime() - 6 * 60 * 1000).toISOString();
 
@@ -21,7 +21,7 @@ describe("alertEngine", () => {
     expect(result.active[0].type).toBe(ALERT_TYPES.NEW_UNHANDLED);
   });
 
-  it("should open paused_stale alert for pending tickets without updates", () => {
+  it("deve abrir alerta paused_stale para tickets pendentes sem atualização", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
     const staleDate = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -37,7 +37,7 @@ describe("alertEngine", () => {
     expect(result.active[0].type).toBe(ALERT_TYPES.PAUSED_STALE);
   });
 
-  it("should open sla_overdue alert when ticket is overdue", () => {
+  it("deve abrir alerta sla_overdue quando o ticket estiver atrasado", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
 
     const result = alertEngine.processTickets([
@@ -52,7 +52,7 @@ describe("alertEngine", () => {
     expect(result.active[0].type).toBe(ALERT_TYPES.SLA_OVERDUE);
   });
 
-  it("should not duplicate open alerts between runs", () => {
+  it("não deve duplicar alertas abertos entre execuções", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
     const staleDate = new Date(now.getTime() - 6 * 60 * 1000).toISOString();
 
@@ -69,7 +69,7 @@ describe("alertEngine", () => {
     expect(second.counters.active).toBe(1);
   });
 
-  it("should close previously open alert when condition is no longer true", () => {
+  it("deve fechar alerta aberto anteriormente quando a condição não for mais verdadeira", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
     const staleDate = new Date(now.getTime() - 6 * 60 * 1000).toISOString();
 

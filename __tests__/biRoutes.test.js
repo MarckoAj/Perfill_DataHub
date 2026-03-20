@@ -15,7 +15,7 @@ jest.unstable_mockModule("../src/repositories/ticketRepository.js", () => ({
     }
 }));
 
-describe("BI Routes", () => {
+describe("Rotas de BI", () => {
     let app;
 
     beforeAll(async () => {
@@ -29,12 +29,12 @@ describe("BI Routes", () => {
         jest.clearAllMocks();
     });
 
-    it("should reject access without auth token", async () => {
+    it("deve rejeitar acesso sem token de autenticação", async () => {
         const response = await request(app).get("/api/bi/tickets");
         expect(response.status).toBe(401);
     });
 
-    it("should reject access with invalid token", async () => {
+    it("deve rejeitar acesso com token inválido", async () => {
         const response = await request(app)
             .get("/api/bi/tickets")
             .set("Authorization", "Bearer invalid_token");
@@ -42,7 +42,7 @@ describe("BI Routes", () => {
         expect(response.status).toBe(401);
     });
 
-    it("should return dashboard tickets correctly with valid token", async () => {
+    it("deve retornar tickets do painel corretamente com token válido", async () => {
         const response = await request(app)
             .get("/api/bi/tickets")
             .set("Authorization", "Bearer secret_test_token");

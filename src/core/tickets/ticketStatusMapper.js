@@ -8,30 +8,30 @@ const STATUS_NAME_TO_ID = Object.freeze({
   atrasado: 7,
 });
 
-const STATUS_ID_TO_NAME = Object.freeze({
-  1: "novo",
-  2: "atribuido",
-  3: "planejado",
-  4: "pendente",
-  5: "solucionado",
-  6: "fechado",
-  7: "atrasado",
-});
+const STATUS_ID_TO_NAME = Object.freeze(
+  Object.fromEntries(
+    Object.entries(STATUS_NAME_TO_ID).map(([key, value]) => [value, key])
+  )
+);
+
+const OVERDUE_STATUS = STATUS_NAME_TO_ID.atrasado;
 
 class TicketStatusMapper {
   toGlpiStatusId(statusName) {
-    if (!statusName) return null;
-    return STATUS_NAME_TO_ID[String(statusName).toLowerCase()] || null;
+    if (statusName === null || statusName === undefined) return null;
+
+    return STATUS_NAME_TO_ID[String(statusName).toLowerCase()] ?? null;
   }
 
   toDataHubStatus(statusId) {
-    if (statusId === null || statusId === undefined) return "indefinido";
-    return STATUS_ID_TO_NAME[Number(statusId)] || "indefinido";
+    if (statusId === null || statusId === undefined) return null;
+
+    return STATUS_ID_TO_NAME[Number(statusId)] ?? null;
   }
 
   isOverdue(statusNameOrId) {
     if (typeof statusNameOrId === "number") {
-      return statusNameOrId === 7;
+      return statusNameOrId === OVERDUE_STATUS;
     }
 
     return String(statusNameOrId).toLowerCase() === "atrasado";

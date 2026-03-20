@@ -11,7 +11,7 @@ jest.unstable_mockModule("../src/utils/glpiUrlBuilder.js", () => ({
 // Mock do método fetch nativo do NodeJS ANTES do import
 global.fetch = jest.fn();
 
-describe("GLPI Client and Service Integration", () => {
+describe("Integração do Cliente e Serviço GLPI", () => {
     let glpi_client;
     let glpi_service;
 
@@ -33,7 +33,7 @@ describe("GLPI Client and Service Integration", () => {
         jest.clearAllMocks();
     });
 
-    it("should successfully init session and fetch a ticket", async () => {
+    it("deve iniciar sessão com sucesso e buscar um ticket", async () => {
         // Mock initSession response
         fetch.mockResolvedValueOnce({
             ok: true,
@@ -62,7 +62,7 @@ describe("GLPI Client and Service Integration", () => {
         expect(ticketsResponse[0]["2"]).toBe(999);
     });
 
-    it("should process and map tickets properly in glpiService", async () => {
+    it("deve processar e mapear tickets corretamente no glpiService", async () => {
         // Mockando diretamente a reposta do glpiRequestData para focar apenas no Service -> Mapper
         jest.spyOn(glpi_client, "glpiRequestData").mockResolvedValueOnce([
             {

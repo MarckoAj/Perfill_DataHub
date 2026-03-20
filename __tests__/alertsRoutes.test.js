@@ -36,7 +36,7 @@ jest.unstable_mockModule("../src/core/alerts/alertRepository.js", () => ({
   },
 }));
 
-describe("Alerts API Routes", () => {
+describe("Rotas da API de Alertas", () => {
   let app;
 
   beforeAll(async () => {
@@ -53,12 +53,12 @@ describe("Alerts API Routes", () => {
     jest.clearAllMocks();
   });
 
-  it("should reject access without auth token", async () => {
+  it("deve rejeitar acesso sem token de autenticação", async () => {
     const response = await request(app).get("/api/alerts");
     expect(response.status).toBe(401);
   });
 
-  it("should return paginated alerts with valid token", async () => {
+  it("deve retornar alertas paginados com token válido", async () => {
     const response = await request(app)
       .get("/api/alerts?state=open&severity=medium&limit=10&offset=0")
       .set("Authorization", "Bearer secret_test_token");

@@ -42,7 +42,7 @@ mockGetGlpiSyncStatus.mockResolvedValue({
   overdue_tickets: 3,
 });
 
-describe("Integrations API", () => {
+describe("API de Integrações", () => {
   let app;
 
   beforeAll(async () => {
@@ -51,7 +51,7 @@ describe("Integrations API", () => {
   });
 
   describe("GET /api/integrations", () => {
-    it("should return system health status", async () => {
+    it("deve retornar o status de saúde do sistema", async () => {
       const response = await request(app).get("/api/integrations");
 
       expect(response.status).toBe(200);
@@ -72,7 +72,7 @@ describe("Integrations API", () => {
       });
     });
 
-    it("should return 503 when system health is degraded", async () => {
+    it("deve retornar 503 quando a saúde do sistema estiver degradada", async () => {
       mockGetSystemHealth.mockResolvedValueOnce({
         status: "error",
         error: "Database connection failed",
@@ -87,7 +87,7 @@ describe("Integrations API", () => {
   });
 
   describe("GET /api/integrations/glpi", () => {
-    it("should return GLPI specific status", async () => {
+    it("deve retornar o status específico do GLPI", async () => {
       const response = await request(app).get("/api/integrations/glpi");
 
       expect(response.status).toBe(200);

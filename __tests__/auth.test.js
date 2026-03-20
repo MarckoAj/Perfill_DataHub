@@ -9,7 +9,7 @@ jest.unstable_mockModule("../src/repositories/userRepository.js", () => ({
     }
 }));
 
-describe("Auth Routes", () => {
+describe("Rotas de Autenticação", () => {
     let app;
     let userRepository;
 
@@ -26,7 +26,7 @@ describe("Auth Routes", () => {
         jest.clearAllMocks();
     });
 
-    it("should return a token for valid credentials", async () => {
+    it("deve retornar um token para credenciais válidas", async () => {
         const request = (await import("supertest")).default;
         
         const hashedPassword = await bcryptjs.hash("testpass", 10);
@@ -45,7 +45,7 @@ describe("Auth Routes", () => {
         expect(response.body).toHaveProperty("token", "secret_test_token");
     });
 
-    it("should return 401 for invalid credentials", async () => {
+    it("deve retornar 401 para credenciais inválidas", async () => {
         const request = (await import("supertest")).default;
 
         // Usuário não existe
@@ -59,7 +59,7 @@ describe("Auth Routes", () => {
         expect(response.body).toHaveProperty("error", "Credenciais inválidas");
     });
 
-    it("should return 401 if missing credentials", async () => {
+    it("deve retornar 401 se faltar credenciais", async () => {
         const request = (await import("supertest")).default;
 
         const response = await request(app)

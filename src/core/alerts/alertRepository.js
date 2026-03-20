@@ -212,6 +212,9 @@ class AlertRepository {
       },
     };
   }
+  async checkDatabaseConnection() {
+    await pool.query("SELECT 1");
+  }
 }
 
 export default new AlertRepository();

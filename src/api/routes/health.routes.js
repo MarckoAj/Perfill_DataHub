@@ -1,5 +1,4 @@
 import { Router } from "express";
-import pool from "../../database/connection.js";
 import alertRepository from "../../core/alerts/alertRepository.js";
 
 const router = Router();
@@ -22,7 +21,7 @@ router.get("/live", (req, res) => {
 
 router.get("/ready", async (req, res, next) => {
   try {
-    await pool.query("SELECT 1");
+    await alertRepository.checkDatabaseConnection();
     res.status(200).json({
       status: "ready",
       database: "connected",

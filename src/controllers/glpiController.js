@@ -1,6 +1,6 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import glpiTickets from "../services/glpi_service.js";
-import ticketRepository from "../repositories/ticketRepository.js";
+import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 import syncService from "../core/tickets/syncTicketsService.js";
 import alertRepository from "../core/alerts/alertRepository.js";
 
@@ -13,7 +13,7 @@ export const getTicketsByStatus = asyncHandler(async (req, res) => {
 export const getTicketsForBi = asyncHandler(async (req, res) => {
   const { startDate, endDate, statusGroup, limit, offset } = req.query;
   
-  const tickets = await ticketRepository.getAllTickets(
+  const tickets = await glpiTicketRepository.getAllTickets(
     startDate, 
     endDate, 
     statusGroup || 'todos', 
@@ -26,7 +26,7 @@ export const getTicketsForBi = asyncHandler(async (req, res) => {
 
 export const getTicketsStats = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.query;
-  const stats = await ticketRepository.getStats(startDate, endDate);
+  const stats = await glpiTicketRepository.getStats(startDate, endDate);
   res.status(200).json(stats);
 });
 
