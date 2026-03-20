@@ -1,14 +1,14 @@
 import pool from "../../database/connection.js";
 
 class AuvoUserRepository {
-  async upsertUsers(users) {
+  async upsertUsers(users, isAlternative = false) {
     if (!users || users.length === 0) return;
 
     const query = `
       INSERT INTO users_auvo (
         userId, externalId, name, login, email, jobPosition,
-        userType, address, active, registrationDate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        userType, address, active, registrationDate, insertedByAlternativeMethod
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         externalId = VALUES(externalId),
         name = VALUES(name),
@@ -18,7 +18,8 @@ class AuvoUserRepository {
         userType = VALUES(userType),
         address = VALUES(address),
         active = VALUES(active),
-        registrationDate = VALUES(registrationDate)
+        registrationDate = VALUES(registrationDate),
+        insertedByAlternativeMethod = VALUES(insertedByAlternativeMethod)
     `;
 
     for (const u of users) {
@@ -31,8 +32,9 @@ class AuvoUserRepository {
         u.jobPosition ? String(u.jobPosition).substring(0, 100) : null,
         parseInt(u.userType?.userTypeId, 10) || 1,
         u.address ? String(u.address).substring(0, 255) : null,
-        u.active ? 1 : 0,
-        u.registrationDate && u.registrationDate !== "" ? u.registrationDate : null
+        u.unavailableForTasks === true ? 0 : 1,
+        u.registrationDate && u.registrationDate !== "" ? u.registrationDate : null,
+        isAlternative ? 1 : 0
       ];
 
       try {

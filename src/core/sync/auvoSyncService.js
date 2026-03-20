@@ -4,13 +4,35 @@ import auvoCustomerRepository from "../../repositories/auvo/auvoCustomerReposito
 import auvoSegmentRepository from "../../repositories/auvo/auvoSegmentRepository.js";
 import auvoGroupRepository from "../../repositories/auvo/auvoGroupRepository.js";
 import auvoTaskRepository from "../../repositories/auvo/auvoTaskRepository.js";
+import auvoQuestionnaireRepository from "../../repositories/auvo/auvoQuestionnaireRepository.js";
+import auvoTaskTypeRepository from "../../repositories/auvo/auvoTaskTypeRepository.js";
 
-class SyncTasksService {
+class AuvoSyncService {
   constructor() {
     this.batchSize = 1000;
   }
 
   // ---- Ingestão Failsafe (Validations) de Estruturas Faltantes ----
+
+  async validateTaskTypeMissingEntities(taskType) {
+    const { creatorId, standardQuestionnaireId } = taskType;
+
+    if (creatorId && !(await auvoUserRepository.exists(creatorId))) {
+      const response = await auvoClient.getAuvoEntity("users", creatorId);
+      if (response && response.result) {
+         console.log(`[AuvoSync/Failsafe] Criador do Tipo de Tarefa ${creatorId} não encontrado. Cadastrando...`);
+         await auvoUserRepository.upsertUsers([response.result], true);
+      }
+    }
+
+    if (standardQuestionnaireId && standardQuestionnaireId > 0 && !(await auvoQuestionnaireRepository.exists(standardQuestionnaireId))) {
+      const response = await auvoClient.getAuvoEntity("questionnaires", standardQuestionnaireId);
+      if (response && response.result) {
+         console.log(`[AuvoSync/Failsafe] Questionário base ${standardQuestionnaireId} não encontrado. Cadastrando...`);
+         await auvoQuestionnaireRepository.upsertQuestionnaires([response.result]);
+      }
+    }
+  }
 
   async validateAndInsertMissingEntities(task) {
     const { idUserFrom, idUserTo, customerId, taskType } = task;
@@ -20,7 +42,7 @@ class SyncTasksService {
       const response = await auvoClient.getAuvoEntity("users", idUserFrom);
       if (response && response.result) {
          console.log(`[AuvoSync] Usuário originador ${idUserFrom} não encontrado na listagem geral. Cadastrando...`);
-         await auvoUserRepository.upsertUsers([response.result]);
+         await auvoUserRepository.upsertUsers([response.result], true);
       }
     }
 
@@ -29,7 +51,7 @@ class SyncTasksService {
       const response = await auvoClient.getAuvoEntity("users", idUserTo);
       if (response && response.result) {
          console.log(`[AuvoSync] Usuário destino ${idUserTo} não encontrado na listagem geral. Cadastrando...`);
-         await auvoUserRepository.upsertUsers([response.result]);
+         await auvoUserRepository.upsertUsers([response.result], true);
       }
     }
 
@@ -39,6 +61,16 @@ class SyncTasksService {
       if (response && response.result) {
          console.log(`[AuvoSync] Cliente ${customerId} não encontrado. Cadastrando...`);
          await auvoCustomerRepository.upsertCustomers([response.result]);
+      }
+    }
+
+    // 4. Valida Tipo da Tarefa (taskType)
+    if (taskType && taskType.id && !(await auvoTaskTypeRepository.exists(taskType.id))) {
+      const response = await auvoClient.getAuvoEntity("taskTypes", taskType.id);
+      if (response && response.result) {
+         console.log(`[AuvoSync] Tipo de Tarefa ${taskType.id} não encontrado. Cadastrando...`);
+         await this.validateTaskTypeMissingEntities(response.result); // Failsafe encadeado das FKs do próprio tipo
+         await auvoTaskTypeRepository.upsertTaskTypes([response.result]);
       }
     }
   }
@@ -82,45 +114,61 @@ class SyncTasksService {
      await auvoTaskRepository.disableForeignKeyChecks();
 
      try {
-       await this.syncSegments();
-       await this.syncGroups();
-       
        console.log("Iniciando sincronização de Clientes AUVO...");
-     let page = 1;
-     let hasNextPage = true;
-     let totalCount = 0;
+       let page = 1;
+       let hasNextPage = true;
+       let totalCount = 0;
 
-     while (hasNextPage) {
-       console.log(`Buscando Clientes AUVO - Página ${page}...`);
-       const response = await auvoClient.getCustomers({ page });
-       const result = response?.result;
-       const customers = result?.entityList || [];
+       while (hasNextPage) {
+         console.log(`Buscando Clientes AUVO - Página ${page}...`);
+         const response = await auvoClient.getCustomers({ page });
+         const result = response?.result;
+         const customers = result?.entityList || [];
 
-       if (customers.length > 0) {
-          await auvoTaskRepository.saveRawData("raw_auvo_customers", customers);
-          await auvoCustomerRepository.upsertCustomers(customers);
-          totalCount += customers.length;
+         if (customers.length > 0) {
+            await auvoTaskRepository.saveRawData("raw_auvo_customers", customers);
+            await auvoCustomerRepository.upsertCustomers(customers);
+            totalCount += customers.length;
+         }
+
+         const links = result?.links || [];
+         hasNextPage = links.some(e => e.rel === "nextPage");
+         
+         if (hasNextPage) {
+           page++;
+         }
        }
-
-       const links = result?.links || [];
-       hasNextPage = links.some(e => e.rel === "nextPage");
-       
-       if (hasNextPage) {
-         page++;
-       }
-     }
-     console.log(`Sincronização concluída: ${totalCount} Clientes AUVO salvos.`);
+       console.log(`Sincronização concluída: ${totalCount} Clientes AUVO salvos.`);
     } finally {
       await auvoTaskRepository.enableForeignKeyChecks();
+    }
+  }
+
+  async syncQuestionnaires() {
+    const response = await auvoClient.getApiListComplete("questionnaires");
+    const questionnaires = response?.result?.entityList || response?.result || [];
+    if (questionnaires.length > 0) {
+      await auvoQuestionnaireRepository.upsertQuestionnaires(questionnaires);
+      console.log(`Sincronizados ${questionnaires.length} Questionários AUVO.`);
+    }
+  }
+
+  async syncTaskTypes() {
+    // Utilizando o conector "resiliente" devido ao Bug de Paginação do Auvo
+    const response = await auvoClient.getTaskTypesComplete();
+    const taskTypes = response?.result?.entityList || response?.result || [];
+    if (taskTypes.length > 0) {
+      for (const t of taskTypes) {
+         await this.validateTaskTypeMissingEntities(t);
+      }
+      await auvoTaskTypeRepository.upsertTaskTypes(taskTypes);
+      console.log(`Sincronizados ${taskTypes.length} Tipos de Tarefa AUVO.`);
     }
   }
 
   async syncTasks(startDate, endDate) {
     console.log("Iniciando sincronização de Tarefas AUVO...");
     
-    // Sincroniza Clientes primeiro para evitar quebras de Foreign Key
-    await this.syncCustomers();
-
     await auvoTaskRepository.disableForeignKeyChecks();
 
     try {
@@ -173,7 +221,11 @@ class SyncTasksService {
 
     try {
       await this.syncUsers();
+      await this.syncSegments();
+      await this.syncGroups();
       await this.syncCustomers();
+      await this.syncQuestionnaires();
+      await this.syncTaskTypes();
       await this.syncTasks();
     } finally {
       await auvoTaskRepository.enableForeignKeyChecks();
@@ -183,4 +235,4 @@ class SyncTasksService {
   }
 }
 
-export default new SyncTasksService();
+export default new AuvoSyncService();

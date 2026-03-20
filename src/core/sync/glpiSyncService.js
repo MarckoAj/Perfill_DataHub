@@ -6,7 +6,7 @@ import glpiClient from "../../integrations/glpi/glpiClient.js";
 import alertEngine from "../alerts/alertEngine.js";
 import alertRepository from "../alerts/alertRepository.js";
 
-class SyncTicketsService {
+class GlpiSyncService {
   constructor() {
     this.batchSize = 1000;
   }
@@ -74,4 +74,4 @@ class SyncTicketsService {
   }
 }
 
-export default new SyncTicketsService();
+export default new GlpiSyncService();

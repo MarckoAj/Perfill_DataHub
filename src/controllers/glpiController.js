@@ -1,7 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import glpiTickets from "../services/glpi_service.js";
 import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
-import syncService from "../core/tickets/syncTicketsService.js";
+import glpiSyncService from "../core/sync/glpiSyncService.js";
 import alertRepository from "../core/alerts/alertRepository.js";
 
 export const getTicketsByStatus = asyncHandler(async (req, res) => {
@@ -32,7 +32,7 @@ export const getTicketsStats = asyncHandler(async (req, res) => {
 
 export const syncBiManual = asyncHandler(async (req, res) => {
   // Dispara a sincronização de forma assíncrona (não prende a resposta HTTP)
-  syncService.syncAll().then(() => console.log("Sincronização manual finalizada com sucesso."))
+  glpiSyncService.syncAll().then(() => console.log("Sincronização manual finalizada com sucesso."))
     .catch((e) => console.error("Erro na sincronização manual:", e));
 
   // Retorna um JSON simplificado

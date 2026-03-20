@@ -1,5 +1,5 @@
 import moment from "moment";
-import syncTasksService from "../src/core/tasks/syncTasksService.js";
+import auvoSyncService from "../src/core/sync/auvoSyncService.js";
 
 async function run() {
   console.log("=== INICIANDO CARGA HISTÓRICA DE TAREFAS (BACKFILL) ===");
@@ -17,7 +17,7 @@ async function run() {
 
       console.log(`[Backfill] Sincronizando período: ${startDate} até ${endDate}...`);
       try {
-         await syncTasksService.syncTasks(startDate, endDate);
+         await auvoSyncService.syncTasks(startDate, endDate);
       } catch (error) {
          console.error(`[Backfill] Erro no período ${startDate} - ${endDate}:`, error.message);
       }

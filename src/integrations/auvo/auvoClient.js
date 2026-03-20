@@ -164,6 +164,38 @@ class AuvoClient {
   async getQuestionnaires() {
     return this.request("/questionnaires", "GET");
   }
+
+  // =========================================================================
+  // WORKAROUND / HACK: BUG NA API DO AUVO (Somente Endpoint /taskTypes)
+  // Motivo: A API não retorna 'totalItems' (sempre 0) e omite a string de 
+  // 'nextPage' na array de links no header da resposta. 
+  // Solução: Iterar manualmente as páginas ignorando metadados até que a 
+  // API retorne uma lista menor que a capacidade (100) ou vazia.
+  // =========================================================================
+  async getTaskTypesComplete(params = {}) {
+    let page = 1;
+    let hasNextPage = true;
+    const completeList = [];
+
+    while (hasNextPage) {
+      const response = await this.getApiList("taskTypes", { ...params, page });
+      // Extrai Array puro em result ou encapsulado dentro de entityList
+      const items = Array.isArray(response?.result) ? response.result : (response?.result?.entityList || []);
+
+      if (items.length > 0) {
+        completeList.push(...items);
+        if (items.length === 100) {
+          page++;
+        } else {
+          hasNextPage = false;
+        }
+      } else {
+        hasNextPage = false;
+      }
+    }
+
+    return { result: { entityList: completeList } };
+  }
 }
 
 export default new AuvoClient();

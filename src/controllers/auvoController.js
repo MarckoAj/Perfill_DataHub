@@ -1,11 +1,11 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import syncTasksService from "../core/tasks/syncTasksService.js";
+import auvoSyncService from "../core/sync/auvoSyncService.js";
 
 export const syncAuvoManual = asyncHandler(async (req, res) => {
     const { startDate, endDate } = req.body; // Parametros opcionais
     
     console.log(`[AuvoController] Iniciando sincronização manual...`);
-    await syncTasksService.syncTasks(startDate, endDate);
+    await auvoSyncService.syncTasks(startDate, endDate);
     
     res.status(200).json({
         success: true,
