@@ -1,7 +1,7 @@
 import request from "supertest";
 import { jest } from "@jest/globals";
 
-jest.unstable_mockModule("../src/core/alerts/alertRepository.js", () => ({
+jest.unstable_mockModule("../src/repositories/alertRepository.js", () => ({
   default: {
     getAlerts: jest.fn().mockResolvedValue({
       data: [

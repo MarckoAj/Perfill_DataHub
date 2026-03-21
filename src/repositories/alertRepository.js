@@ -1,4 +1,4 @@
-import pool from "../../database/connection.js";
+import pool from "../database/connection.js";
 
 class AlertRepository {
   async upsertActiveAlerts(alerts) {

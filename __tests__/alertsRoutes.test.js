@@ -25,7 +25,7 @@ const getAlertsMock = jest.fn().mockResolvedValue({
   },
 });
 
-jest.unstable_mockModule("../src/core/alerts/alertRepository.js", () => ({
+jest.unstable_mockModule("../src/repositories/alertRepository.js", () => ({
   default: {
     getAlerts: getAlertsMock,
     getSummary: jest.fn().mockResolvedValue({

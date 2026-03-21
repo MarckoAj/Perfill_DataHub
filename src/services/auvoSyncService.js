@@ -1,11 +1,11 @@
-import auvoClient from "../../integrations/auvo/auvoClient.js";
-import auvoUserRepository from "../../repositories/auvo/auvoUserRepository.js";
-import auvoCustomerRepository from "../../repositories/auvo/auvoCustomerRepository.js";
-import auvoSegmentRepository from "../../repositories/auvo/auvoSegmentRepository.js";
-import auvoGroupRepository from "../../repositories/auvo/auvoGroupRepository.js";
-import auvoTaskRepository from "../../repositories/auvo/auvoTaskRepository.js";
-import auvoQuestionnaireRepository from "../../repositories/auvo/auvoQuestionnaireRepository.js";
-import auvoTaskTypeRepository from "../../repositories/auvo/auvoTaskTypeRepository.js";
+import auvoClient from "../integrations/auvo/auvoClient.js";
+import auvoUserRepository from "../repositories/auvo/auvoUserRepository.js";
+import auvoCustomerRepository from "../repositories/auvo/auvoCustomerRepository.js";
+import auvoSegmentRepository from "../repositories/auvo/auvoSegmentRepository.js";
+import auvoGroupRepository from "../repositories/auvo/auvoGroupRepository.js";
+import auvoTaskRepository from "../repositories/auvo/auvoTaskRepository.js";
+import auvoQuestionnaireRepository from "../repositories/auvo/auvoQuestionnaireRepository.js";
+import auvoTaskTypeRepository from "../repositories/auvo/auvoTaskTypeRepository.js";
 
 class AuvoSyncService {
   constructor() {

@@ -4,7 +4,7 @@ import { jest } from "@jest/globals";
 const mockGetSystemHealth = jest.fn();
 const mockGetGlpiSyncStatus = jest.fn();
 
-jest.unstable_mockModule("../src/core/integrations/integrationRepository.js", () => ({
+jest.unstable_mockModule("../src/repositories/integrationRepository.js", () => ({
   default: {
     getSystemHealth: mockGetSystemHealth,
     getGlpiSyncStatus: mockGetGlpiSyncStatus,

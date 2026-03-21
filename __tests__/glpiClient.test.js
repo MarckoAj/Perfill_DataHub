@@ -25,7 +25,7 @@ describe("Integração do Cliente e Serviço GLPI", () => {
         });
 
         // Precisamos importar dinamicamente após os mocks
-        glpi_client = (await import("../src/integrations/glpi_client.js")).default;
+        glpi_client = (await import("../src/integrations/glpi/glpiClient.js")).default;
         glpi_service = (await import("../src/services/glpi_service.js")).default;
     });
 

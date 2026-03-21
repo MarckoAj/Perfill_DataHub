@@ -1,6 +1,6 @@
 import he from "he";
 import customDate from "../utils/customDate.js";
-import ticketStatusMapper from "../core/tickets/ticketStatusMapper.js";
+import ticketStatusMapper from "./ticketStatusMapper.js";
 
 class TicketMapper {
   constructor() {

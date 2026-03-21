@@ -1,7 +1,7 @@
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
-import glpi_client from "../integrations/glpi_client.js";
+import glpi_client from "../integrations/glpi/glpiClient.js";
 import ticketMapper from "../mappers/ticketMapper.js";
-import ticketStatusMapper from "../core/tickets/ticketStatusMapper.js";
+import ticketStatusMapper from "../mappers/ticketStatusMapper.js";
 
 class GlpiTickets {
     constructor() {

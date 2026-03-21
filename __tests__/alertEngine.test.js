@@ -1,4 +1,4 @@
-import alertEngine, { ALERT_TYPES } from "../src/core/alerts/alertEngine.js";
+import alertEngine, { ALERT_TYPES } from "../src/services/alertEngine.js";
 
 describe("Motor de Alertas", () => {
   beforeEach(() => {

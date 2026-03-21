@@ -1,1 +1,1 @@
-export { default } from "../core/sync/glpiSyncService.js";
+export { default } from "./glpiSyncService.js";

@@ -4,7 +4,7 @@ import biRoutes from "../routes/biRoutes.js";
 import routes from "../routes/routes.js";
 import authRoutes from "../routes/authRoutes.js";
 import healthRoutes from "../routes/healthRoutes.js";
-import apiHealthRoutes from "../api/routes/health.routes.js";
+import apiHealthRoutes from "../routes/healthRoutes.js";
 import integrationRoutes from "../routes/integrationRoutes.js";
 import notFoundHandler from "../shared/errors/notFoundHandler.js";
 import errorHandler from "../shared/errors/errorHandler.js";

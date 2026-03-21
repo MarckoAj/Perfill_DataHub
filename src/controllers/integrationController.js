@@ -1,5 +1,5 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import integrationRepository from "../core/integrations/integrationRepository.js";
+import integrationRepository from "../repositories/integrationRepository.js";
 
 export const getIntegrationHealth = asyncHandler(async (req, res) => {
   const health = await integrationRepository.getSystemHealth();

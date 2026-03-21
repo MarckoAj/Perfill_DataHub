@@ -1,8 +1,8 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import glpiTickets from "../services/glpi_service.js";
 import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
-import glpiSyncService from "../core/sync/glpiSyncService.js";
-import alertRepository from "../core/alerts/alertRepository.js";
+import glpiSyncService from "../services/glpiSyncService.js";
+import alertRepository from "../repositories/alertRepository.js";
 
 export const getTicketsByStatus = asyncHandler(async (req, res) => {
   const { status } = req.params;

@@ -1,5 +1,5 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import auvoSyncService from "../core/sync/auvoSyncService.js";
+import auvoSyncService from "../services/auvoSyncService.js";
 
 export const syncAuvoManual = asyncHandler(async (req, res) => {
     const { startDate, endDate } = req.body; // Parametros opcionais

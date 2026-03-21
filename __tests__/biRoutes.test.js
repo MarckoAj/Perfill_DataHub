@@ -2,7 +2,7 @@ import request from "supertest";
 import { jest } from "@jest/globals";
 
 // Mock the ticketRepository before importing customExpress to ensure the mock is used
-jest.unstable_mockModule("../src/repositories/ticketRepository.js", () => ({
+jest.unstable_mockModule("../src/repositories/glpi/glpiTicketRepository.js", () => ({
     default: {
         getAllTickets: jest.fn().mockResolvedValue([
             { 

@@ -1,10 +1,10 @@
-import glpiTickets from "../../services/glpi_service.js";
-import glpiTicketRepository from "../../repositories/glpi/glpiTicketRepository.js";
-import glpiRawRepository from "../../repositories/glpi/glpiRawRepository.js";
-import glpiUrlBuilder from "../../utils/glpiUrlBuilder.js";
-import glpiClient from "../../integrations/glpi/glpiClient.js";
-import alertEngine from "../alerts/alertEngine.js";
-import alertRepository from "../alerts/alertRepository.js";
+import glpiTickets from "../services/glpi_service.js";
+import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
+import glpiRawRepository from "../repositories/glpi/glpiRawRepository.js";
+import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
+import glpiClient from "../integrations/glpi/glpiClient.js";
+import alertEngine from "./alertEngine.js";
+import alertRepository from "../repositories/alertRepository.js";
 
 class GlpiSyncService {
   constructor() {
