@@ -300,8 +300,13 @@
             row.className = "log-row";
             row.style.background = ent.status === 'SYNCING' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)';
             
-            const pageTotal = ent.totalPages > 0 ? ent.totalPages : ent.page;
-            const targetTotal = ent.targetCount > 0 ? ent.targetCount : ent.count;
+            let pageTotal = ent.totalPages > 0 ? ent.totalPages : '?';
+            let targetTotal = ent.targetCount > 0 ? ent.targetCount : '?';
+            
+            if (ent.status === 'DONE') {
+                if (pageTotal === '?') pageTotal = ent.page;
+                if (targetTotal === '?') targetTotal = ent.count;
+            }
             
             const pageText = `${ent.page}/${pageTotal}`;
             const countText = `${ent.count}/${targetTotal}`;
