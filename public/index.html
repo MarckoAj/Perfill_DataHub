@@ -83,7 +83,6 @@
       opacity: 0.5;
     }
     .entity-card.selected .checkbox-icon { opacity: 1; background: white; }
-    .entity-card.selected .checkbox-icon::after { content: "✔"; color: black; font-size: 12px; font-weight: bold; }
 
     /* Actions */
     .actions {
@@ -301,8 +300,11 @@
             row.className = "log-row";
             row.style.background = ent.status === 'SYNCING' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)';
             
-            const pageText = ent.page + (ent.totalPages > 0 ? ` / ${ent.totalPages}` : '');
-            const countText = ent.count + (ent.targetCount > 0 ? ` / ${ent.targetCount}` : '');
+            const pageTotal = ent.totalPages > 0 ? ent.totalPages : ent.page;
+            const targetTotal = ent.targetCount > 0 ? ent.targetCount : ent.count;
+            
+            const pageText = `${ent.page}/${pageTotal}`;
+            const countText = `${ent.count}/${targetTotal}`;
 
             row.innerHTML = `
                <div class="status-dot ${dotClass}"></div>
