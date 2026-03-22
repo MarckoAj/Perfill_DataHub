@@ -91,3 +91,14 @@ Esses eventos poderão alimentar:
 - alert engine
 - automações
 - correlação entre plataformas
+
+---
+
+# Políticas de Retenção e Soft Delete
+
+Para garantir consistência com ferramentas de BI sem perder o poder da camada RAW, foi implementado o conceito de Soft Delete nas camadas relacionais.
+
+Ciclo de Vida:
+- **Ativo**: Registro existe na origem (`isActive = 1`, `deletedAt = NULL`).
+- **Deletado Lógico**: Registro "sumiu" da origem. O motor de inferência (`AuvoSyncService.markAsDeletedPhase`) aplica o Inativo.
+- **Deletado Físico**: O dado lógico expira após 30 dias na tabela e um Job agendado faz a exclusão definitiva (Purge).

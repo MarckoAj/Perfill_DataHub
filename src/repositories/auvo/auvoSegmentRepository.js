@@ -1,16 +1,14 @@
-import pool from "../../database/connection.js";
+import BaseRepository from "../baseRepository.js";
 
-class AuvoSegmentRepository {
+class AuvoSegmentRepository extends BaseRepository {
   async upsertSegments(segments) {
-    if (!segments || segments.length === 0) return;
-    const query = `INSERT INTO segments_auvo (segmentId, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = VALUES(description)`;
-    for (const s of segments) {
-      try {
-        await pool.query(query, [parseInt(s.id, 10), s.description]);
-      } catch (e) {
-        console.error(`Erro ao salvar segmento AUVO ${s.id}:`, e.message);
-      }
-    }
+    const query = `INSERT INTO segments_auvo (segmentId, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = VALUES(description), isActive = 1, deletedAt = NULL`;
+    await this.executeUpsertMany(
+      segments, 
+      query, 
+      s => [parseInt(s.id, 10), s.description], 
+      "segmento AUVO"
+    );
   }
 }
 

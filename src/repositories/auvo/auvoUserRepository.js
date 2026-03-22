@@ -1,9 +1,7 @@
-import pool from "../../database/connection.js";
+import BaseRepository from "../baseRepository.js";
 
-class AuvoUserRepository {
+class AuvoUserRepository extends BaseRepository {
   async upsertUsers(users, isAlternative = false) {
-    if (!users || users.length === 0) return;
-
     const query = `
       INSERT INTO users_auvo (
         userId, externalId, name, login, email, jobPosition,
@@ -19,11 +17,15 @@ class AuvoUserRepository {
         address = VALUES(address),
         active = VALUES(active),
         registrationDate = VALUES(registrationDate),
-        insertedByAlternativeMethod = VALUES(insertedByAlternativeMethod)
+        insertedByAlternativeMethod = VALUES(insertedByAlternativeMethod),
+        isActive = 1,
+        deletedAt = NULL
     `;
 
-    for (const u of users) {
-      const values = [
+    await this.executeUpsertMany(
+      users,
+      query,
+      u => [
         parseInt(u.userID, 10) || null,
         u.externalId ? String(u.externalId).substring(0, 200) : null,
         u.name ? String(u.name).substring(0, 100) : null,
@@ -35,20 +37,13 @@ class AuvoUserRepository {
         u.unavailableForTasks === true ? 0 : 1,
         u.registrationDate && u.registrationDate !== "" ? u.registrationDate : null,
         isAlternative ? 1 : 0
-      ];
-
-      try {
-        await pool.query(query, values);
-      } catch (error) {
-        console.error(`Erro ao salvar usuário AUVO ${u.id}:`, error.sqlMessage || error.message);
-      }
-    }
+      ],
+      "usuário AUVO"
+    );
   }
 
   async exists(userId) {
-    const query = `SELECT 1 FROM users_auvo WHERE userId = ? LIMIT 1`;
-    const [rows] = await pool.query(query, [userId]);
-    return rows.length > 0;
+    return super.checkExists("users_auvo", "userId", userId);
   }
 }
 

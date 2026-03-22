@@ -9,229 +9,260 @@ import auvoTaskTypeRepository from "../repositories/auvo/auvoTaskTypeRepository.
 
 class AuvoSyncService {
   constructor() {
-    this.batchSize = 1000;
+    this.syncState = {
+      status: 'IDLE', // IDLE, RUNNING, PAUSED, CANCELED, COMPLETED
+      message: 'Aguardando ação...',
+      entities: []
+    };
   }
 
-  // ---- Ingestão Failsafe (Validations) de Estruturas Faltantes ----
+  async _checkPause() {
+    while (this.syncState.status === 'PAUSED') {
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+
+  _setEntityState(id, props) {
+      const idx = this.syncState.entities.findIndex(e => e.id === id);
+      if (idx !== -1) {
+          this.syncState.entities[idx] = { ...this.syncState.entities[idx], ...props };
+      }
+  }
 
   async validateTaskTypeMissingEntities(taskType) {
     const { creatorId, standardQuestionnaireId } = taskType;
-
     if (creatorId && !(await auvoUserRepository.exists(creatorId))) {
       const response = await auvoClient.getAuvoEntity("users", creatorId);
-      if (response && response.result) {
-         console.log(`[AuvoSync/Failsafe] Criador do Tipo de Tarefa ${creatorId} não encontrado. Cadastrando...`);
-         await auvoUserRepository.upsertUsers([response.result], true);
-      }
+      if (response && response.result) await auvoUserRepository.upsertUsers([response.result], true);
     }
-
     if (standardQuestionnaireId && standardQuestionnaireId > 0 && !(await auvoQuestionnaireRepository.exists(standardQuestionnaireId))) {
       const response = await auvoClient.getAuvoEntity("questionnaires", standardQuestionnaireId);
-      if (response && response.result) {
-         console.log(`[AuvoSync/Failsafe] Questionário base ${standardQuestionnaireId} não encontrado. Cadastrando...`);
-         await auvoQuestionnaireRepository.upsertQuestionnaires([response.result]);
-      }
+      if (response && response.result) await auvoQuestionnaireRepository.upsertQuestionnaires([response.result]);
     }
   }
 
   async validateAndInsertMissingEntities(task) {
     const { idUserFrom, idUserTo, customerId, taskType } = task;
-
-    // 1. Valida User From (Técnico originador)
     if (idUserFrom && !(await auvoUserRepository.exists(idUserFrom))) {
       const response = await auvoClient.getAuvoEntity("users", idUserFrom);
-      if (response && response.result) {
-         console.log(`[AuvoSync] Usuário originador ${idUserFrom} não encontrado na listagem geral. Cadastrando...`);
-         await auvoUserRepository.upsertUsers([response.result], true);
-      }
+      if (response && response.result) await auvoUserRepository.upsertUsers([response.result], true);
     }
-
-    // 2. Valida User To (Técnico atribuído)
     if (idUserTo && !(await auvoUserRepository.exists(idUserTo))) {
       const response = await auvoClient.getAuvoEntity("users", idUserTo);
-      if (response && response.result) {
-         console.log(`[AuvoSync] Usuário destino ${idUserTo} não encontrado na listagem geral. Cadastrando...`);
-         await auvoUserRepository.upsertUsers([response.result], true);
-      }
+      if (response && response.result) await auvoUserRepository.upsertUsers([response.result], true);
     }
-
-    // 3. Valida Cliente
     if (customerId && !(await auvoCustomerRepository.exists(customerId))) {
       const response = await auvoClient.getAuvoEntity("customers", customerId);
-      if (response && response.result) {
-         console.log(`[AuvoSync] Cliente ${customerId} não encontrado. Cadastrando...`);
-         await auvoCustomerRepository.upsertCustomers([response.result]);
-      }
+      if (response && response.result) await auvoCustomerRepository.upsertCustomers([response.result]);
     }
-
-    // 4. Valida Tipo da Tarefa (taskType)
     if (taskType && taskType.id && !(await auvoTaskTypeRepository.exists(taskType.id))) {
       const response = await auvoClient.getAuvoEntity("taskTypes", taskType.id);
       if (response && response.result) {
-         console.log(`[AuvoSync] Tipo de Tarefa ${taskType.id} não encontrado. Cadastrando...`);
-         await this.validateTaskTypeMissingEntities(response.result); // Failsafe encadeado das FKs do próprio tipo
+         await this.validateTaskTypeMissingEntities(response.result); 
          await auvoTaskTypeRepository.upsertTaskTypes([response.result]);
       }
     }
   }
 
-  // ---- Ingestão e Sync de Tarefas ----
-
-  async syncUsers() {
-    await auvoTaskRepository.disableForeignKeyChecks();
-    try {
-      const response = await auvoClient.getApiListComplete("users");
-      const users = response?.result?.entityList || response?.result || [];
-      if (users.length > 0) {
-        await auvoUserRepository.upsertUsers(users);
-        console.log(`Sincronizados ${users.length} Usuários AUVO.`);
-      }
-    } finally {
-      await auvoTaskRepository.enableForeignKeyChecks();
-    }
-  }
-
-  async syncSegments() {
-    const response = await auvoClient.getApiListComplete("segments");
-    const segments = response?.result?.entityList || response?.result || [];
-    if (segments.length > 0) {
-      await auvoSegmentRepository.upsertSegments(segments);
-      console.log(`Sincronizados ${segments.length} Segmentos AUVO.`);
-    }
-  }
-
-  async syncGroups() {
-    const response = await auvoClient.getApiListComplete("customerGroups");
-    const groups = response?.result?.entityList || response?.result || [];
-    if (groups.length > 0) {
-      await auvoGroupRepository.upsertGroups(groups);
-      console.log(`Sincronizados ${groups.length} Grupos AUVO.`);
-    }
-  }
-
-  async syncCustomers() {
-     // Desativa FK checks para carga massiva de staging de dados
-     await auvoTaskRepository.disableForeignKeyChecks();
-
-     try {
-       console.log("Iniciando sincronização de Clientes AUVO...");
-       let page = 1;
-       let hasNextPage = true;
-       let totalCount = 0;
-
-       while (hasNextPage) {
-         console.log(`Buscando Clientes AUVO - Página ${page}...`);
-         const response = await auvoClient.getCustomers({ page });
-         const result = response?.result;
-         const customers = result?.entityList || [];
-
-         if (customers.length > 0) {
-            await auvoTaskRepository.saveRawData("raw_auvo_customers", customers);
-            await auvoCustomerRepository.upsertCustomers(customers);
-            totalCount += customers.length;
-         }
-
-         const links = result?.links || [];
-         hasNextPage = links.some(e => e.rel === "nextPage");
-         
-         if (hasNextPage) {
-           page++;
-         }
-       }
-       console.log(`Sincronização concluída: ${totalCount} Clientes AUVO salvos.`);
-    } finally {
-      await auvoTaskRepository.enableForeignKeyChecks();
-    }
-  }
-
-  async syncQuestionnaires() {
-    const response = await auvoClient.getApiListComplete("questionnaires");
-    const questionnaires = response?.result?.entityList || response?.result || [];
-    if (questionnaires.length > 0) {
-      await auvoQuestionnaireRepository.upsertQuestionnaires(questionnaires);
-      console.log(`Sincronizados ${questionnaires.length} Questionários AUVO.`);
-    }
-  }
-
-  async syncTaskTypes() {
-    // Utilizando o conector "resiliente" devido ao Bug de Paginação do Auvo
-    const response = await auvoClient.getTaskTypesComplete();
-    const taskTypes = response?.result?.entityList || response?.result || [];
-    if (taskTypes.length > 0) {
-      for (const t of taskTypes) {
-         await this.validateTaskTypeMissingEntities(t);
-      }
-      await auvoTaskTypeRepository.upsertTaskTypes(taskTypes);
-      console.log(`Sincronizados ${taskTypes.length} Tipos de Tarefa AUVO.`);
-    }
-  }
-
-  async syncTasks(startDate, endDate) {
-    console.log("Iniciando sincronização de Tarefas AUVO...");
-    
-    await auvoTaskRepository.disableForeignKeyChecks();
-
-    try {
-      const params = {};
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-
+  async rawPaginatedLoop(entityId, endpointOrFetcher, repoUpsertFn, preUpsertHook = null) {
+      const syncStartTime = new Date();
       let page = 1;
       let hasNextPage = true;
       let totalCount = 0;
+      let targetCount = 0;
+      let targetPages = 0;
+      
+      this._setEntityState(entityId, { status: 'SYNCING', page, totalPages: 0, count: 0, targetCount: 0 });
 
       while (hasNextPage) {
-        const response = await auvoClient.getTasks({ ...params, page });
-        const result = response?.result;
-        const tasks = result?.entityList || [];
+          await this._checkPause();
+          if (this.syncState.status === 'CANCELED') throw new Error("Ação Abortada");
+          
+          this._setEntityState(entityId, { status: 'SYNCING', page, totalPages: targetPages, count: totalCount, targetCount });
+          
+          const res = typeof endpointOrFetcher === 'function' 
+              ? await endpointOrFetcher(page) 
+              : await auvoClient.getApiList(endpointOrFetcher, { page });
+              
+          if (page === 1 && res?.result) {
+              targetCount = res.result.totalItems || res.result.totalElements || 0;
+              targetPages = res.result.totalPages || (targetCount > 0 ? Math.ceil(targetCount / 100) : 0);
+          }
 
-        if (tasks.length === 0 && page === 1) {
-          console.log("Nenhuma tarefa encontrada no período para o AUVO.");
-          return;
-        }
+          const items = Array.isArray(res?.result) ? res.result : (res?.result?.entityList || []);
 
-        if (tasks.length > 0) {
-           console.log(`Processando ${tasks.length} tarefas (Página ${page})...`);
-           await auvoTaskRepository.saveRawData("raw_auvo_tasks", tasks);
-           for (const t of tasks) {
-               await this.validateAndInsertMissingEntities(t);
-           }
-           await auvoTaskRepository.upsertTasks(tasks);
-           totalCount += tasks.length;
-        }
-
-        const links = result?.links || [];
-        hasNextPage = links.some(e => e.rel === "nextPage");
-        if (hasNextPage) {
-          page++;
-        }
+          if (items.length > 0) {
+              if (preUpsertHook) await preUpsertHook(items);
+              await repoUpsertFn(items);
+              totalCount += items.length;
+              this._setEntityState(entityId, { count: totalCount, targetCount, page, totalPages: targetPages });
+          }
+          
+          if (entityId === "taskTypes") {
+             hasNextPage = items.length === 100;
+          } else {
+             const links = res?.result?.links || [];
+             hasNextPage = items.length > 0 && links.some(e => e.rel === "nextPage");
+          }
+          
+          if (hasNextPage) page++;
       }
-
-      console.log(`Sincronização de ${totalCount} Tarefas AUVO concluída.`);
-    } finally {
-      await auvoTaskRepository.enableForeignKeyChecks();
-    }
+      this._setEntityState(entityId, { status: 'DONE', count: totalCount, page, targetCount, totalPages: targetPages });
+      await auvoTaskRepository.updateLastSyncDate(entityId);
+      
+      const map = { 'users': 'users_auvo', 'segments': 'segments_auvo', 'groups': 'groups_auvo', 'customers': 'customers_auvo', 'questionnaires': 'questionnaires_auvo', 'taskTypes': 'tasks_types_auvo' };
+      if (map[entityId]) {
+          await auvoTaskRepository.markAsDeletedPhase(map[entityId], syncStartTime);
+      }
   }
 
-  async syncAllAuvo() {
-    console.log("=== INICIANDO SINCRONIZAÇÃO GERAL AUVO ===");
-    
-    // Desativa FK checks para carga geral massiva
-    await auvoTaskRepository.disableForeignKeyChecks();
+  // ==== Rotinas Indivíduos ====
 
-    try {
-      await this.syncUsers();
-      await this.syncSegments();
-      await this.syncGroups();
-      await this.syncCustomers();
-      await this.syncQuestionnaires();
-      await this.syncTaskTypes();
-      await this.syncTasks();
-    } finally {
-      await auvoTaskRepository.enableForeignKeyChecks();
-    }
-    
-    console.log("=== SINCRONIZAÇÃO GERAL AUVO CONCLUÍDA ===");
+  async syncUsers() { await this.rawPaginatedLoop('users', 'users', items => auvoUserRepository.upsertUsers(items)); }
+  async syncSegments() { await this.rawPaginatedLoop('segments', 'segments', items => auvoSegmentRepository.upsertSegments(items)); }
+  async syncGroups() { await this.rawPaginatedLoop('groups', 'customerGroups', items => auvoGroupRepository.upsertGroups(items)); }
+  async syncQuestionnaires() { await this.rawPaginatedLoop('questionnaires', 'questionnaires', items => auvoQuestionnaireRepository.upsertQuestionnaires(items)); }
+  
+  async syncTaskTypes() {
+      await this.rawPaginatedLoop('taskTypes', 'taskTypes', items => auvoTaskTypeRepository.upsertTaskTypes(items), async (items) => {
+          for (const t of items) await this.validateTaskTypeMissingEntities(t);
+      });
+  }
+  
+  async syncCustomers() {
+      await this.rawPaginatedLoop('customers', async (page) => {
+          return await auvoClient.getCustomers({ page });
+      }, async items => {
+          await auvoTaskRepository.saveRawData("raw_auvo_customers", items);
+          await auvoCustomerRepository.upsertCustomers(items);
+      });
+  }
+
+  async syncTasks(startDate, endDate) {
+      const syncStartTime = new Date();
+      let page = 1;
+      let hasNextPage = true;
+      let totalCount = 0;
+      let targetCount = 0;
+      let targetPages = 0;
+      
+      const params = {
+          startDate: startDate || "2000-01-01",
+          endDate: endDate || new Date().toISOString().split('T')[0]
+      };
+
+      this._setEntityState('tasks', { status: 'SYNCING', page, totalPages: 0, count: 0, targetCount: 0 });
+
+      while (hasNextPage) {
+          await this._checkPause();
+          if (this.syncState.status === 'CANCELED') throw new Error("Ação Abortada");
+          
+          this._setEntityState('tasks', { status: 'SYNCING', page, totalPages: targetPages, count: totalCount, targetCount });
+          
+          const res = await auvoClient.getTasks({ ...params, page });
+          
+          if (page === 1 && res?.result) {
+              targetCount = res.result.totalItems || res.result.totalElements || 0;
+              targetPages = res.result.totalPages || (targetCount > 0 ? Math.ceil(targetCount / 100) : 0);
+          }
+
+          const items = res?.result?.entityList || [];
+
+          if (items.length > 0) {
+              await auvoTaskRepository.saveRawData("raw_auvo_tasks", items);
+              for (const t of items) await this.validateAndInsertMissingEntities(t);
+              await auvoTaskRepository.upsertTasks(items);
+              
+              totalCount += items.length;
+              this._setEntityState('tasks', { count: totalCount, targetCount, page, totalPages: targetPages });
+          }
+
+          const links = res?.result?.links || [];
+          hasNextPage = items.length > 0 && links.some(e => e.rel === "nextPage");
+          if (hasNextPage) page++;
+      }
+      this._setEntityState('tasks', { status: 'DONE', count: totalCount, page, targetCount, totalPages: targetPages });
+      await auvoTaskRepository.updateLastSyncDate('tasks');
+      await auvoTaskRepository.markAsDeletedPhase('tasks_auvo', syncStartTime);
+  }
+
+  async runQueue(entitiesToSync, startDate, endDate) {
+      if (this.syncState.status === 'RUNNING' || this.syncState.status === 'PAUSED') {
+          throw new Error("Uma fila já está em andamento ou pausada.");
+      }
+
+      this.syncState.status = 'RUNNING';
+      this.syncState.message = "Verificando fila de entidades...";
+      
+      const allEntities = [
+         { id: 'users', label: 'Usuários' },
+         { id: 'segments', label: 'Segmentos' },
+         { id: 'groups', label: 'Grupos' },
+         { id: 'customers', label: 'Clientes' },
+         { id: 'questionnaires', label: 'Questionários' },
+         { id: 'taskTypes', label: 'Tipos de Tarefa' },
+         { id: 'tasks', label: 'Tarefas' },
+      ];
+
+      // Filtra e prepara
+      const toProcess = entitiesToSync && entitiesToSync.length > 0 
+          ? allEntities.filter(e => entitiesToSync.includes(e.id))
+          : allEntities;
+
+      this.syncState.entities = toProcess.map(e => ({
+          ...e,
+          status: 'PENDING',
+          page: 0,
+          count: 0
+      }));
+
+      await auvoTaskRepository.disableForeignKeyChecks();
+
+      try {
+          for (const ent of toProcess) {
+              await this._checkPause();
+              if (this.syncState.status === 'CANCELED') break;
+              
+              this.syncState.message = `Sincronizando ${ent.label}...`;
+              
+              if (ent.id === 'users') await this.syncUsers();
+              if (ent.id === 'segments') await this.syncSegments();
+              if (ent.id === 'groups') await this.syncGroups();
+              if (ent.id === 'customers') await this.syncCustomers();
+              if (ent.id === 'questionnaires') await this.syncQuestionnaires();
+              if (ent.id === 'taskTypes') await this.syncTaskTypes();
+              if (ent.id === 'tasks') await this.syncTasks(startDate, endDate);
+          }
+      } catch (e) {
+         if (this.syncState.status !== 'CANCELED') {
+             this.syncState.status = 'ERROR';
+             this.syncState.message = `Falha Crítica: ${e.message}`;
+         }
+      } finally {
+          await auvoTaskRepository.enableForeignKeyChecks();
+          if (this.syncState.status !== 'CANCELED' && this.syncState.status !== 'ERROR') {
+              this.syncState.status = 'COMPLETED';
+              this.syncState.message = "Fila finalizada com sucesso!";
+          }
+      }
+  }
+
+  controlSync(action) {
+      if (action === 'pause' && this.syncState.status === 'RUNNING') {
+          this.syncState.status = 'PAUSED';
+          this.syncState.message = "Sincronização Pausada.";
+      } else if (action === 'resume' && this.syncState.status === 'PAUSED') {
+          this.syncState.status = 'RUNNING';
+          this.syncState.message = "Retomando sincronização...";
+      } else if (action === 'cancel') {
+          this.syncState.status = 'CANCELED';
+          this.syncState.message = "Sincronização Abortada pelo Usuário.";
+      } else if (action === 'reset') {
+          this.syncState.status = 'IDLE';
+          this.syncState.message = "Aguardando ação...";
+          this.syncState.entities = [];
+      }
+      return this.syncState;
   }
 }
 

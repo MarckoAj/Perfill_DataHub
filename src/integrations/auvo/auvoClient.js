@@ -137,8 +137,10 @@ class AuvoClient {
   }
 
   async getTasks(params = {}) {
-    const { pageSize = 100, ...filters } = params;
+    const { pageSize = 100, page, ...filters } = params;
     const query = { pageSize };
+    
+    if (page) query.page = page;
     
     if (Object.keys(filters).length > 0) {
       query.paramFilter = JSON.stringify(filters);

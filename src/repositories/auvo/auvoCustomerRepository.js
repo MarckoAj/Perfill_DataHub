@@ -1,9 +1,7 @@
-import pool from "../../database/connection.js";
+import BaseRepository from "../baseRepository.js";
 
-class AuvoCustomerRepository {
+class AuvoCustomerRepository extends BaseRepository {
   async upsertCustomers(customers) {
-    if (!customers || customers.length === 0) return;
-
     const query = `
       INSERT INTO customers_auvo (
         customerId, externalId, description, cpfCnpj, note, address,
@@ -19,11 +17,15 @@ class AuvoCustomerRepository {
         latitude = VALUES(latitude),
         longitude = VALUES(longitude),
         active = VALUES(active),
-        segmentId = VALUES(segmentId)
+        segmentId = VALUES(segmentId),
+        isActive = 1,
+        deletedAt = NULL
     `;
 
-    for (const c of customers) {
-      const values = [
+    await this.executeUpsertMany(
+      customers,
+      query,
+      c => [
         parseInt(c.id, 10) || null,
         c.externalId ? String(c.externalId).substring(0, 100) : null,
         c.description ? String(c.description) : null,
@@ -35,20 +37,13 @@ class AuvoCustomerRepository {
         c.longitude ? String(c.longitude).substring(0, 30) : null,
         c.active ? 1 : 0,
         parseInt(c.segmentId, 10) || 0
-      ];
-
-      try {
-        await pool.query(query, values);
-      } catch (error) {
-        console.error(`Erro ao salvar cliente AUVO ${c.id}:`, error.sqlMessage || error.message);
-      }
-    }
+      ],
+      "cliente AUVO"
+    );
   }
 
   async exists(customerId) {
-    const query = `SELECT 1 FROM customers_auvo WHERE customerId = ? LIMIT 1`;
-    const [rows] = await pool.query(query, [customerId]);
-    return rows.length > 0;
+    return super.checkExists("customers_auvo", "customerId", customerId);
   }
 }
 

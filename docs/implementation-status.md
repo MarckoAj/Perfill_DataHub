@@ -53,7 +53,8 @@
 
 [x] client AUVO
 [x] mapper AUVO (embutido no service/repo)
-[x] ingestão de tarefas
+[x] ingestão de tarefas e demais entidades
+[x] sync incremental e motores de purge
 [ ] webhook handler
 
 ---
@@ -69,8 +70,9 @@
 # Data Pipeline
 
 [x] camada RAW
-[ ] camada normalizada
-[ ] reprocessamento de dados
+[x] camada normalizada (com Soft Delete e Resurrection)
+[x] lógica de expurgo (Retention Policy)
+[ ] reprocessamento de dados globais
 
 ---
 

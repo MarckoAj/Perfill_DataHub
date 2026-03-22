@@ -20,7 +20,11 @@ export async function runAuvoMigrations() {
                 CREATE TABLE IF NOT EXISTS segments_auvo (
                     segmentId INT NOT NULL PRIMARY KEY,
                     description VARCHAR(100) NULL,
-                    registrationDate DATETIME NULL
+                    registrationDate DATETIME NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `
         },
@@ -29,7 +33,11 @@ export async function runAuvoMigrations() {
             query: `
                 CREATE TABLE IF NOT EXISTS groups_auvo (
                     groupId INT NOT NULL PRIMARY KEY,
-                    description TEXT NULL
+                    description TEXT NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `
         },
@@ -41,7 +49,11 @@ export async function runAuvoMigrations() {
                     description TEXT NULL,
                     header TEXT NULL,
                     footer TEXT NULL,
-                    creationDate DATETIME NULL
+                    creationDate DATETIME NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `
         },
@@ -80,6 +92,10 @@ export async function runAuvoMigrations() {
                     basePoint POINT NULL,
                     registrationDate DATETIME NULL,
                     active TINYINT NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL,
                     CONSTRAINT fk_users_userstypes_auvo FOREIGN KEY (userType) REFERENCES userstypes_auvo (userTypeId)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `
@@ -103,6 +119,10 @@ export async function runAuvoMigrations() {
                     dateLastUpdate DATETIME NULL,
                     creationDate DATETIME NULL,
                     segmentId INT NOT NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL,
                     CONSTRAINT fk_customers_segments_auvo FOREIGN KEY (segmentId) REFERENCES segments_auvo (segmentId)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
             `
@@ -242,6 +262,10 @@ export async function runAuvoMigrations() {
                     standardTime TIME NULL,
                     toleranceTime TIME NULL,
                     active TINYINT NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL,
                     PRIMARY KEY (tasksTypesId, userCreatorId, standardQuestionnaireId),
                     CONSTRAINT fk_types_questionnaires FOREIGN KEY (standardQuestionnaireId) REFERENCES questionnaires_auvo (questionaryId),
                     CONSTRAINT fk_types_users_auvo FOREIGN KEY (userCreatorId) REFERENCES users_auvo (userId)
@@ -287,6 +311,10 @@ export async function runAuvoMigrations() {
                     pendency TEXT NULL,
                     dateLastUpdate DATETIME NULL,
                     displacementStart DATETIME NULL,
+                    isActive BOOLEAN DEFAULT 1,
+                    deletedAt DATETIME NULL,
+                    lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    sourceUpdatedAt DATETIME NULL,
                     CONSTRAINT fk_tasks_customers_auvo FOREIGN KEY (customerId) REFERENCES customers_auvo (customerId),
                     CONSTRAINT fk_tasks_priority_auvo FOREIGN KEY (taskPriorityId) REFERENCES tasks_prioritys (taskPriorityId),
                     CONSTRAINT fk_tasks_status_auvo FOREIGN KEY (taskStatusID) REFERENCES tasks_status (taskStatusId),

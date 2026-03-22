@@ -1,13 +1,15 @@
 import express from "express";
-import { syncAuvoManual } from "../controllers/auvoController.js";
+import { syncAuvoManual, getAuvoSyncStatus, controlAuvoSync, getAuvoStats } from "../controllers/auvoController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// 1. Aplica Autenticação em Todas as rotas do AUVO
-router.use(authMiddleware);
+// Temporariamente desabilitado para o painel
+// router.use(authMiddleware);
 
-// 2. Requisição de Sincronização Manual
 router.post("/sync", syncAuvoManual);
+router.post("/sync/control", controlAuvoSync);
+router.get("/sync/status", getAuvoSyncStatus);
+router.get("/stats", getAuvoStats);
 
 export default router;

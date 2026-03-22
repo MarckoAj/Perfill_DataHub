@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>PerfillBI - Sincronizador de Entidades</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* Fundo Deep Dark */
+      --card-bg: #1e293b; /* Console Box */
+      --text: #ffffff;
+      --text-muted: #94a3b8;
+      --font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-family);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 20px 40px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: rgba(15, 23, 42, 0.9);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .logo-ball {
+      width: 25px; height: 25px; border-radius: 50%;
+      background: linear-gradient(135deg, #aa3bff, #3b82f6);
+    }
+
+    .container {
+      width: 1200px;
+      max-width: 95%;
+      margin: 40px 0;
+    }
+
+    /* Cards (Toggles) */
+    .cards-title { font-size: 18px; margin-bottom: 20px; font-weight: 600; }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .entity-card {
+      padding: 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s;
+      border: 3px solid transparent;
+      opacity: 0.4;
+      position: relative;
+    }
+    
+    .entity-card.selected {
+      opacity: 1;
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .entity-card .count { font-size: 26px; font-weight: bold; margin-bottom: 5px; }
+    .entity-card .label { font-size: 14px; opacity: 0.9; }
+    .entity-card .date { font-size: 11px; margin-top: 10px; opacity: 0.7; }
+    
+    .checkbox-icon {
+      position: absolute; top: 10px; right: 10px;
+      width: 18px; height: 18px; border-radius: 4px; border: 2px solid white;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.5;
+    }
+    .entity-card.selected .checkbox-icon { opacity: 1; background: white; }
+    .entity-card.selected .checkbox-icon::after { content: "✔"; color: black; font-size: 12px; font-weight: bold; }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 40px;
+    }
+    
+    button {
+      padding: 14px 30px;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-start { background: #3b82f6; } /* Azul */
+    .btn-pause { background: #eab308; color: #000; } /* Amarelo */
+    .btn-resume { background: #22c55e; } /* Verde */
+    .btn-cancel { background: #ef4444; } /* Vermelho */
+
+    button:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* Console Block */
+    .console-box {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 30px;
+      min-height: 250px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    
+    .console-header {
+      display: flex; justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 15px; margin-bottom: 20px;
+    }
+
+    .console-title { font-size: 20px; font-weight: 600; }
+    .console-status { font-family: monospace; color: var(--text-muted); }
+
+    .checklist {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 15px;
+    }
+
+    .log-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 18px;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+
+    .status-dot {
+      width: 14px; height: 14px; border-radius: 50%; margin-right: 15px;
+      flex-shrink: 0;
+    }
+
+    .dot-pending { background: #475569; }
+    .dot-syncing { background: #eab308; box-shadow: 0 0 12px #eab308; animation: pulse 1s infinite; }
+    .dot-done { background: #22c55e; box-shadow: 0 0 12px #22c55e; }
+    .dot-error { background: #ef4444; }
+
+    .log-content { flex-grow: 1; }
+    .log-entity { font-weight: bold; color: white; width: 180px; display: inline-block; }
+    .log-details { color: var(--text-muted); }
+    .log-tag { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; margin-right: 10px; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+      100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-ball"></div>
+    <strong>PerfillBI | Sincronizador de Dados (AUVO Engine)</strong>
+  </header>
+
+  <div class="container">
+    <div class="cards-title">1. Selecione as Entidades a Sincronizar</div>
+    <div class="cards-grid" id="cardsGrid">
+      <!-- Injetado via JS -->
+      Carregando estatísticas do banco de dados...
+    </div>
+
+    <div class="actions">
+      <button class="btn-start" id="btnStart" onclick="runAction('start')">▶ Iniciar Selecionados</button>
+      <button class="btn-pause" id="btnPause" onclick="runAction('pause')" style="display:none;">⏸ Pausar Progresso</button>
+      <button class="btn-resume" id="btnResume" onclick="runAction('resume')" style="display:none;">▶ Continuar</button>
+      <button class="btn-cancel" id="btnCancel" onclick="runAction('cancel')" style="display:none;">⏹ Cancelar</button>
+    </div>
+
+    <div class="console-box">
+      <div class="console-header">
+        <span class="console-title">Lista de Sincronização (Console)</span>
+        <span class="console-status" id="txtGlobalStatus">Estado: IDLE</span>
+      </div>
+      <div class="checklist" id="checklistContainer">
+        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique em Iniciar.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let pollInterval = null;
+    let availableEntities = [];
+    let selectedIds = new Set();
+    
+    const uiGrid = document.getElementById("cardsGrid");
+    const uiChecklist = document.getElementById("checklistContainer");
+    const uiStatus = document.getElementById("txtGlobalStatus");
+    
+    // Botões
+    const bStart = document.getElementById("btnStart");
+    const bPause = document.getElementById("btnPause");
+    const bResume = document.getElementById("btnResume");
+    const bCancel = document.getElementById("btnCancel");
+
+    // Formata Data
+    function formatDate(iso) {
+        if (!iso) return "Nunca atualizado";
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR');
+    }
+
+    // 1. Carrega Estatísticas Iniciais
+    async function loadStats() {
+      try {
+        const res = await fetch("/api/auvo/stats");
+        const json = await res.json();
+        availableEntities = json.stats || [];
+        renderCards();
+      } catch (e) {
+        uiGrid.innerHTML = "Erro ao buscar repositórios nativos da API.";
+      }
+    }
+
+    // 2. Renderiza as "Caixas de Seleção Coloridas"
+    function renderCards() {
+        uiGrid.innerHTML = "";
+        availableEntities.forEach(ent => {
+             const div = document.createElement("div");
+             div.className = "entity-card selected"; // Selecionado por padrão
+             selectedIds.add(ent.id); // Adiciona ao Set
+
+             const isLight = ent.color === '#ffffff';
+             
+             div.style.backgroundColor = ent.color || '#3b82f6';
+             div.style.color = isLight ? '#0f172a' : 'white';
+             div.style.borderColor = isLight ? 'transparent' : 'rgba(255,255,255,0.3)';
+
+             let checkStyle = `border-color: ${isLight ? '#0f172a' : 'white'};`;
+             
+             div.innerHTML = `
+                <div class="checkbox-icon" style="${checkStyle}"></div>
+                <div class="count">${ent.count.toLocaleString('pt-BR')}</div>
+                <div class="label">${ent.label}</div>
+                <div class="date">${ent.lastDate ? 'Verificado: ' + formatDate(ent.lastDate) : 'Sinc. Pendente'}</div>
+             `;
+             
+             div.onclick = () => {
+                 if (selectedIds.has(ent.id)) {
+                     selectedIds.delete(ent.id);
+                     div.className = "entity-card";
+                     div.querySelector('.checkbox-icon').style.background = 'transparent';
+                     div.querySelector('.checkbox-icon').innerHTML = '';
+                 } else {
+                     selectedIds.add(ent.id);
+                     div.className = "entity-card selected";
+                     div.querySelector('.checkbox-icon').style.background = isLight ? '#0f172a' : 'white';
+                     div.querySelector('.checkbox-icon').innerHTML = `<span style="color: ${isLight ? 'white' : 'black'}; font-size: 12px; font-weight: bold;">✔</span>`;
+                 }
+             };
+             
+             // Initial Set Style for CheckIcon
+             div.querySelector('.checkbox-icon').style.background = isLight ? '#0f172a' : 'white';
+             div.querySelector('.checkbox-icon').innerHTML = `<span style="color: ${isLight ? 'white' : 'black'}; font-size: 12px; font-weight: bold;">✔</span>`;
+             
+             uiGrid.appendChild(div);
+        });
+    }
+
+    // 3. Renderiza o Console
+    function renderConsole(state) {
+        uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
+        
+        // Controle de Botões
+        bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'CANCELED') ? 'block' : 'none';
+        bPause.style.display = state.status === 'RUNNING' ? 'block' : 'none';
+        bResume.style.display = state.status === 'PAUSED' ? 'block' : 'none';
+        bCancel.style.display = (state.status === 'RUNNING' || state.status === 'PAUSED') ? 'block' : 'none';
+
+        if (!state.entities || state.entities.length === 0) return;
+        
+        uiChecklist.innerHTML = "";
+        
+        state.entities.forEach(ent => {
+            let dotClass = "dot-pending";
+            if (ent.status === 'SYNCING') dotClass = "dot-syncing";
+            if (ent.status === 'DONE') dotClass = "dot-done";
+            if (ent.status === 'ERROR') dotClass = "dot-error";
+
+            const row = document.createElement("div");
+            row.className = "log-row";
+            row.style.background = ent.status === 'SYNCING' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)';
+            
+            const pageText = ent.page + (ent.totalPages > 0 ? ` / ${ent.totalPages}` : '');
+            const countText = ent.count + (ent.targetCount > 0 ? ` / ${ent.targetCount}` : '');
+
+            row.innerHTML = `
+               <div class="status-dot ${dotClass}"></div>
+               <div class="log-content">
+                  <span class="log-entity">${ent.label}</span>
+                  <span class="log-details">
+                     ${ent.status === 'PENDING' ? 'Aguardando na fila...' : ''}
+                     ${ent.status === 'DONE' ? `<span class="log-tag">✅ Concluído</span> Baixados/Processados: ${countText}` : ''}
+                     ${ent.status === 'SYNCING' ? `<span class="log-tag">⏳ Sincronizando</span> Pág: ${pageText} | Processados: ${countText}` : ''}
+                  </span>
+               </div>
+            `;
+            uiChecklist.appendChild(row);
+        });
+    }
+
+    // 4. Mecanica de Polling (Loop infinito a cada 2 segs)
+    async function startPolling() {
+        if (pollInterval) return;
+        pollInterval = setInterval(async () => {
+             const res = await fetch("/api/auvo/sync/status");
+             const json = await res.json();
+             if (json.status) renderConsole(json.status);
+        }, 1500); // 1.5s pra parecer responsivo
+    }
+
+    // Ações de Botões (Start / Pause / Resume / Cancel)
+    window.runAction = async (action) => {
+        try {
+            if (action === 'start') {
+                const arr = Array.from(selectedIds);
+                if (arr.length === 0) return alert("Selecione pelo menos uma entidade nas caixas criadas!");
+                
+                await fetch("/api/auvo/sync/control", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' })
+                });
+
+                await fetch("/api/auvo/sync", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entities: arr })
+                });
+            } else {
+                await fetch("/api/auvo/sync/control", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: action })
+                });
+            }
+            startPolling();
+        } catch (e) {
+            alert("Falha de rede: " + e.message);
+        }
+    };
+
+    // Auto-carrega Stats e Polling na montagem
+    loadStats();
+    startPolling(); // Traz o estado atual, caso o server já esteja rodando uma fila por baixo dos panos!
+  </script>
+</body>
+</html>

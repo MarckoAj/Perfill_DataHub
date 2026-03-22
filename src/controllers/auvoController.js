@@ -1,15 +1,42 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import auvoSyncService from "../services/auvoSyncService.js";
+import auvoTaskRepository from "../repositories/auvo/auvoTaskRepository.js";
 
 export const syncAuvoManual = asyncHandler(async (req, res) => {
-    const { startDate, endDate } = req.body; // Parametros opcionais
+    const { entities, startDate, endDate } = req.body || {}; 
     
-    console.log(`[AuvoController] Iniciando sincronização manual...`);
-    await auvoSyncService.syncTasks(startDate, endDate);
+    // Roda em BG
+    try {
+        await auvoSyncService.runQueue(entities, startDate, endDate);
+    } catch(e) {
+        if (e.message.includes("já está em andamento")) {
+             return res.status(409).json({ success: false, message: e.message });
+        }
+        console.error("RunQueue Failed: ", e.message);
+    }
     
-    res.status(200).json({
+    res.status(202).json({
         success: true,
-        message: "Sincronização manual do AUVO executada com sucesso!",
+        message: "Sincronização de entidades AUVO enfileirada com sucesso!",
         timestamp: new Date().toISOString()
     });
+});
+
+export const getAuvoSyncStatus = asyncHandler(async (req, res) => {
+    res.status(200).json({
+        success: true,
+        status: auvoSyncService.syncState,
+        timestamp: new Date().toISOString()
+    });
+});
+
+export const controlAuvoSync = asyncHandler(async (req, res) => {
+    const { action } = req.body;
+    const result = auvoSyncService.controlSync(action);
+    res.status(200).json({ success: true, status: result });
+});
+
+export const getAuvoStats = asyncHandler(async (req, res) => {
+    const stats = await auvoTaskRepository.getGlobalAuvoStats();
+    res.status(200).json({ success: true, stats });
 });

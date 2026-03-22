@@ -1,16 +1,14 @@
-import pool from "../../database/connection.js";
+import BaseRepository from "../baseRepository.js";
 
-class AuvoGroupRepository {
+class AuvoGroupRepository extends BaseRepository {
   async upsertGroups(groups) {
-    if (!groups || groups.length === 0) return;
-    const query = `INSERT INTO groups_auvo (groupId, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = VALUES(description)`;
-    for (const g of groups) {
-      try {
-        await pool.query(query, [parseInt(g.id, 10), g.description]);
-      } catch (e) {
-        console.error(`Erro ao salvar grupo AUVO ${g.id}:`, e.message);
-      }
-    }
+    const query = `INSERT INTO groups_auvo (groupId, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = VALUES(description), isActive = 1, deletedAt = NULL`;
+    await this.executeUpsertMany(
+      groups, 
+      query, 
+      g => [parseInt(g.id, 10), g.description], 
+      "grupo AUVO"
+    );
   }
 }
 

@@ -23,6 +23,7 @@ const customExpress = () => {
   app.use("/api/auvo", auvoRoutes);
   app.use("/api", routes);
   app.use("/", healthRoutes); // Acopla /live, /health, /ready na raiz
+  app.use("/panel", express.static("public")); // Micro-frontend desacoplado (UI)
 
   app.use(notFoundHandler);
   app.use(errorHandler);

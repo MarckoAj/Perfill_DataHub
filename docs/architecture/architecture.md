@@ -144,8 +144,9 @@ Exemplos de tabelas normalizadas:
 * tickets
 * alerts
 * integrations_status
+* Tabelas do AUVO com gestão de `isActive` e `deletedAt` (Soft Delete)
 
-Esses dados são utilizados diretamente pelo sistema e pelos endpoints da API.
+Esses dados são utilizados diretamente pelo sistema e pelos endpoints da API, e mantêm uma janela de resiliência caso os dados sejam apagados da origem temporariamente.
 
 ---
 
@@ -161,6 +162,7 @@ Exemplos de jobs planejados:
 
 * glpiSync.job.js
 * auvoSync.job.js
+* auvoRetentionJob.js (Purge físico agendado de dados deletados)
 * zabbixSync.job.js
 
 Esses jobs executam processos como:

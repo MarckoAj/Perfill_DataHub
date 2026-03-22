@@ -1,9 +1,8 @@
+import BaseRepository from "../baseRepository.js";
 import pool from "../../database/connection.js";
 
-class AuvoTaskRepository {
+class AuvoTaskRepository extends BaseRepository {
   async upsertTasks(tasks) {
-    if (!tasks || tasks.length === 0) return;
-
     const query = `
       INSERT INTO tasks_auvo (
         taskId, userFromId, userToId, taskPriorityId, customerId,
@@ -42,11 +41,15 @@ class AuvoTaskRepository {
         taskUrl = VALUES(taskUrl),
         pendency = VALUES(pendency),
         dateLastUpdate = VALUES(dateLastUpdate),
-        displacementStart = VALUES(displacementStart)
+        displacementStart = VALUES(displacementStart),
+        isActive = 1,
+        deletedAt = NULL
     `;
 
-    for (const t of tasks) {
-      const values = [
+    await this.executeUpsertMany(
+      tasks,
+      query,
+      t => [
         parseInt(t.taskID || t.id, 10) || null,
         parseInt(t.idUserFrom, 10) || 0,
         parseInt(t.idUserTo, 10) || 0,
@@ -78,19 +81,12 @@ class AuvoTaskRepository {
         t.pendency ? String(t.pendency) : null,
         t.dateLastUpdate || null,
         t.displacementStart || null
-      ];
-
-      try {
-        await pool.query(query, values);
-      } catch (error) {
-        console.error(`Erro ao salvar tarefa AUVO ${t.id}:`, error.sqlMessage || error.message);
-      }
-    }
+      ],
+      "tarefa AUVO"
+    );
   }
 
   async saveRawData(tableName, items) {
-    if (!items || items.length === 0) return;
-
     const query = `
       INSERT INTO ${tableName} (external_id, payload_json)
       VALUES (?, ?)
@@ -98,15 +94,12 @@ class AuvoTaskRepository {
         payload_json = VALUES(payload_json),
         fetched_at = CURRENT_TIMESTAMP
     `;
-
-    for (const item of items) {
-      try {
-        const id = parseInt(item.id, 10) || 0;
-        await pool.query(query, [id, JSON.stringify(item)]);
-      } catch (error) {
-        console.error(`Erro ao salvar Raw Data em ${tableName} [ID ${item.id}]:`, error.message);
-      }
-    }
+    await this.executeUpsertMany(
+      items,
+      query,
+      item => [parseInt(item.id, 10) || 0, JSON.stringify(item)],
+      `Raw Data (${tableName})`
+    );
   }
 
   async disableForeignKeyChecks() {
@@ -115,6 +108,70 @@ class AuvoTaskRepository {
 
   async enableForeignKeyChecks() {
     await pool.query("SET FOREIGN_KEY_CHECKS = 1;");
+  }
+
+  async updateLastSyncDate(entityId) {
+    try {
+      const query = `
+        CREATE TABLE IF NOT EXISTS auvo_sync_metadata (
+          entity_id VARCHAR(50) PRIMARY KEY,
+          last_sync DATETIME NOT NULL
+        )
+      `;
+      await pool.query(query);
+      await pool.query(`INSERT INTO auvo_sync_metadata (entity_id, last_sync) VALUES (?, NOW()) ON DUPLICATE KEY UPDATE last_sync = NOW()`, [entityId]);
+    } catch (e) {
+      console.error("Erro ao atualizar data de log da sincronizacao AUVO:", e.message);
+    }
+  }
+
+  async markAsDeletedPhase(tableName, syncStartTime) {
+    try {
+      const formattedTime = syncStartTime.toISOString().slice(0, 19).replace('T', ' ');
+      const query = `UPDATE ${tableName} SET isActive = 0, deletedAt = NOW() WHERE lastSyncAt < ? AND isActive = 1`;
+      const [result] = await pool.query(query, [formattedTime]);
+      if (result.affectedRows > 0) {
+        console.log(`[SoftDelete] ${result.affectedRows} registros inativados na tabela ${tableName}.`);
+      }
+    } catch (e) {
+      console.error(`Erro ao marcar registros como deletados na tabela ${tableName}:`, e.message);
+    }
+  }
+
+  async getGlobalAuvoStats() {
+    try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS auvo_sync_metadata (entity_id VARCHAR(50) PRIMARY KEY, last_sync DATETIME NOT NULL)`);
+    } catch(e) { }
+
+    const tables = [
+      { id: 'users', table: 'users_auvo', label: 'Usuários', color: '#10b981' }, 
+      { id: 'segments', table: 'segments_auvo', label: 'Segmentos', color: '#0ea5e9' },
+      { id: 'groups', table: 'groups_auvo', label: 'Grupos', color: '#8b5cf6' }, 
+      { id: 'customers', table: 'customers_auvo', label: 'Clientes', color: '#64748b' }, 
+      { id: 'questionnaires', table: 'questionnaires_auvo', label: 'Questionários', color: '#ef4444' }, 
+      { id: 'taskTypes', table: 'tasks_types_auvo', label: 'Tipos de Tarefa', color: '#f59e0b' }, 
+      { id: 'tasks', table: 'tasks_auvo', label: 'Tarefas', color: '#ffffff' } 
+    ];
+
+    const stats = [];
+    for (const t of tables) {
+        let count = 0;
+        let lastDate = null;
+        try {
+            const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM ${t.table}`);
+            count = countRows[0].count;
+        } catch (e) { /* ignore */ }
+        
+        try {
+            const [dateRows] = await pool.query(`SELECT last_sync FROM auvo_sync_metadata WHERE entity_id = ?`, [t.id]);
+            if (dateRows && dateRows.length > 0) {
+               lastDate = dateRows[0].last_sync;
+            }
+        } catch (e) { /* ignore */ }
+
+        stats.push({ id: t.id, label: t.label, count, lastDate, color: t.color });
+    }
+    return stats;
   }
 }
 
