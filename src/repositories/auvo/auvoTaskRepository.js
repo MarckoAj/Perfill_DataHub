@@ -126,12 +126,20 @@ class AuvoTaskRepository extends BaseRepository {
     }
   }
 
-  async markAsDeletedPhase(tableName, syncStartTime) {
+  async markAsDeletedPhase(tableName, syncStartTime, startDate = null, endDate = null) {
     try {
       const localSyncStartTime = new Date(syncStartTime.getTime() - (syncStartTime.getTimezoneOffset() * 60000));
       const formattedTime = localSyncStartTime.toISOString().slice(0, 19).replace('T', ' ');
-      const query = `UPDATE ${tableName} SET isActive = 0, deletedAt = NOW() WHERE lastSyncAt < ? AND isActive = 1`;
-      const [result] = await pool.query(query, [formattedTime]);
+      
+      let query = `UPDATE ${tableName} SET isActive = 0, deletedAt = NOW() WHERE lastSyncAt < ? AND isActive = 1`;
+      let queryParams = [formattedTime];
+
+      if (tableName === 'tasks_auvo' && startDate && endDate) {
+          query += ` AND DATE(taskDate) >= ? AND DATE(taskDate) <= ?`;
+          queryParams.push(startDate, endDate);
+      }
+
+      const [result] = await pool.query(query, queryParams);
       if (result.affectedRows > 0) {
         console.log(`[SoftDelete] ${result.affectedRows} registros inativados na tabela ${tableName}.`);
       }

@@ -214,7 +214,7 @@ class AuvoSyncService {
       }
       this._setEntityState('tasks', { status: 'DONE', count: totalCount, page, targetCount, totalPages: targetPages });
       await auvoTaskRepository.updateLastSyncDate('tasks');
-      const deletedCount = await auvoTaskRepository.markAsDeletedPhase('tasks_auvo', syncStartTime);
+      const deletedCount = await auvoTaskRepository.markAsDeletedPhase('tasks_auvo', syncStartTime, params.startDate, params.endDate);
       const currentEntity = this.syncState.entities.find(e => e.id === 'tasks');
       if (currentEntity && currentEntity.deltas) {
           const newDeltas = { ...currentEntity.deltas, deletes: deletedCount || 0 };
@@ -283,6 +283,10 @@ class AuvoSyncService {
           let totalProcessed = 0;
           let totalErrors = 0;
           this.syncState.entities.forEach(e => {
+              if (this.syncState.status === 'CANCELED' && (e.status === 'SYNCING' || e.status === 'PENDING')) {
+                  e.status = 'CANCELED';
+              }
+              
               if (e.deltas) {
                   totalProcessed += (e.deltas.inserts + e.deltas.updates + e.deltas.skips);
                   totalErrors += e.deltas.errors;
