@@ -23,7 +23,7 @@ class GlpiClient {
     }
 
     const data = await response.json();
-    return { data };
+    return { data, headers: response.headers };
   }
 
   async getGlpiHeader() {
@@ -70,7 +70,7 @@ class GlpiClient {
       return null;
     }
 
-    return response.data;
+    return response;
   }
 }
 

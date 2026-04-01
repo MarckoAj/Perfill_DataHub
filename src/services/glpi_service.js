@@ -19,8 +19,14 @@ class GlpiTickets {
 
         const result = await glpi_client.glpiRequestData(endPoint, "GET");
 
-        // Tenta extrair o array de tickets (pode vir direto ou dentro de .data)
-        const ticketsArray = Array.isArray(result) ? result : (result?.data && Array.isArray(result.data) ? result.data : null);
+        const dataPayload = result?.data;
+        let ticketsArray = null;
+        
+        if (Array.isArray(dataPayload)) {
+            ticketsArray = dataPayload;
+        } else if (dataPayload && Array.isArray(dataPayload.data)) {
+            ticketsArray = dataPayload.data;
+        }
 
         if (!ticketsArray) {
             console.warn(`Aviso: GLPI retornou formato inesperado para status ${status}:`, result);
@@ -42,14 +48,21 @@ class GlpiTickets {
 
     async getTicketsByStatusFromDirectEndpoint(endPoint) {
         const result = await glpi_client.glpiRequestData(endPoint, "GET");
-        const ticketsArray = Array.isArray(result) ? result : (result?.data && Array.isArray(result.data) ? result.data : null);
+        const dataPayload = result?.data;
+        let ticketsArray = null;
         
-        if (!ticketsArray) return { processedTickets: [], rawTickets: [] };
+        if (Array.isArray(dataPayload)) {
+            ticketsArray = dataPayload;
+        } else if (dataPayload && Array.isArray(dataPayload.data)) {
+            ticketsArray = dataPayload.data;
+        }
+        
+        if (!ticketsArray) return { processedTickets: [], rawTickets: [], headers: null };
 
         const processedTickets = ticketMapper.processTickets(ticketsArray);
         const withTechs = await this.addTechniciansToTickets(processedTickets);
 
-        return { processedTickets: withTechs, rawTickets: ticketsArray };
+        return { processedTickets: withTechs, rawTickets: ticketsArray, headers: result?.headers };
     }
 
     async getTicketsByStatus(status) {

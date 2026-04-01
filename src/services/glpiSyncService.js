@@ -53,12 +53,30 @@ class GlpiSyncService {
 
       console.log(`Buscando tickets ${currentRange} a ${currentRange + this.batchSize}...`);
 
-      // Fallback para atrasado, pega tudo em aberto (não fechado) se não tiver criterias (implementação de proxy já faz isso)
-      const rangeEndPoint = statusId 
-         ? `search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=${statusId}&range=${currentRange}-${currentRange + this.batchSize}`
-         : `search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=notequals&criteria[0][value]=6&range=${currentRange}-${currentRange + this.batchSize}`;
+      // Obter o endpoint base pelo builder (ele constrói a URL massiva do atrasado "status 7" corretamente)
+      let baseEndPoint = statusId 
+         ? glpiUrlBuilder.requestGlpiEndpointByStatus(statusId) 
+         : `search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=notequals&criteria[0][value]=6`;
       
-      const { processedTickets, rawTickets } = await glpiTickets.getTicketsByStatusFromDirectEndpoint(rangeEndPoint);
+      // Limpa os ranges default e injeta a páginação real da engine
+      baseEndPoint = baseEndPoint.replace(/&range=[0-9]+-[0-9]+/g, '');
+      const rangeString = `range=${currentRange}-${currentRange + this.batchSize}`;
+      const rangeEndPoint = baseEndPoint.includes('?') ? `${baseEndPoint}&${rangeString}` : `${baseEndPoint}?${rangeString}`;
+      
+      let { processedTickets, rawTickets, headers } = await glpiTickets.getTicketsByStatusFromDirectEndpoint(rangeEndPoint);
+      
+      let discoveredTargetCount = '?';
+      if (headers && typeof headers.get === 'function') {
+          const rangeHeader = headers.get('content-range') || headers.get('Content-Range');
+          if (rangeHeader) {
+              const match = rangeHeader.match(/\/(\d+)/);
+              if (match && match[1]) discoveredTargetCount = parseInt(match[1], 10);
+          }
+      }
+      
+      if (statusName === 'atrasado' && processedTickets && processedTickets.length > 0) {
+          processedTickets = processedTickets.map(ticket => ({ ...ticket, isAtrasado: true }));
+      }
  
       if (!processedTickets || processedTickets.length === 0) {
         hasMore = false;
@@ -91,9 +109,14 @@ class GlpiSyncService {
           newDeltas.updates += batchMetrics.updates || 0;
           newDeltas.errors += batchMetrics.errors || 0;
           
+          const finalTargetCount = discoveredTargetCount !== '?' ? discoveredTargetCount : currentEntity.targetCount;
+          const finalTotalPages = finalTargetCount !== '?' ? Math.ceil(finalTargetCount / this.batchSize) : '?';
+          
           this._setEntityState(statusName, { 
              count: totalSynced, 
              page: page, 
+             targetCount: finalTargetCount,
+             totalPages: finalTotalPages,
              deltas: newDeltas 
           });
       }
@@ -121,13 +144,13 @@ class GlpiSyncService {
       this.syncState.message = "Verificando fila GLPI...";
       
       const allEntities = [
-         { id: 'novo', label: 'Tickets Novos' },
-         { id: 'atribuido', label: 'Tickets Atribuídos' },
-         { id: 'planejado', label: 'Tickets Planejados' },
-         { id: 'pendente', label: 'Tickets Pendentes' },
-         { id: 'solucionado', label: 'Tickets Solucionados' },
-         { id: 'fechado', label: 'Tickets Fechados' },
-         { id: 'atrasado', label: 'Tickets Atrasados' }
+         { id: 'novo', label: 'Tickets novos' },
+         { id: 'planejado', label: 'Tickets planejados' },
+         { id: 'atribuido', label: 'Tickets atribuídos' },
+         { id: 'solucionado', label: 'Tickets solucionados' },
+         { id: 'atrasado', label: 'Tickets atrasados' },
+         { id: 'pendente', label: 'Tickets pendentes' },
+         { id: 'fechado', label: 'Tickets fechados' }
       ];
 
       const toProcess = entitiesToSync && entitiesToSync.length > 0 

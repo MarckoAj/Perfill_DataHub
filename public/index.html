@@ -603,6 +603,7 @@
     // Estado Isolado
     let selectedIds = { auvo: new Set(), glpi: new Set() };
     let availableEntities = { auvo: [], glpi: [] };
+    let lastSyncStatus = { auvo: 'IDLE', glpi: 'IDLE' };
 
     // Variaveis Dinâmicas do DOM
     let uiGrid, uiChecklist, uiStatus;
@@ -714,6 +715,16 @@
     // 3. Renderiza o Console
     function renderConsole(state, overrideTab = null) {
       const tab = overrideTab || currentTab;
+      
+      const isFinished = state.status === 'COMPLETED' || state.status === 'ERROR' || state.status === 'CANCELED' || state.status === 'IDLE';
+      const wasRunning = lastSyncStatus[tab] === 'RUNNING' || lastSyncStatus[tab] === 'PAUSED';
+      
+      if (wasRunning && isFinished) {
+          loadStats();
+      }
+      
+      lastSyncStatus[tab] = state.status;
+
       // Evita re-renderizar aba oculta (mas se for a visivel, processa normalmente)
       if (tab !== currentTab) return;
 

@@ -28,7 +28,8 @@ class GlpiTicketRepository {
         motivoPausa = VALUES(motivoPausa),
         idTecnicoAtribuido = VALUES(idTecnicoAtribuido),
         nomeTecnico = VALUES(nomeTecnico),
-        isAtrasado = VALUES(isAtrasado)
+        isAtrasado = VALUES(isAtrasado),
+        updated_at = CURRENT_TIMESTAMP()
     `;
 
     for (const t of tickets) {
@@ -166,13 +167,13 @@ class GlpiTicketRepository {
     } catch(e) { }
 
     const statuses = [
-      { id: 'novo', label: 'Tickets Novos', color: '#10b981' },
-      { id: 'planejado', label: 'Tickets Planejados', color: '#3b82f6' },
-      { id: 'atribuido', label: 'Tickets Atribuídos', color: '#8b5cf6' },
-      { id: 'atrasado', label: 'Tickets Atrasados', color: '#ef4444' },
-      { id: 'fechado', label: 'Tickets Fechados', color: '#ffffff' },
-      { id: 'pendente', label: 'Tickets Pendentes', color: '#64748b' },
-      { id: 'solucionado', label: 'Tickets Solucionados', color: '#facc15' }
+      { id: 'novo', label: 'Tickets novos', color: '#10b981' },
+      { id: 'planejado', label: 'Tickets planejados', color: '#0ea5e9' },
+      { id: 'atribuido', label: 'Tickets atribuídos', color: '#8b5cf6' },
+      { id: 'solucionado', label: 'Tickets solucionados', color: '#64748b' },
+      { id: 'atrasado', label: 'Tickets atrasados', color: '#ef4444' },
+      { id: 'pendente', label: 'Tickets pendentes', color: '#f59e0b' },
+      { id: 'fechado', label: 'Tickets fechados', color: '#ffffff' }
     ];
 
     const stats = [];
