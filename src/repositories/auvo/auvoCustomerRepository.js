@@ -19,10 +19,11 @@ class AuvoCustomerRepository extends BaseRepository {
         active = VALUES(active),
         segmentId = VALUES(segmentId),
         isActive = 1,
-        deletedAt = NULL
+        deletedAt = NULL,
+        lastSyncAt = CURRENT_TIMESTAMP
     `;
 
-    await this.executeUpsertMany(
+    return await this.executeUpsertMany(
       customers,
       query,
       c => [

@@ -6,12 +6,14 @@ import auvoGroupRepository from "../repositories/auvo/auvoGroupRepository.js";
 import auvoTaskRepository from "../repositories/auvo/auvoTaskRepository.js";
 import auvoQuestionnaireRepository from "../repositories/auvo/auvoQuestionnaireRepository.js";
 import auvoTaskTypeRepository from "../repositories/auvo/auvoTaskTypeRepository.js";
+import syncLogRepository from "../repositories/syncLogRepository.js";
 
 class AuvoSyncService {
   constructor() {
     this.syncState = {
       status: 'IDLE', // IDLE, RUNNING, PAUSED, CANCELED, COMPLETED
       message: 'Aguardando ação...',
+      historyId: null,
       entities: []
     };
   }
@@ -85,7 +87,8 @@ class AuvoSyncService {
               : await auvoClient.getApiList(endpointOrFetcher, { page });
               
           if (page === 1 && res?.result) {
-              targetCount = res.result.totalItems || res.result.totalElements || 0;
+              targetCount = res.result.totalItems || res.result.totalElements || res.result.pagedSearchReturnData?.totalItems || 0;
+              if (entityId === 'taskTypes') targetCount = 0; // BYPASS OBRIGATORIO PRO BUG DO AUVO
               targetPages = res.result.totalPages || (targetCount > 0 ? Math.ceil(targetCount / 100) : 0);
           }
 
@@ -93,9 +96,21 @@ class AuvoSyncService {
 
           if (items.length > 0) {
               if (preUpsertHook) await preUpsertHook(items);
-              await repoUpsertFn(items);
+              const batchMetrics = await repoUpsertFn(items) || { inserts: 0, updates: 0, skips: 0, errors: 0, errorLogs: [] };
+              
+              if (batchMetrics.errorLogs && batchMetrics.errorLogs.length > 0 && this.syncState.historyId) {
+                  await syncLogRepository.insertLogs(this.syncState.historyId, batchMetrics.errorLogs);
+              }
+              
+              const currentEntity = this.syncState.entities.find(e => e.id === entityId);
+              const newDeltas = { ...currentEntity.deltas };
+              newDeltas.inserts += batchMetrics.inserts || 0;
+              newDeltas.updates += batchMetrics.updates || 0;
+              newDeltas.skips += batchMetrics.skips || 0;
+              newDeltas.errors += batchMetrics.errors || 0;
+
               totalCount += items.length;
-              this._setEntityState(entityId, { count: totalCount, targetCount, page, totalPages: targetPages });
+              this._setEntityState(entityId, { count: totalCount, targetCount, page, totalPages: targetPages, deltas: newDeltas });
           }
           
           if (entityId === "taskTypes") {
@@ -112,7 +127,12 @@ class AuvoSyncService {
       
       const map = { 'users': 'users_auvo', 'segments': 'segments_auvo', 'groups': 'groups_auvo', 'customers': 'customers_auvo', 'questionnaires': 'questionnaires_auvo', 'taskTypes': 'tasks_types_auvo' };
       if (map[entityId]) {
-          await auvoTaskRepository.markAsDeletedPhase(map[entityId], syncStartTime);
+          const deletedCount = await auvoTaskRepository.markAsDeletedPhase(map[entityId], syncStartTime);
+          const currentEntity = this.syncState.entities.find(e => e.id === entityId);
+          if (currentEntity && currentEntity.deltas) {
+              const newDeltas = { ...currentEntity.deltas, deletes: deletedCount || 0 };
+              this._setEntityState(entityId, { deltas: newDeltas });
+          }
       }
   }
 
@@ -134,7 +154,7 @@ class AuvoSyncService {
           return await auvoClient.getCustomers({ page });
       }, async items => {
           await auvoTaskRepository.saveRawData("raw_auvo_customers", items);
-          await auvoCustomerRepository.upsertCustomers(items);
+          return await auvoCustomerRepository.upsertCustomers(items);
       });
   }
 
@@ -162,7 +182,7 @@ class AuvoSyncService {
           const res = await auvoClient.getTasks({ ...params, page });
           
           if (page === 1 && res?.result) {
-              targetCount = res.result.totalItems || res.result.totalElements || 0;
+              targetCount = res.result.totalItems || res.result.totalElements || res.result.pagedSearchReturnData?.totalItems || 0;
               targetPages = res.result.totalPages || (targetCount > 0 ? Math.ceil(targetCount / 100) : 0);
           }
 
@@ -171,10 +191,21 @@ class AuvoSyncService {
           if (items.length > 0) {
               await auvoTaskRepository.saveRawData("raw_auvo_tasks", items);
               for (const t of items) await this.validateAndInsertMissingEntities(t);
-              await auvoTaskRepository.upsertTasks(items);
+              const batchMetrics = await auvoTaskRepository.upsertTasks(items) || { inserts: 0, updates: 0, skips: 0, errors: 0, errorLogs: [] };
+              
+              if (batchMetrics.errorLogs && batchMetrics.errorLogs.length > 0 && this.syncState.historyId) {
+                  await syncLogRepository.insertLogs(this.syncState.historyId, batchMetrics.errorLogs);
+              }
+              
+              const currentEntity = this.syncState.entities.find(e => e.id === 'tasks');
+              const newDeltas = { ...currentEntity.deltas };
+              newDeltas.inserts += batchMetrics.inserts || 0;
+              newDeltas.updates += batchMetrics.updates || 0;
+              newDeltas.skips += batchMetrics.skips || 0;
+              newDeltas.errors += batchMetrics.errors || 0;
               
               totalCount += items.length;
-              this._setEntityState('tasks', { count: totalCount, targetCount, page, totalPages: targetPages });
+              this._setEntityState('tasks', { count: totalCount, targetCount, page, totalPages: targetPages, deltas: newDeltas });
           }
 
           const links = res?.result?.links || [];
@@ -183,7 +214,12 @@ class AuvoSyncService {
       }
       this._setEntityState('tasks', { status: 'DONE', count: totalCount, page, targetCount, totalPages: targetPages });
       await auvoTaskRepository.updateLastSyncDate('tasks');
-      await auvoTaskRepository.markAsDeletedPhase('tasks_auvo', syncStartTime);
+      const deletedCount = await auvoTaskRepository.markAsDeletedPhase('tasks_auvo', syncStartTime);
+      const currentEntity = this.syncState.entities.find(e => e.id === 'tasks');
+      if (currentEntity && currentEntity.deltas) {
+          const newDeltas = { ...currentEntity.deltas, deletes: deletedCount || 0 };
+          this._setEntityState('tasks', { deltas: newDeltas });
+      }
   }
 
   async runQueue(entitiesToSync, startDate, endDate) {
@@ -209,11 +245,14 @@ class AuvoSyncService {
           ? allEntities.filter(e => entitiesToSync.includes(e.id))
           : allEntities;
 
+      this.syncState.historyId = await syncLogRepository.createHistory('AUVO');
+
       this.syncState.entities = toProcess.map(e => ({
           ...e,
           status: 'PENDING',
           page: 0,
-          count: 0
+          count: 0,
+          deltas: { inserts: 0, updates: 0, skips: 0, errors: 0, deletes: 0 }
       }));
 
       await auvoTaskRepository.disableForeignKeyChecks();
@@ -240,9 +279,24 @@ class AuvoSyncService {
          }
       } finally {
           await auvoTaskRepository.enableForeignKeyChecks();
+          
+          let totalProcessed = 0;
+          let totalErrors = 0;
+          this.syncState.entities.forEach(e => {
+              if (e.deltas) {
+                  totalProcessed += (e.deltas.inserts + e.deltas.updates + e.deltas.skips);
+                  totalErrors += e.deltas.errors;
+              }
+          });
+
           if (this.syncState.status !== 'CANCELED' && this.syncState.status !== 'ERROR') {
-              this.syncState.status = 'COMPLETED';
-              this.syncState.message = "Fila finalizada com sucesso!";
+              this.syncState.status = totalErrors > 0 ? 'PARTIAL' : 'COMPLETED';
+              this.syncState.message = totalErrors > 0 ? "Finalizada com falhas parciais!" : "Fila finalizada com sucesso!";
+          }
+
+          if (this.syncState.historyId) {
+             const hStatus = this.syncState.status === 'PARTIAL' ? 'PARTIAL' : (this.syncState.status === 'ERROR' ? 'ERROR' : (this.syncState.status === 'CANCELED' ? 'CANCELED' : 'SUCCESS'));
+             await syncLogRepository.updateHistory(this.syncState.historyId, hStatus, totalProcessed, totalErrors);
           }
       }
   }

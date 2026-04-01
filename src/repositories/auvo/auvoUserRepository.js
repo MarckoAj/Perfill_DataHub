@@ -19,25 +19,29 @@ class AuvoUserRepository extends BaseRepository {
         registrationDate = VALUES(registrationDate),
         insertedByAlternativeMethod = VALUES(insertedByAlternativeMethod),
         isActive = 1,
-        deletedAt = NULL
+        deletedAt = NULL,
+        lastSyncAt = CURRENT_TIMESTAMP
     `;
 
-    await this.executeUpsertMany(
+    return await this.executeUpsertMany(
       users,
       query,
-      u => [
-        parseInt(u.userID, 10) || null,
-        u.externalId ? String(u.externalId).substring(0, 200) : null,
-        u.name ? String(u.name).substring(0, 100) : null,
-        u.login ? String(u.login).substring(0, 100) : null,
-        u.email ? String(u.email).substring(0, 100) : null,
-        u.jobPosition ? String(u.jobPosition).substring(0, 100) : null,
-        parseInt(u.userType?.userTypeId, 10) || 1,
-        u.address ? String(u.address).substring(0, 255) : null,
-        u.unavailableForTasks === true ? 0 : 1,
-        u.registrationDate && u.registrationDate !== "" ? u.registrationDate : null,
-        isAlternative ? 1 : 0
-      ],
+      u => {
+        const idVal = parseInt(u.userID || u.userId || u.id, 10);
+        return [
+          Number.isNaN(idVal) ? null : idVal,
+          u.externalId ? String(u.externalId).substring(0, 200) : null,
+          u.name ? String(u.name).substring(0, 100) : null,
+          u.login ? String(u.login).substring(0, 100) : null,
+          u.email ? String(u.email).substring(0, 100) : null,
+          u.jobPosition ? String(u.jobPosition).substring(0, 100) : null,
+          parseInt(u.userType?.userTypeId, 10) || 1,
+          u.address ? String(u.address).substring(0, 255) : null,
+          u.unavailableForTasks === true ? 0 : 1,
+          u.registrationDate && u.registrationDate !== "" ? u.registrationDate : null,
+          isAlternative ? 1 : 0
+        ];
+      },
       "usuário AUVO"
     );
   }

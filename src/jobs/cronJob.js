@@ -1,6 +1,9 @@
 import cron from "node-cron";
 import syncService from "../services/sync_service.js";
 
+import { setupAuvoRetentionJob } from "./auvoRetentionJob.js";
+import setupAuvoSyncJob from "./auvoSyncJob.js";
+
 const startJobs = () => {
   // Roda a cada 4 horas
   cron.schedule("0 */4 * * *", async () => {
@@ -12,8 +15,11 @@ const startJobs = () => {
       console.error("Erro na rotina de sincronização automática:", error);
     }
   });
+  console.log("Job de sincronização GLPI agendado (A cada 4h).");
 
-  console.log("Job de sincronização automática agendado (Diário às 02:00).");
+  // AUVO - Agendadores
+  setupAuvoRetentionJob();
+  setupAuvoSyncJob();
 };
 
 export default startJobs;

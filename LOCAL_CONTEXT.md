@@ -159,6 +159,31 @@ GLPI
 Zabbix  
 AUVO  
 
+---
+
+## Fase 1: Deltas e Operações (INSERT/UPDATE/SKIP/DELETE)
+- [x] Mapear `affectedRows` na abstração principal `baseRepository.js`.
+- [x] Retornar dados operacionais ao `auvoSyncService.js`.
+- [x] Coletar a quantidade de Soft Deletes na função `markAsDeletedPhase`.
+- [x] Atualizar o Frontend para englobar os Deltas.
+
+## Fase 2: Tratamento de Erros e Históricos
+- [x] Criar tabelas `sync_history` e `sync_logs` em uma nova Migration.
+- [x] O backend deverá injetar eventos e exceções na tabela `sync_logs`.
+- [x] Frontend: Rota, Tela Modal de Auditoria e link nos relatórios aplicados.
+- [x] Correções de Model (Tipo do externalId do Task para VARCHAR e StandardQuestionnaireId padrão 0).
+
+## Fase 3: Sincronização Automática (CronJob)
+- [x] Criar o arquivo gerenciador `src/jobs/auvoSyncJob.js`.
+- [x] Ativar a chamada para a Sincronização Global no intervalo configurado.
+- [x] Plugar o `setupAuvoRetentionJob` e o `setupAuvoSyncJob` no boot da aplicação raiz (`server.js`).
+
+## Fase 4: Experiência Gráfica Web (Visual Upgrade)
+- [x] Frontend: Converter caixas de seleção em Toggles Switch.
+- [x] Frontend: Adicionar Progress Bars Animadas na listagem do console.
+- [x] Frontend: Badge luminosa indicatória de Cron-Sync Automático ativa no cabeçalho.
+- [x] Resiliência: Prevenção de valor NaN nas chaves de tabelas individualizadas (Fallback de Primary Keys).
+
 For now, the focus is exposing BI endpoints for Power BI.
 
 ---

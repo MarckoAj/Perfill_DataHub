@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import pool from "../database/connection.js";
-import logger from "../utils/logger.js";
+import logger from "../logger.js";
 
 async function runAuvoRetentionPurge() {
     logger.info("[AuvoRetentionJob] Iniciando verificação de registros marcados para exclusão (Soft Delete)...");

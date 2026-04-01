@@ -285,7 +285,7 @@ export async function runAuvoMigrations() {
                     customerId INT NOT NULL,
                     taskStatusID INT NOT NULL,
                     tasksTypesId INT NOT NULL,
-                    externalId INT NULL,
+                    externalId VARCHAR(255) NULL,
                     taskDate DATETIME NULL,
                     taskCreationDate DATETIME NULL,
                     orientation TEXT NULL,
@@ -318,9 +318,10 @@ export async function runAuvoMigrations() {
                     CONSTRAINT fk_tasks_customers_auvo FOREIGN KEY (customerId) REFERENCES customers_auvo (customerId),
                     CONSTRAINT fk_tasks_priority_auvo FOREIGN KEY (taskPriorityId) REFERENCES tasks_prioritys (taskPriorityId),
                     CONSTRAINT fk_tasks_status_auvo FOREIGN KEY (taskStatusID) REFERENCES tasks_status (taskStatusId),
+                    CONSTRAINT fk_tasks_types_auvo FOREIGN KEY (tasksTypesId) REFERENCES tasks_types_auvo (tasksTypesId),
                     CONSTRAINT fk_tasks_users_from FOREIGN KEY (userFromId) REFERENCES users_auvo (userId),
                     CONSTRAINT fk_tasks_users_to FOREIGN KEY (userToId) REFERENCES users_auvo (userId)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
             `
         }
     ];
@@ -328,10 +329,18 @@ export async function runAuvoMigrations() {
     for (const table of tables) {
         try {
             await pool.query(table.query);
-            console.log(`Migration AUVO: Tabela '${table.name}' verificada/criada com sucesso.`);
+            console.log(`Migration AUVO: Tabela '${table.name}' validada/criada com sucesso.`);
         } catch (error) {
             console.error(`Erro ao criar tabela AUVO '${table.name}':`, error.message);
             throw error; // Interrompe para não quebrar FKs subsequentes
         }
+    }
+
+    try {
+        await pool.query("ALTER TABLE tasks_auvo MODIFY COLUMN externalId VARCHAR(255) NULL;");
+        console.log("Migration AUVO: Tipo da coluna tasks_auvo.externalId garantida como VARCHAR.");
+    } catch (error) {
+        console.error(`Erro ao alterar coluna tasks_auvo.externalId:`, error.message);
+        throw error;
     }
 }

@@ -12,19 +12,23 @@ class AuvoQuestionnaireRepository extends BaseRepository {
         footer = VALUES(footer),
         creationDate = VALUES(creationDate),
         isActive = 1,
-        deletedAt = NULL
+        deletedAt = NULL,
+        lastSyncAt = CURRENT_TIMESTAMP
     `;
 
-    await this.executeUpsertMany(
+    return await this.executeUpsertMany(
       questionnaires,
       query,
-      q => [
-        parseInt(q.id, 10),
-        q.description ? String(q.description).substring(0, 255) : null,
-        q.header ? String(q.header) : null,
-        q.footer ? String(q.footer) : null,
-        q.creationDate && q.creationDate !== "" ? q.creationDate : null
-      ],
+      q => {
+        const idVal = parseInt(q.id || q.questionaryId || q.questionaryID || q.questionnaireId || q.questionnaireID, 10);
+        return [
+          Number.isNaN(idVal) ? null : idVal,
+          q.description ? String(q.description).substring(0, 255) : null,
+          q.header ? String(q.header) : null,
+          q.footer ? String(q.footer) : null,
+          q.creationDate && q.creationDate !== "" ? q.creationDate : null
+        ];
+      },
       "questionário AUVO"
     );
   }

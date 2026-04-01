@@ -8,7 +8,13 @@
     "start": "node src/index.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles"
   },
-  "keywords": ["glpi", "power-bi", "integration", "dashboard", "perfill"],
+  "keywords": [
+    "glpi",
+    "power-bi",
+    "integration",
+    "dashboard",
+    "perfill"
+  ],
   "author": "Perfill Team",
   "license": "ISC",
   "type": "module",
@@ -20,7 +26,8 @@
     "he": "^1.2.0",
     "moment": "^2.30.1",
     "mysql2": "^3.19.1",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

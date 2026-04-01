@@ -1,6 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import auvoSyncService from "../services/auvoSyncService.js";
 import auvoTaskRepository from "../repositories/auvo/auvoTaskRepository.js";
+import syncLogRepository from "../repositories/syncLogRepository.js";
 
 export const syncAuvoManual = asyncHandler(async (req, res) => {
     const { entities, startDate, endDate } = req.body || {}; 
@@ -39,4 +40,10 @@ export const controlAuvoSync = asyncHandler(async (req, res) => {
 export const getAuvoStats = asyncHandler(async (req, res) => {
     const stats = await auvoTaskRepository.getGlobalAuvoStats();
     res.status(200).json({ success: true, stats });
+});
+
+export const getAuvoSyncLogs = asyncHandler(async (req, res) => {
+    const { historyId } = req.params;
+    const logs = await syncLogRepository.getHistoryLogs(historyId);
+    res.status(200).json({ success: true, logs });
 });

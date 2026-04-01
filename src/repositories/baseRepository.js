@@ -9,17 +9,24 @@ export default class BaseRepository {
    * @param {String} entityName Nome da entidade para exibição no log de erro (ex: "usuário AUVO")
    */
   async executeUpsertMany(items, query, getValuesFn, entityName) {
-    if (!items || items.length === 0) return;
+    const metrics = { inserts: 0, updates: 0, skips: 0, errors: 0, errorLogs: [] };
+    if (!items || items.length === 0) return metrics;
 
     for (const item of items) {
       const values = getValuesFn(item);
       try {
-        await pool.query(query, values);
+        const [result] = await pool.query(query, values);
+        if (result.affectedRows === 1) metrics.inserts++;
+        else if (result.affectedRows === 2) metrics.updates++;
+        else metrics.skips++;
       } catch (error) {
+        metrics.errors++;
         const itemId = item.id || item.userID || item.taskID || item.questionaryId || item.groupId || item.tasksTypesId || 'desconhecido';
+        metrics.errorLogs.push({ entityName, entityId: itemId, message: error.sqlMessage || error.message });
         console.error(`Erro ao salvar ${entityName} ${itemId}:`, error.sqlMessage || error.message);
       }
     }
+    return metrics;
   }
 
   /**

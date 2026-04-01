@@ -55,7 +55,7 @@
     }
     
     .entity-card {
-      padding: 20px;
+      padding: 25px 20px 20px 20px;
       border-radius: 12px;
       cursor: pointer;
       color: white;
@@ -76,13 +76,35 @@
     .entity-card .label { font-size: 14px; opacity: 0.9; }
     .entity-card .date { font-size: 11px; margin-top: 10px; opacity: 0.7; }
     
-    .checkbox-icon {
-      position: absolute; top: 10px; right: 10px;
-      width: 18px; height: 18px; border-radius: 4px; border: 2px solid white;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0.5;
+    .toggle-switch {
+      position: absolute; top: 12px; right: 12px;
+      width: 36px; height: 20px; border-radius: 12px;
+      background: rgba(255,255,255,0.2);
+      transition: all 0.3s ease; box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
     }
-    .entity-card.selected .checkbox-icon { opacity: 1; background: white; }
+    .toggle-switch::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: white; transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .entity-card.selected .toggle-switch { background: #10b981; }
+    .entity-card.selected .toggle-switch::after { transform: translateX(16px); }
+    .entity-card.light.selected .toggle-switch { background: #0f172a; }
+
+    .progress-track {
+      width: 100%; height: 6px; background: rgba(0,0,0,0.2); 
+      border-radius: 4px; margin-top: 10px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s ease-out, background-color 0.3s;
+    }
+    @keyframes strip { 0% { background-position: 0 0; } 100% { background-position: 50px 50px; } }
+    .progress-fill.active {
+       background-image: linear-gradient(-45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent);
+       background-size: 50px 50px;
+       animation: strip 2s linear infinite;
+    }
 
     /* Actions */
     .actions {
@@ -163,6 +185,15 @@
       70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
       100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
     }
+    .dot-cron {
+      width: 8px; height: 8px; border-radius: 50%; background: #10b981;
+      box-shadow: 0 0 8px #10b981; animation: pulseGreen 2s infinite;
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
   </style>
 </head>
 <body>
@@ -170,6 +201,10 @@
   <header>
     <div class="logo-ball"></div>
     <strong>PerfillBI | Sincronizador de Dados (AUVO Engine)</strong>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2);" title="A sincronização automática está ativada no servidor a cada 2 horas">
+       <div class="dot-cron"></div>
+       <span style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (2h)</span>
+    </div>
   </header>
 
   <div class="container">
@@ -245,10 +280,10 @@
              div.style.color = isLight ? '#0f172a' : 'white';
              div.style.borderColor = isLight ? 'transparent' : 'rgba(255,255,255,0.3)';
 
-             let checkStyle = `border-color: ${isLight ? '#0f172a' : 'white'};`;
-             
+             if (isLight) div.classList.add("light");
+
              div.innerHTML = `
-                <div class="checkbox-icon" style="${checkStyle}"></div>
+                <div class="toggle-switch"></div>
                 <div class="count">${ent.count.toLocaleString('pt-BR')}</div>
                 <div class="label">${ent.label}</div>
                 <div class="date">${ent.lastDate ? 'Verificado: ' + formatDate(ent.lastDate) : 'Sinc. Pendente'}</div>
@@ -257,20 +292,12 @@
              div.onclick = () => {
                  if (selectedIds.has(ent.id)) {
                      selectedIds.delete(ent.id);
-                     div.className = "entity-card";
-                     div.querySelector('.checkbox-icon').style.background = 'transparent';
-                     div.querySelector('.checkbox-icon').innerHTML = '';
+                     div.classList.remove("selected");
                  } else {
                      selectedIds.add(ent.id);
-                     div.className = "entity-card selected";
-                     div.querySelector('.checkbox-icon').style.background = isLight ? '#0f172a' : 'white';
-                     div.querySelector('.checkbox-icon').innerHTML = `<span style="color: ${isLight ? 'white' : 'black'}; font-size: 12px; font-weight: bold;">✔</span>`;
+                     div.classList.add("selected");
                  }
              };
-             
-             // Initial Set Style for CheckIcon
-             div.querySelector('.checkbox-icon').style.background = isLight ? '#0f172a' : 'white';
-             div.querySelector('.checkbox-icon').innerHTML = `<span style="color: ${isLight ? 'white' : 'black'}; font-size: 12px; font-weight: bold;">✔</span>`;
              
              uiGrid.appendChild(div);
         });
@@ -280,8 +307,7 @@
     function renderConsole(state) {
         uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
         
-        // Controle de Botões
-        bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'CANCELED') ? 'block' : 'none';
+        bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'PARTIAL' || state.status === 'CANCELED' || state.status === 'ERROR') ? 'block' : 'none';
         bPause.style.display = state.status === 'RUNNING' ? 'block' : 'none';
         bResume.style.display = state.status === 'PAUSED' ? 'block' : 'none';
         bCancel.style.display = (state.status === 'RUNNING' || state.status === 'PAUSED') ? 'block' : 'none';
@@ -311,15 +337,49 @@
             const pageText = `${ent.page}/${pageTotal}`;
             const countText = `${ent.count}/${targetTotal}`;
 
+            let deltaString = '';
+            if (ent.deltas && (ent.status === 'DONE' || ent.status === 'SYNCING')) {
+               deltaString = `
+                  <div style="font-size: 12px; margin-top: 6px; color: #a1a1aa; display: flex; gap: 10px; background: rgba(0,0,0,0.15); padding: 4px 8px; border-radius: 4px; width: fit-content;">
+                     <span style="color: #4ade80; font-weight: 500;">+${ent.deltas.inserts || 0} novos</span>
+                     <span style="color: #60a5fa; font-weight: 500;">~${ent.deltas.updates || 0} confirmados na base</span>
+                     ${ent.deltas.deletes ? `<span style="color: #f87171; font-weight: 500;">-${ent.deltas.deletes} apagados</span>` : ''}
+                     ${ent.deltas.errors ? `<span style="color: #fca5a5; font-weight: 500; cursor: pointer; text-decoration: underline;" onclick="openErrorModal(${state.historyId})" title="Clique para ver os logs">⚠ ${ent.deltas.errors} erros</span>` : ''}
+                  </div>
+               `;
+            }
+
+            let progressHtml = '';
+            if (ent.status === 'SYNCING' || ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR') {
+                let percentage = 0;
+                let targetTot = ent.targetCount > 0 ? ent.targetCount : (ent.count > 0 ? ent.count : 1);
+                
+                if (ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR') percentage = 100;
+                else percentage = Math.min((ent.count / targetTot) * 100, 100);
+                
+                let fillClass = ent.status === 'SYNCING' ? 'progress-fill active' : 'progress-fill';
+                let fillColor = ent.status === 'ERROR' ? '#f87171' : (ent.status === 'SYNCING' ? '#3b82f6' : '#10b981');
+                
+                progressHtml = `
+                  <div class="progress-track">
+                     <div class="${fillClass}" style="width: ${percentage.toFixed(1)}%; background-color: ${fillColor};"></div>
+                  </div>
+                `;
+            }
+
             row.innerHTML = `
                <div class="status-dot ${dotClass}"></div>
-               <div class="log-content">
-                  <span class="log-entity">${ent.label}</span>
-                  <span class="log-details">
-                     ${ent.status === 'PENDING' ? 'Aguardando na fila...' : ''}
-                     ${ent.status === 'DONE' ? `<span class="log-tag">✅ Concluído</span> Baixados/Processados: ${countText}` : ''}
-                     ${ent.status === 'SYNCING' ? `<span class="log-tag">⏳ Sincronizando</span> Pág: ${pageText} | Processados: ${countText}` : ''}
-                  </span>
+               <div class="log-content" style="flex: 1; width: 100%;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                      <span class="log-entity">${ent.label}</span>
+                      <span class="log-details" style="margin-left: auto;">
+                         ${ent.status === 'PENDING' ? 'Aguardando na fila...' : ''}
+                         ${ent.status === 'DONE' ? `<span class="log-tag">✅ Concluído</span> Processados: ${countText}` : ''}
+                         ${ent.status === 'SYNCING' ? `<span class="log-tag">⏳ Sincronizando</span> Pág: ${pageText} | Lidos da API: ${countText}` : ''}
+                      </span>
+                  </div>
+                  ${progressHtml}
+                  ${deltaString}
                </div>
             `;
             uiChecklist.appendChild(row);
@@ -358,14 +418,61 @@
                 });
             }
             startPolling();
-        } catch (e) {
-            alert("Falha de rede: " + e.message);
-        }
+        } catch (e) { alert("Erro de comunicação: " + e.message); }
+    };
+
+    window.openErrorModal = async (historyId) => {
+      if (!historyId) return alert('Sessão não disponível.');
+      document.getElementById('errorModal').style.display = 'flex';
+      document.getElementById('modalHistoryId').innerText = historyId;
+      const tbody = document.getElementById('errorTableBody');
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Buscando logs no servidor...</td></tr>';
+      
+      try {
+         const res = await fetch(`/api/auvo/sync/logs/${historyId}`);
+         const data = await res.json();
+         if (data.logs && data.logs.length > 0) {
+            tbody.innerHTML = data.logs.map(log => `
+               <tr style="border-bottom: 1px solid #334155;">
+                  <td style="padding: 10px;">${log.entityName}</td>
+                  <td style="padding: 10px; font-family: monospace; color: #fbbf24;">${log.entityId}</td>
+                  <td style="padding: 10px; color: #fca5a5;">${log.message}</td>
+               </tr>
+            `).join('');
+         } else {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #4ade80;">Nenhum log gravado.</td></tr>';
+         }
+      } catch (e) {
+         tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: #f87171;">Falha na leitura: ${e.message}</td></tr>`;
+      }
     };
 
     // Auto-carrega Stats e Polling na montagem
     loadStats();
     startPolling(); // Traz o estado atual, caso o server já esteja rodando uma fila por baixo dos panos!
   </script>
+
+   <!-- Modal de Erros (Auditoria) -->
+   <div id="errorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; font-family: 'Inter', sans-serif;">
+      <div style="background: #1e293b; width: 100%; max-width: 800px; max-height: 80vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+         <div style="padding: 16px 20px; background: #334155; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="color: #f8fafc; margin: 0; font-size: 16px;">🔍 Auditoria de Falhas (Sessão #<span id="modalHistoryId"></span>)</h3>
+            <button onclick="document.getElementById('errorModal').style.display='none'" style="background: none; border: none; color: #cbd5e1; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+         </div>
+         <div style="padding: 0; overflow-y: auto; flex: 1; background: #0f172a;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; color: #cbd5e1; font-size: 13px;">
+               <thead style="background: #1e293b; position: sticky; top: 0;">
+                  <tr style="border-bottom: 1px solid #334155;">
+                     <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Repositório</th>
+                     <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Item (ID Originário)</th>
+                     <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Mensagem Recebida (MySQL)</th>
+                  </tr>
+               </thead>
+               <tbody id="errorTableBody">
+               </tbody>
+            </table>
+         </div>
+      </div>
+   </div>
 </body>
 </html>

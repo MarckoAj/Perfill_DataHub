@@ -3,6 +3,7 @@ import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
 import { runAuvoMigrations } from "./migrations/auvoTables.js";
 import { runAuvoSeeds } from "./seeds/auvoSeeds.js";
+import { createSyncLogsTables } from "./migrations/syncLogsTables.js";
 
 dotenv.config();
 
@@ -125,6 +126,9 @@ export async function runMigrations() {
             );
             console.log(`Migration: Usuário '${defaultUser}' criado com sucesso.`);
         }
+        
+        // Novas tabelas de Auditoria de Sincronizacao
+        await createSyncLogsTables();
 
     } catch (error) {
         console.error("Migration Erro:", error);

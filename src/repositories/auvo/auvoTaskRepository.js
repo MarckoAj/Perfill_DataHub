@@ -43,10 +43,11 @@ class AuvoTaskRepository extends BaseRepository {
         dateLastUpdate = VALUES(dateLastUpdate),
         displacementStart = VALUES(displacementStart),
         isActive = 1,
-        deletedAt = NULL
+        deletedAt = NULL,
+        lastSyncAt = CURRENT_TIMESTAMP
     `;
 
-    await this.executeUpsertMany(
+    return await this.executeUpsertMany(
       tasks,
       query,
       t => [
@@ -57,7 +58,7 @@ class AuvoTaskRepository extends BaseRepository {
         parseInt(t.customerId, 10) || 0,
         parseInt(t.taskStatus, 10) || 1,
         parseInt(t.taskType, 10) || 0,
-        parseInt(t.externalId, 10) || null,
+        t.externalId ? String(t.externalId).substring(0, 255) : null,
         t.taskDate || null,
         t.creationDate || null,
         t.orientation ? String(t.orientation) : null,
@@ -127,14 +128,17 @@ class AuvoTaskRepository extends BaseRepository {
 
   async markAsDeletedPhase(tableName, syncStartTime) {
     try {
-      const formattedTime = syncStartTime.toISOString().slice(0, 19).replace('T', ' ');
+      const localSyncStartTime = new Date(syncStartTime.getTime() - (syncStartTime.getTimezoneOffset() * 60000));
+      const formattedTime = localSyncStartTime.toISOString().slice(0, 19).replace('T', ' ');
       const query = `UPDATE ${tableName} SET isActive = 0, deletedAt = NOW() WHERE lastSyncAt < ? AND isActive = 1`;
       const [result] = await pool.query(query, [formattedTime]);
       if (result.affectedRows > 0) {
         console.log(`[SoftDelete] ${result.affectedRows} registros inativados na tabela ${tableName}.`);
       }
+      return result.affectedRows;
     } catch (e) {
       console.error(`Erro ao marcar registros como deletados na tabela ${tableName}:`, e.message);
+      return 0;
     }
   }
 

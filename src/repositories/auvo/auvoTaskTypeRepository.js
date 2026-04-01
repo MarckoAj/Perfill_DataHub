@@ -16,22 +16,26 @@ class AuvoTaskTypeRepository extends BaseRepository {
         toleranceTime = VALUES(toleranceTime),
         active = VALUES(active),
         isActive = 1,
-        deletedAt = NULL
+        deletedAt = NULL,
+        lastSyncAt = CURRENT_TIMESTAMP
     `;
 
-    await this.executeUpsertMany(
+    return await this.executeUpsertMany(
       taskTypes,
       query,
-      t => [
-        parseInt(t.id, 10),
-        t.creatorId ? parseInt(t.creatorId, 10) : null,
-        t.standardQuestionnaireId && t.standardQuestionnaireId > 0 ? parseInt(t.standardQuestionnaireId, 10) : null,
-        t.description ? String(t.description).substring(0, 255) : null,
-        t.creationDate && t.creationDate !== "" ? t.creationDate : null,
-        t.standardTime ? String(t.standardTime).substring(0, 50) : null,
-        t.toleranceTime ? String(t.toleranceTime).substring(0, 50) : null,
-        t.active === false ? 0 : 1
-      ],
+      t => {
+        const idVal = parseInt(t.id || t.taskTypeID || t.tasksTypesId, 10);
+        return [
+          Number.isNaN(idVal) ? null : idVal,
+          t.creatorId ? parseInt(t.creatorId, 10) : null,
+          t.standardQuestionnaireId ? parseInt(t.standardQuestionnaireId, 10) : 0,
+          t.description ? String(t.description).substring(0, 255) : null,
+          t.creationDate && t.creationDate !== "" ? t.creationDate : null,
+          t.standardTime ? String(t.standardTime).substring(0, 50) : null,
+          t.toleranceTime ? String(t.toleranceTime).substring(0, 50) : null,
+          t.active === false ? 0 : 1
+        ];
+      },
       "tipo de tarefa AUVO"
     );
   }
