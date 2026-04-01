@@ -1,26 +1,84 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <title>PerfillBI - Sincronizador de Entidades</title>
   <style>
     :root {
-      --bg: #0f172a; /* Fundo Deep Dark */
-      --card-bg: #1e293b; /* Console Box */
+      --bg: #0f172a;
+      /* Fundo Deep Dark */
+      --card-bg: #1e293b;
+      /* Console Box */
       --text: #ffffff;
       --text-muted: #94a3b8;
       --font-family: system-ui, -apple-system, sans-serif;
     }
 
     .tabs-container {
-      display: flex; justify-content: center; gap: 15px; padding: 20px 0; background: #0b1120; border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: flex-start;
+      gap: 20px;
+      padding: 25px 45px;
+      background: var(--bg);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
+
     .tab-btn {
-      background: transparent; border: 2px solid rgba(255,255,255,0.1); color: var(--text-muted);
-      padding: 10px 30px; font-size: 15px; font-weight: 600; border-radius: 30px; cursor: pointer; transition: 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 14px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 8px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.3s;
+      min-width: 190px;
     }
-    .tab-btn:hover { border-color: rgba(255,255,255,0.3); color: white; }
-    .tab-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; box-shadow: 0 4px 15px rgba(59,130,246,0.2); }
+
+    .tab-btn img {
+      height: 35px;
+      width: 62px;
+      border-radius: 8px;
+      object-fit: contain;
+      background: transparent;
+      padding: 2px;
+    }
+
+    #tabBtn_auvo img {
+      background: rgb(109, 38, 194);
+    }
+
+    #tabBtn_glpi img {
+      background: #000000;
+    }
+
+    .tab-btn:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+      background: #334155;
+    }
+
+    .tab-btn.active#tabBtn_auvo {
+      background: rgb(109, 38, 194);
+      /* Cor Exata Sugerida */
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(255, 255, 255, );
+    }
+
+    .tab-btn.active#tabBtn_glpi {
+      background: #000000;
+      /* Preto GLPI */
+      border-color: #334155;
+      color: white;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
 
     body {
       background: var(--bg);
@@ -41,11 +99,13 @@
       align-items: center;
       gap: 15px;
       background: rgba(15, 23, 42, 0.9);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
-    
+
     .logo-ball {
-      width: 25px; height: 25px; border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
       background: linear-gradient(135deg, #aa3bff, #3b82f6);
     }
 
@@ -56,14 +116,19 @@
     }
 
     /* Cards (Toggles) */
-    .cards-title { font-size: 18px; margin-bottom: 20px; font-weight: 600; }
+    .cards-title {
+      font-size: 18px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 15px;
       margin-bottom: 30px;
     }
-    
+
     .entity-card {
       padding: 45px 20px 20px 20px;
       border-radius: 12px;
@@ -74,46 +139,98 @@
       opacity: 0.4;
       position: relative;
     }
-    
+
     .entity-card.selected {
       opacity: 1;
       transform: translateY(-3px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      border-color: rgba(255,255,255,0.3);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
-    .entity-card .count { font-size: 26px; font-weight: bold; margin-bottom: 5px; }
-    .entity-card .label { font-size: 14px; opacity: 0.9; }
-    .entity-card .date { font-size: 11px; margin-top: 10px; opacity: 0.7; }
-    
+    .entity-card .count {
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .entity-card .label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .entity-card .date {
+      font-size: 11px;
+      margin-top: 10px;
+      opacity: 0.7;
+    }
+
     .toggle-switch {
-      position: absolute; top: 12px; right: 12px;
-      width: 36px; height: 20px; border-radius: 12px;
-      background: rgba(255,255,255,0.2);
-      transition: all 0.3s ease; box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 36px;
+      height: 20px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
     }
+
     .toggle-switch::after {
-      content: ''; position: absolute; top: 2px; left: 2px;
-      width: 16px; height: 16px; border-radius: 50%;
-      background: white; transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
-    .entity-card.selected .toggle-switch { background: #10b981; }
-    .entity-card.selected .toggle-switch::after { transform: translateX(16px); }
-    .entity-card.light.selected .toggle-switch { background: #0f172a; }
+
+    .entity-card.selected .toggle-switch {
+      background: #10b981;
+    }
+
+    .entity-card.selected .toggle-switch::after {
+      transform: translateX(16px);
+    }
+
+    .entity-card.light.selected .toggle-switch {
+      background: #0f172a;
+    }
 
     .progress-track {
-      width: 100%; height: 6px; background: rgba(0,0,0,0.2); 
-      border-radius: 4px; margin-top: 10px; overflow: hidden;
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      margin-top: 10px;
+      overflow: hidden;
     }
+
     .progress-fill {
-      height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s ease-out, background-color 0.3s;
+      height: 100%;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s ease-out, background-color 0.3s;
     }
-    @keyframes strip { 0% { background-position: 0 0; } 100% { background-position: 50px 50px; } }
+
+    @keyframes strip {
+      0% {
+        background-position: 0 0;
+      }
+
+      100% {
+        background-position: 50px 50px;
+      }
+    }
+
     .progress-fill.active {
-       background-image: linear-gradient(-45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent);
-       background-size: 50px 50px;
-       animation: strip 2s linear infinite;
+      background-image: linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+      background-size: 50px 50px;
+      animation: strip 2s linear infinite;
     }
 
     /* Actions */
@@ -122,7 +239,7 @@
       gap: 15px;
       margin-bottom: 40px;
     }
-    
+
     button {
       padding: 14px 30px;
       border-radius: 8px;
@@ -133,14 +250,38 @@
       cursor: pointer;
       transition: 0.2s;
     }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    
-    .btn-start { background: #3b82f6; } /* Azul */
-    .btn-pause { background: #eab308; color: #000; } /* Amarelo */
-    .btn-resume { background: #22c55e; } /* Verde */
-    .btn-cancel { background: #ef4444; } /* Vermelho */
 
-    button:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-start {
+      background: #3b82f6;
+    }
+
+    /* Azul */
+    .btn-pause {
+      background: #eab308;
+      color: #000;
+    }
+
+    /* Amarelo */
+    .btn-resume {
+      background: #22c55e;
+    }
+
+    /* Verde */
+    .btn-cancel {
+      background: #ef4444;
+    }
+
+    /* Vermelho */
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
 
     /* Console Block */
     .console-box {
@@ -148,17 +289,26 @@
       border-radius: 12px;
       padding: 30px;
       min-height: 250px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-    
-    .console-header {
-      display: flex; justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      padding-bottom: 15px; margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
-    .console-title { font-size: 20px; font-weight: 600; }
-    .console-status { font-family: monospace; color: var(--text-muted); }
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+
+    .console-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .console-status {
+      font-family: monospace;
+      color: var(--text-muted);
+    }
 
     .checklist {
       font-family: ui-monospace, Consolas, monospace;
@@ -170,57 +320,119 @@
       align-items: center;
       margin-bottom: 18px;
       padding: 10px;
-      background: rgba(0,0,0,0.2);
+      background: rgba(0, 0, 0, 0.2);
       border-radius: 6px;
       transition: background 0.3s;
     }
 
     .status-dot {
-      width: 14px; height: 14px; border-radius: 50%; margin-right: 15px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 15px;
       flex-shrink: 0;
     }
 
-    .dot-pending { background: #475569; }
-    .dot-syncing { background: #eab308; box-shadow: 0 0 12px #eab308; animation: pulse 1s infinite; }
-    .dot-done { background: #22c55e; box-shadow: 0 0 12px #22c55e; }
-    .dot-error { background: #ef4444; }
+    .dot-pending {
+      background: #475569;
+    }
 
-    .log-content { flex-grow: 1; }
-    .log-entity { font-weight: bold; color: white; width: 180px; display: inline-block; }
-    .log-details { color: var(--text-muted); }
-    .log-tag { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; margin-right: 10px; }
+    .dot-syncing {
+      background: #eab308;
+      box-shadow: 0 0 12px #eab308;
+      animation: pulse 1s infinite;
+    }
+
+    .dot-done {
+      background: #22c55e;
+      box-shadow: 0 0 12px #22c55e;
+    }
+
+    .dot-error {
+      background: #ef4444;
+    }
+
+    .log-content {
+      flex-grow: 1;
+    }
+
+    .log-entity {
+      font-weight: bold;
+      color: white;
+      width: 180px;
+      display: inline-block;
+    }
+
+    .log-details {
+      color: var(--text-muted);
+    }
+
+    .log-tag {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
 
     @keyframes pulse {
-      0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
-      70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
-      100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+      0% {
+        transform: scale(0.9);
+        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7);
+      }
+
+      70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(234, 179, 8, 0);
+      }
+
+      100% {
+        transform: scale(0.9);
+        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
+      }
     }
+
     .dot-cron {
-      width: 8px; height: 8px; border-radius: 50%; background: #10b981;
-      box-shadow: 0 0 8px #10b981; animation: pulseGreen 2s infinite;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseGreen 2s infinite;
     }
+
     @keyframes pulseGreen {
-      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+      0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
     }
+
     /* Floating Dropdown Period Configuration */
     .card-period-dropdown {
       position: absolute;
-      top: 40px; /* Logo abaixo dos botoes do topo */
+      top: 40px;
+      /* Logo abaixo dos botoes do topo */
       left: 0;
       width: 190px;
       background: #1e293b;
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 8px;
       padding: 14px;
-      display: none; /* Toggled via class .active */
+      display: none;
+      /* Toggled via class .active */
       flex-direction: column;
       gap: 10px;
       z-index: 1000;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     }
-    
+
     .card-period-dropdown.active {
       display: flex;
     }
@@ -256,36 +468,39 @@
     }
 
     .btn-period-config {
-       position: absolute;
-       top: 12px;
-       left: 12px;
-       display: flex;
-       align-items: center;
-       gap: 6px;
-       font-size: 10px;
-       background: #000000 !important; /* Fundo Preto de Alto Contraste */
-       color: #ffffff !important;      /* Fonte Branca */
-       padding: 0 10px;
-       border-radius: 6px;
-       cursor: pointer;
-       height: 22px;
-       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-       border: 1px solid rgba(255, 255, 255, 0.25); /* Bordas Brancas */
-       white-space: nowrap;
-       z-index: 10;
-       font-weight: 600;
-       text-transform: uppercase;
-       letter-spacing: 0.5px;
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      background: #000000 !important;
+      /* Fundo Preto de Alto Contraste */
+      color: #ffffff !important;
+      /* Fonte Branca */
+      padding: 0 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      height: 22px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      /* Bordas Brancas */
+      white-space: nowrap;
+      z-index: 10;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    
-    .btn-period-config:hover { 
-      background: #111111 !important; 
+
+    .btn-period-config:hover {
+      background: #111111 !important;
       border-color: rgba(255, 255, 255, 0.5);
       transform: scale(1.02);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     }
-    
-    .entity-card.light .btn-period-config { 
+
+    .entity-card.light .btn-period-config {
       border-color: rgba(0, 0, 0, 0.3);
     }
 
@@ -297,20 +512,29 @@
     }
   </style>
 </head>
+
 <body>
 
   <header>
     <div class="logo-ball"></div>
     <strong>PerfillBI | Sincronizador de Dados (AUVO Engine)</strong>
-    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2);" title="A sincronização automática está ativada no servidor a cada 2 horas">
-       <div class="dot-cron"></div>
-       <span style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (2h)</span>
+    <div
+      style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2);"
+      title="A sincronização automática está ativada no servidor a cada 2 horas">
+      <div class="dot-cron"></div>
+      <span style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (2h)</span>
     </div>
   </header>
 
   <div class="tabs-container">
-     <button class="tab-btn active" id="tabBtn_auvo" onclick="switchTab('auvo')">🟣 API AUVO</button>
-     <button class="tab-btn" id="tabBtn_glpi" onclick="switchTab('glpi')">🔵 API GLPI</button>
+    <button class="tab-btn active" id="tabBtn_auvo" onclick="switchTab('auvo')">
+      <img src="auvo_logo.png" alt="AUVO O" onerror="this.style.display='none'">
+      API AUVO
+    </button>
+    <button class="tab-btn" id="tabBtn_glpi" onclick="switchTab('glpi')">
+      <img src="glpi_logo.png" alt="GLPI" onerror="this.style.display='none'">
+      API GLPI
+    </button>
   </div>
 
   <!-- ABA AUVO -->
@@ -322,9 +546,12 @@
 
     <div class="actions">
       <button class="btn-start" id="auvoBtnStart" onclick="runAction('start', 'auvo')">▶ Iniciar Selecionados</button>
-      <button class="btn-pause" id="auvoBtnPause" onclick="runAction('pause', 'auvo')" style="display:none;">⏸ Pausar Progresso</button>
-      <button class="btn-resume" id="auvoBtnResume" onclick="runAction('resume', 'auvo')" style="display:none;">▶ Continuar</button>
-      <button class="btn-cancel" id="auvoBtnCancel" onclick="runAction('cancel', 'auvo')" style="display:none;">⏹ Cancelar</button>
+      <button class="btn-pause" id="auvoBtnPause" onclick="runAction('pause', 'auvo')" style="display:none;">⏸ Pausar
+        Progresso</button>
+      <button class="btn-resume" id="auvoBtnResume" onclick="runAction('resume', 'auvo')" style="display:none;">▶
+        Continuar</button>
+      <button class="btn-cancel" id="auvoBtnCancel" onclick="runAction('cancel', 'auvo')" style="display:none;">⏹
+        Cancelar</button>
     </div>
 
     <div class="console-box">
@@ -333,7 +560,8 @@
         <span class="console-status" id="auvoStatus">Estado: IDLE</span>
       </div>
       <div class="checklist" id="auvoChecklist">
-        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique em Iniciar.</div>
+        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique
+          em Iniciar.</div>
       </div>
     </div>
   </div>
@@ -348,9 +576,12 @@
 
     <div class="actions">
       <button class="btn-start" id="glpiBtnStart" onclick="runAction('start', 'glpi')">▶ Iniciar Selecionados</button>
-      <button class="btn-pause" id="glpiBtnPause" onclick="runAction('pause', 'glpi')" style="display:none;">⏸ Pausar Progresso</button>
-      <button class="btn-resume" id="glpiBtnResume" onclick="runAction('resume', 'glpi')" style="display:none;">▶ Continuar</button>
-      <button class="btn-cancel" id="glpiBtnCancel" onclick="runAction('cancel', 'glpi')" style="display:none;">⏹ Cancelar</button>
+      <button class="btn-pause" id="glpiBtnPause" onclick="runAction('pause', 'glpi')" style="display:none;">⏸ Pausar
+        Progresso</button>
+      <button class="btn-resume" id="glpiBtnResume" onclick="runAction('resume', 'glpi')" style="display:none;">▶
+        Continuar</button>
+      <button class="btn-cancel" id="glpiBtnCancel" onclick="runAction('cancel', 'glpi')" style="display:none;">⏹
+        Cancelar</button>
     </div>
 
     <div class="console-box">
@@ -359,7 +590,8 @@
         <span class="console-status" id="glpiStatus">Estado: IDLE</span>
       </div>
       <div class="checklist" id="glpiChecklist">
-        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique em Iniciar.</div>
+        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique
+          em Iniciar.</div>
       </div>
     </div>
   </div>
@@ -367,7 +599,7 @@
   <script>
     let pollInterval = null;
     let currentTab = 'auvo';
-    
+
     // Estado Isolado
     let selectedIds = { auvo: new Set(), glpi: new Set() };
     let availableEntities = { auvo: [], glpi: [] };
@@ -378,35 +610,35 @@
 
     // Formata Data
     function formatDate(iso) {
-        if (!iso) return "Nunca atualizado";
-        const d = new Date(iso);
-        return isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR');
+      if (!iso) return "Nunca atualizado";
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR');
     }
 
     // Gerenciamento de Abas
     function switchTab(tabId) {
-        currentTab = tabId;
-        
-        // Update styling
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tabBtn_' + tabId).classList.add('active');
-        
-        // Toggle UI
-        document.getElementById('auvoApp').style.display = tabId === 'auvo' ? 'block' : 'none';
-        document.getElementById('glpiApp').style.display = tabId === 'glpi' ? 'block' : 'none';
-        
-        // Link DOM Elements to active tab
-        uiGrid = document.getElementById(tabId + "CardsGrid");
-        uiChecklist = document.getElementById(tabId + "Checklist");
-        uiStatus = document.getElementById(tabId + "Status");
-        bStart = document.getElementById(tabId + "BtnStart");
-        bPause = document.getElementById(tabId + "BtnPause");
-        bResume = document.getElementById(tabId + "BtnResume");
-        bCancel = document.getElementById(tabId + "BtnCancel");
+      currentTab = tabId;
 
-        // Reload data for this tab
-        loadStats();
-        startPolling(); // Restart polling for new endpoint
+      // Update styling
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tabBtn_' + tabId).classList.add('active');
+
+      // Toggle UI
+      document.getElementById('auvoApp').style.display = tabId === 'auvo' ? 'block' : 'none';
+      document.getElementById('glpiApp').style.display = tabId === 'glpi' ? 'block' : 'none';
+
+      // Link DOM Elements to active tab
+      uiGrid = document.getElementById(tabId + "CardsGrid");
+      uiChecklist = document.getElementById(tabId + "Checklist");
+      uiStatus = document.getElementById(tabId + "Status");
+      bStart = document.getElementById(tabId + "BtnStart");
+      bPause = document.getElementById(tabId + "BtnPause");
+      bResume = document.getElementById(tabId + "BtnResume");
+      bCancel = document.getElementById(tabId + "BtnCancel");
+
+      // Reload data for this tab
+      loadStats();
+      startPolling(); // Restart polling for new endpoint
     }
 
     // 1. Carrega Estatísticas Iniciais
@@ -425,24 +657,24 @@
 
     // 2. Renderiza as "Caixas de Seleção Coloridas"
     function renderCards() {
-        if (!uiGrid) return;
-        uiGrid.innerHTML = "";
-        const ents = availableEntities[currentTab] || [];
-        
-        ents.forEach(ent => {
-             const div = document.createElement("div");
-             div.className = "entity-card selected";
-             selectedIds[currentTab].add(ent.id);
+      if (!uiGrid) return;
+      uiGrid.innerHTML = "";
+      const ents = availableEntities[currentTab] || [];
 
-             const isLight = ent.color === '#ffffff';
-             
-             div.style.backgroundColor = ent.color || '#3b82f6';
-             div.style.color = isLight ? '#0f172a' : 'white';
-             div.style.borderColor = isLight ? 'transparent' : 'rgba(255,255,255,0.3)';
+      ents.forEach(ent => {
+        const div = document.createElement("div");
+        div.className = "entity-card selected";
+        selectedIds[currentTab].add(ent.id);
 
-             if (isLight) div.classList.add("light");
+        const isLight = ent.color === '#ffffff';
 
-             div.innerHTML = `
+        div.style.backgroundColor = ent.color || '#3b82f6';
+        div.style.color = isLight ? '#0f172a' : 'white';
+        div.style.borderColor = isLight ? 'transparent' : 'rgba(255,255,255,0.3)';
+
+        if (isLight) div.classList.add("light");
+
+        div.innerHTML = `
                 <div class="toggle-switch"></div>
                 <div class="count">${ent.count?.toLocaleString('pt-BR') || 0}</div>
                 <div class="label">${ent.label}</div>
@@ -464,63 +696,63 @@
                     </div>
                 ` : ''}
              `;
-             
-             div.onclick = () => {
-                 if (selectedIds[currentTab].has(ent.id)) {
-                     selectedIds[currentTab].delete(ent.id);
-                     div.classList.remove("selected");
-                 } else {
-                     selectedIds[currentTab].add(ent.id);
-                     div.classList.add("selected");
-                 }
-             };
-             
-             uiGrid.appendChild(div);
-        });
+
+        div.onclick = () => {
+          if (selectedIds[currentTab].has(ent.id)) {
+            selectedIds[currentTab].delete(ent.id);
+            div.classList.remove("selected");
+          } else {
+            selectedIds[currentTab].add(ent.id);
+            div.classList.add("selected");
+          }
+        };
+
+        uiGrid.appendChild(div);
+      });
     }
 
     // 3. Renderiza o Console
     function renderConsole(state, overrideTab = null) {
-        const tab = overrideTab || currentTab;
-        // Evita re-renderizar aba oculta (mas se for a visivel, processa normalmente)
-        if (tab !== currentTab) return;
-        
-        if (uiStatus) uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
-        
-        if (bStart) bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'PARTIAL' || state.status === 'CANCELED' || state.status === 'ERROR') ? 'block' : 'none';
-        if (bPause) bPause.style.display = state.status === 'RUNNING' ? 'block' : 'none';
-        if (bResume) bResume.style.display = state.status === 'PAUSED' ? 'block' : 'none';
-        if (bCancel) bCancel.style.display = (state.status === 'RUNNING' || state.status === 'PAUSED') ? 'block' : 'none';
+      const tab = overrideTab || currentTab;
+      // Evita re-renderizar aba oculta (mas se for a visivel, processa normalmente)
+      if (tab !== currentTab) return;
 
-        if (!state.entities || state.entities.length === 0) return;
-        
-        if (uiChecklist) uiChecklist.innerHTML = "";
-        
-        state.entities.forEach(ent => {
-            let dotClass = "dot-pending";
-            if (ent.status === 'SYNCING') dotClass = "dot-syncing";
-            if (ent.status === 'DONE') dotClass = "dot-done";
-            if (ent.status === 'ERROR') dotClass = "dot-error";
-            if (ent.status === 'CANCELED') dotClass = "dot-error";
+      if (uiStatus) uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
 
-            const row = document.createElement("div");
-            row.className = "log-row";
-            row.style.background = ent.status === 'SYNCING' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)';
-            
-            let pageTotal = ent.totalPages > 0 ? ent.totalPages : '?';
-            let targetTotal = ent.targetCount > 0 ? ent.targetCount : '?';
-            
-            if (ent.status === 'DONE') {
-                if (pageTotal === '?') pageTotal = ent.page;
-                if (targetTotal === '?') targetTotal = ent.count;
-            }
-            
-            const pageText = `${ent.page}/${pageTotal}`;
-            const countText = `${ent.count}/${targetTotal}`;
+      if (bStart) bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'PARTIAL' || state.status === 'CANCELED' || state.status === 'ERROR') ? 'block' : 'none';
+      if (bPause) bPause.style.display = state.status === 'RUNNING' ? 'block' : 'none';
+      if (bResume) bResume.style.display = state.status === 'PAUSED' ? 'block' : 'none';
+      if (bCancel) bCancel.style.display = (state.status === 'RUNNING' || state.status === 'PAUSED') ? 'block' : 'none';
 
-            let deltaString = '';
-            if (ent.deltas && (ent.status === 'DONE' || ent.status === 'SYNCING' || ent.status === 'CANCELED')) {
-               deltaString = `
+      if (!state.entities || state.entities.length === 0) return;
+
+      if (uiChecklist) uiChecklist.innerHTML = "";
+
+      state.entities.forEach(ent => {
+        let dotClass = "dot-pending";
+        if (ent.status === 'SYNCING') dotClass = "dot-syncing";
+        if (ent.status === 'DONE') dotClass = "dot-done";
+        if (ent.status === 'ERROR') dotClass = "dot-error";
+        if (ent.status === 'CANCELED') dotClass = "dot-error";
+
+        const row = document.createElement("div");
+        row.className = "log-row";
+        row.style.background = ent.status === 'SYNCING' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)';
+
+        let pageTotal = ent.totalPages > 0 ? ent.totalPages : '?';
+        let targetTotal = ent.targetCount > 0 ? ent.targetCount : '?';
+
+        if (ent.status === 'DONE') {
+          if (pageTotal === '?') pageTotal = ent.page;
+          if (targetTotal === '?') targetTotal = ent.count;
+        }
+
+        const pageText = `${ent.page}/${pageTotal}`;
+        const countText = `${ent.count}/${targetTotal}`;
+
+        let deltaString = '';
+        if (ent.deltas && (ent.status === 'DONE' || ent.status === 'SYNCING' || ent.status === 'CANCELED')) {
+          deltaString = `
                   <div style="font-size: 12px; margin-top: 6px; color: #a1a1aa; display: flex; gap: 10px; background: rgba(0,0,0,0.15); padding: 4px 8px; border-radius: 4px; width: fit-content;">
                      <span style="color: #4ade80; font-weight: 500;">+${ent.deltas.inserts || 0} novos</span>
                      <span style="color: #60a5fa; font-weight: 500;">~${ent.deltas.updates || 0} confirm. na base</span>
@@ -528,27 +760,27 @@
                      ${ent.deltas.errors ? `<span style="color: #fca5a5; font-weight: 500; cursor: pointer; text-decoration: underline;" onclick="openErrorModal(${state.historyId})" title="Clique para ver os logs">⚠ ${ent.deltas.errors} erros</span>` : ''}
                   </div>
                `;
-            }
+        }
 
-            let progressHtml = '';
-            if (ent.status === 'SYNCING' || ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR' || ent.status === 'CANCELED') {
-                let percentage = 0;
-                let targetTot = ent.targetCount > 0 ? ent.targetCount : (ent.count > 0 ? ent.count : 1);
-                
-                if (ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR') percentage = 100;
-                else percentage = Math.min((ent.count / targetTot) * 100, 100);
-                
-                let fillClass = ent.status === 'SYNCING' ? 'progress-fill active' : 'progress-fill';
-                let fillColor = ent.status === 'ERROR' ? '#f87171' : (ent.status === 'CANCELED' ? '#94a3b8' : (ent.status === 'SYNCING' ? '#3b82f6' : '#10b981'));
-                
-                progressHtml = `
+        let progressHtml = '';
+        if (ent.status === 'SYNCING' || ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR' || ent.status === 'CANCELED') {
+          let percentage = 0;
+          let targetTot = ent.targetCount > 0 ? ent.targetCount : (ent.count > 0 ? ent.count : 1);
+
+          if (ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR') percentage = 100;
+          else percentage = Math.min((ent.count / targetTot) * 100, 100);
+
+          let fillClass = ent.status === 'SYNCING' ? 'progress-fill active' : 'progress-fill';
+          let fillColor = ent.status === 'ERROR' ? '#f87171' : (ent.status === 'CANCELED' ? '#94a3b8' : (ent.status === 'SYNCING' ? '#3b82f6' : '#10b981'));
+
+          progressHtml = `
                   <div class="progress-track">
                      <div class="${fillClass}" style="width: ${percentage.toFixed(1)}%; background-color: ${fillColor};"></div>
                   </div>
                 `;
-            }
+        }
 
-            row.innerHTML = `
+        row.innerHTML = `
                <div class="status-dot ${dotClass}"></div>
                <div class="log-content" style="flex: 1; width: 100%;">
                   <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -564,61 +796,61 @@
                   ${deltaString}
                </div>
             `;
-            uiChecklist.appendChild(row);
-        });
+        uiChecklist.appendChild(row);
+      });
     }
 
     // 4. Mecanica de Polling (Loop infinito isolado por contexto)
     async function startPolling() {
-        if (pollInterval) clearInterval(pollInterval);
-        const pollingForTab = currentTab;
-        pollInterval = setInterval(async () => {
-             // Só faz fetch se a aba não mudou
-             if (currentTab !== pollingForTab) return;
-             try {
-                const res = await fetch(`/api/${currentTab}/sync/status`);
-                if (res.ok) {
-                   const json = await res.json();
-                   if (json.status) renderConsole(json.status, pollingForTab);
-                }
-             } catch(e) {}
-        }, 1500); 
+      if (pollInterval) clearInterval(pollInterval);
+      const pollingForTab = currentTab;
+      pollInterval = setInterval(async () => {
+        // Só faz fetch se a aba não mudou
+        if (currentTab !== pollingForTab) return;
+        try {
+          const res = await fetch(`/api/${currentTab}/sync/status`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json.status) renderConsole(json.status, pollingForTab);
+          }
+        } catch (e) { }
+      }, 1500);
     }
 
     // Ações de Botões (Start / Pause / Resume / Cancel)
     window.runAction = async (action, targetTab) => {
-        try {
-            if (action === 'start') {
-                const arr = Array.from(selectedIds[targetTab]);
-                if (arr.length === 0) return alert("Selecione pelo menos uma entidade nas caixas acima!");
-                
-                let reqBody = { entities: arr };
-                
-                if (targetTab === 'auvo') {
-                   const elS = document.getElementById("inputStartDate");
-                   const elE = document.getElementById("inputEndDate");
-                   if (elS && elE) {
-                     reqBody.startDate = elS.value;
-                     reqBody.endDate = elE.value;
-                   }
-                }
-                
-                await fetch(`/api/${targetTab}/sync/control`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' })
-                });
+      try {
+        if (action === 'start') {
+          const arr = Array.from(selectedIds[targetTab]);
+          if (arr.length === 0) return alert("Selecione pelo menos uma entidade nas caixas acima!");
 
-                await fetch(`/api/${targetTab}/sync`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(reqBody)
-                });
-            } else {
-                await fetch(`/api/${targetTab}/sync/control`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: action })
-                });
+          let reqBody = { entities: arr };
+
+          if (targetTab === 'auvo') {
+            const elS = document.getElementById("inputStartDate");
+            const elE = document.getElementById("inputEndDate");
+            if (elS && elE) {
+              reqBody.startDate = elS.value;
+              reqBody.endDate = elE.value;
             }
-            startPolling();
-        } catch (e) { alert("Erro de comunicação: " + e.message); }
+          }
+
+          await fetch(`/api/${targetTab}/sync/control`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' })
+          });
+
+          await fetch(`/api/${targetTab}/sync`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reqBody)
+          });
+        } else {
+          await fetch(`/api/${targetTab}/sync/control`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: action })
+          });
+        }
+        startPolling();
+      } catch (e) { alert("Erro de comunicação: " + e.message); }
     };
 
     window.openErrorModal = async (historyId) => {
@@ -627,52 +859,52 @@
       document.getElementById('modalHistoryId').innerText = historyId;
       const tbody = document.getElementById('errorTableBody');
       tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Buscando logs no servidor...</td></tr>';
-      
+
       try {
-         // Aqui o log repository hoje é o mesmo. Os logs do auvo e glpi compartilham a log_history?
-         // Sim. Porem as urls podem ser especificas.
-         const res = await fetch(`/api/${currentTab}/sync/logs/${historyId}`);
-         if(!res.ok) throw new Error("Endpoint indisponível");
-         const data = await res.json();
-         if (data.logs && data.logs.length > 0) {
-            tbody.innerHTML = data.logs.map(log => `
+        // Aqui o log repository hoje é o mesmo. Os logs do auvo e glpi compartilham a log_history?
+        // Sim. Porem as urls podem ser especificas.
+        const res = await fetch(`/api/${currentTab}/sync/logs/${historyId}`);
+        if (!res.ok) throw new Error("Endpoint indisponível");
+        const data = await res.json();
+        if (data.logs && data.logs.length > 0) {
+          tbody.innerHTML = data.logs.map(log => `
                <tr style="border-bottom: 1px solid #334155;">
                   <td style="padding: 10px;">${log.entityName}</td>
                   <td style="padding: 10px; font-family: monospace; color: #fbbf24;">${log.entityId}</td>
                   <td style="padding: 10px; color: #fca5a5;">${log.message}</td>
                </tr>
             `).join('');
-         } else {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #4ade80;">Nenhum log gravado.</td></tr>';
-         }
+        } else {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #4ade80;">Nenhum log gravado.</td></tr>';
+        }
       } catch (e) {
-         tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: #f87171;">Falha na leitura: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: #f87171;">Falha na leitura: ${e.message}</td></tr>`;
       }
     };
 
     // 5. Inicializacao Automatica
     function setInitialDates() {
-        const uiSD = document.getElementById("inputStartDate");
-        const uiED = document.getElementById("inputEndDate");
-        if (!uiSD || !uiED) return;
-        
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const toISO = (d) => {
-            const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dy = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${dy}`;
-        };
-        uiSD.value = toISO(firstDay); uiED.value = toISO(now);
+      const uiSD = document.getElementById("inputStartDate");
+      const uiED = document.getElementById("inputEndDate");
+      if (!uiSD || !uiED) return;
+
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      const toISO = (d) => {
+        const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dy = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dy}`;
+      };
+      uiSD.value = toISO(firstDay); uiED.value = toISO(now);
     }
 
     function toggleTasksDropdown() {
-        const dd = document.getElementById("tasksDropdown");
-        if (dd) dd.classList.toggle("active");
+      const dd = document.getElementById("tasksDropdown");
+      if (dd) dd.classList.toggle("active");
     }
 
     document.addEventListener("click", () => {
-        const dd = document.getElementById("tasksDropdown");
-        if (dd) dd.classList.remove("active");
+      const dd = document.getElementById("tasksDropdown");
+      if (dd) dd.classList.remove("active");
     });
 
     // Boot Up
@@ -680,27 +912,33 @@
     setTimeout(setInitialDates, 500); // Aguarda render async
   </script>
 
-   <!-- Modal de Erros (Auditoria) -->
-   <div id="errorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; font-family: 'Inter', sans-serif;">
-      <div style="background: #1e293b; width: 100%; max-width: 800px; max-height: 80vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-         <div style="padding: 16px 20px; background: #334155; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="color: #f8fafc; margin: 0; font-size: 16px;">🔍 Auditoria de Falhas (Sessão #<span id="modalHistoryId"></span>)</h3>
-            <button onclick="document.getElementById('errorModal').style.display='none'" style="background: none; border: none; color: #cbd5e1; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
-         </div>
-         <div style="padding: 0; overflow-y: auto; flex: 1; background: #0f172a;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left; color: #cbd5e1; font-size: 13px;">
-               <thead style="background: #1e293b; position: sticky; top: 0;">
-                  <tr style="border-bottom: 1px solid #334155;">
-                     <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Repositório</th>
-                     <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Item (ID Originário)</th>
-                     <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Mensagem Recebida (MySQL)</th>
-                  </tr>
-               </thead>
-               <tbody id="errorTableBody">
-               </tbody>
-            </table>
-         </div>
+  <!-- Modal de Erros (Auditoria) -->
+  <div id="errorModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; font-family: 'Inter', sans-serif;">
+    <div
+      style="background: #1e293b; width: 100%; max-width: 800px; max-height: 80vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+      <div
+        style="padding: 16px 20px; background: #334155; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="color: #f8fafc; margin: 0; font-size: 16px;">🔍 Auditoria de Falhas (Sessão #<span
+            id="modalHistoryId"></span>)</h3>
+        <button onclick="document.getElementById('errorModal').style.display='none'"
+          style="background: none; border: none; color: #cbd5e1; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
       </div>
-   </div>
+      <div style="padding: 0; overflow-y: auto; flex: 1; background: #0f172a;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; color: #cbd5e1; font-size: 13px;">
+          <thead style="background: #1e293b; position: sticky; top: 0;">
+            <tr style="border-bottom: 1px solid #334155;">
+              <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Repositório</th>
+              <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Item (ID Originário)</th>
+              <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Mensagem Recebida (MySQL)</th>
+            </tr>
+          </thead>
+          <tbody id="errorTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </body>
+
 </html>
