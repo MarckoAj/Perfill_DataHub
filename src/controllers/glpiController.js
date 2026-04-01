@@ -3,6 +3,7 @@ import glpiTickets from "../services/glpi_service.js";
 import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 import glpiSyncService from "../services/glpiSyncService.js";
 import alertRepository from "../repositories/alertRepository.js";
+import syncLogRepository from "../repositories/syncLogRepository.js";
 
 export const getTicketsByStatus = asyncHandler(async (req, res) => {
   const { status } = req.params;
@@ -30,17 +31,48 @@ export const getTicketsStats = asyncHandler(async (req, res) => {
   res.status(200).json(stats);
 });
 
-export const syncBiManual = asyncHandler(async (req, res) => {
-  // Dispara a sincronização de forma assíncrona (não prende a resposta HTTP)
-  glpiSyncService.syncAll().then(() => console.log("Sincronização manual finalizada com sucesso."))
-    .catch((e) => console.error("Erro na sincronização manual:", e));
+export const getGlpiStats = asyncHandler(async (req, res) => {
+  const stats = await glpiTicketRepository.getGlobalGlpiStats();
+  res.status(200).json({ success: true, stats });
+});
 
-  // Retorna um JSON simplificado
-  res.status(200).json({
-    success: true,
-    message: "Sincronização Iniciada",
-    detail: "A sincronização com o GLPI foi iniciada em segundo plano. Leva um curto período para as informações serem atualizadas completamente no banco de dados do BI."
+export const syncGlpiManual = asyncHandler(async (req, res) => {
+  const { entities, startDate, endDate } = req.body || {}; 
+  
+  try {
+      await glpiSyncService.runQueue(entities, startDate, endDate);
+  } catch(e) {
+      if (e.message.includes("já está em andamento")) {
+           return res.status(409).json({ success: false, message: e.message });
+      }
+      console.error("RunQueue GLPI Failed: ", e.message);
+  }
+  
+  res.status(202).json({
+      success: true,
+      message: "Sincronização de entidades GLPI enfileirada com sucesso!",
+      timestamp: new Date().toISOString()
   });
+});
+
+export const getGlpiSyncStatus = asyncHandler(async (req, res) => {
+  res.status(200).json({
+      success: true,
+      status: glpiSyncService.syncState,
+      timestamp: new Date().toISOString()
+  });
+});
+
+export const controlGlpiSync = asyncHandler(async (req, res) => {
+  const { action } = req.body;
+  const result = glpiSyncService.controlSync(action);
+  res.status(200).json({ success: true, status: result });
+});
+
+export const getGlpiSyncLogs = asyncHandler(async (req, res) => {
+  const { historyId } = req.params;
+  const logs = await syncLogRepository.getHistoryLogs(historyId);
+  res.status(200).json({ success: true, logs });
 });
 
 export const getAlertsForApi = asyncHandler(async (req, res) => {

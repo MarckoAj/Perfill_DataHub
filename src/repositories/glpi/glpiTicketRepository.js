@@ -2,7 +2,12 @@ import pool from "../../database/connection.js";
 
 class GlpiTicketRepository {
   async upsertTickets(tickets) {
-    if (!tickets || tickets.length === 0) return;
+    if (!tickets || tickets.length === 0) return { inserts: 0, updates: 0, skips: 0, errors: 0, errorLogs: [] };
+
+    let inserts = 0;
+    let updates = 0;
+    let errors = 0;
+    let errorLogs = [];
 
     const query = `
       INSERT INTO tickets (
@@ -46,11 +51,21 @@ class GlpiTicketRepository {
       ];
 
       try {
-        await pool.query(query, values);
+        const [result] = await pool.query(query, values);
+        if (result.affectedRows === 1) {
+            inserts++;
+        } else if (result.affectedRows === 2) {
+            updates++;
+        } else {
+            updates++;
+        }
       } catch (error) {
-        console.error(`Erro ao salvar ticket ${t.ticketId} (valores: ${values.length}):`, error.sqlMessage);
+        errors++;
+        errorLogs.push({ entityName: 'tickets', entityId: t.ticketId || 0, message: error.sqlMessage || error.message });
       }
     }
+
+    return { inserts, updates, skips: 0, errors, errorLogs };
   }
 
   async resetAtrasadoFlags() {
@@ -132,6 +147,58 @@ class GlpiTicketRepository {
       console.error("Erro ao buscar estatísticas do banco:", error);
       throw error;
     }
+  }
+  async updateLastSyncDate(entityId) {
+      try {
+          const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+          await pool.query(`
+              INSERT INTO glpi_sync_metadata (entity_id, last_sync) 
+              VALUES (?, ?) 
+              ON DUPLICATE KEY UPDATE last_sync = ?
+          `, [entityId, now, now]);
+          return true;
+      } catch (e) { return false; }
+  }
+
+  async getGlobalGlpiStats() {
+    try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS glpi_sync_metadata (entity_id VARCHAR(50) PRIMARY KEY, last_sync DATETIME NOT NULL)`);
+    } catch(e) { }
+
+    const statuses = [
+      { id: 'novo', label: 'Tickets Novos', color: '#10b981' },
+      { id: 'planejado', label: 'Tickets Planejados', color: '#3b82f6' },
+      { id: 'atribuido', label: 'Tickets Atribuídos', color: '#8b5cf6' },
+      { id: 'atrasado', label: 'Tickets Atrasados', color: '#ef4444' },
+      { id: 'fechado', label: 'Tickets Fechados', color: '#ffffff' },
+      { id: 'pendente', label: 'Tickets Pendentes', color: '#64748b' },
+      { id: 'solucionado', label: 'Tickets Solucionados', color: '#facc15' }
+    ];
+
+    const stats = [];
+    for (const t of statuses) {
+        let count = 0;
+        let lastDate = null;
+        try {
+            if (t.id === 'atrasado') {
+                const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM tickets WHERE isAtrasado = 1`);
+                count = countRows[0].count;
+            } else {
+                const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM tickets WHERE LOWER(status) = ?`, [t.id]);
+                count = countRows[0].count;
+            }
+        } catch (e) { /* ignore */ }
+        
+        try {
+            const [dateRows] = await pool.query(`SELECT last_sync FROM glpi_sync_metadata WHERE entity_id = ?`, [t.id]);
+            if (dateRows && dateRows.length > 0) {
+               lastDate = dateRows[0].last_sync;
+            }
+        } catch (e) { /* ignore */ }
+
+        stats.push({ id: t.id, label: t.label, count, lastDate, color: t.color });
+    }
+    return stats;
   }
 }
 

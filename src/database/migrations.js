@@ -22,7 +22,7 @@ export async function runMigrations() {
             ticketId BIGINT PRIMARY KEY,
             nomeCliente VARCHAR(255),
             titulo VARCHAR(255),
-            descricao TEXT,
+            descricao LONGTEXT,
             dataCriacao DATETIME,
             status VARCHAR(50),
             dataFechamento DATETIME,
