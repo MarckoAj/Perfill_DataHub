@@ -15,18 +15,21 @@
 [x] Cliente de API GLPI
 [x] Mappers de dados
 [x] Endpoints de consulta
-[ ] Sync incremental
+[x] Sync incremental e massivo via Fila Async
 [x] Persistência RAW
-[ ] Normalização automática
+[x] Normalização automática no Banco de Dados
+[x] Desvio de Autenticação Auto-Assinada / Expirada TLS (Bypass)
 
 ---
 
 # Banco de Dados
 
 [x] Estrutura de repositórios
-[x] Persistência de tickets
+[x] Persistência de tickets (GLPI) e Entidades (AUVO)
 [x] Tabelas RAW
-[x] Versionamento de schema
+[x] Versionamento de schema via Migrations
+[x] Seeding de Agendamentos e Auditorias
+[x] Correção de Palavras Reservadas no CRUD (System->`system`)
 
 ---
 
@@ -40,12 +43,13 @@
 
 ---
 
-# Jobs
+# Jobs e Automacação (Auto-Sync 2.0)
 
-[x] Estrutura de jobs
-[x] job de sync GLPI
-[ ] job incremental
-[x] scheduler configurado
+[x] Motor Dinâmico via Banco de Dados (Substituição de Código Fixo)
+[x] Criação de Painel/HUD de Configuração no Frontend Web
+[x] Carga Assíncrona Não-Bloqueante (Background Queue)
+[x] Agendador Customizável com expressões amigáveis (Semana, Mês)
+[x] Suporte à Filtros Específicos por Entidade (Checkboxes independentes)
 
 ---
 
@@ -72,13 +76,16 @@
 [x] camada RAW
 [x] camada normalizada (com Soft Delete e Resurrection)
 [x] lógica de expurgo (Retention Policy)
-[ ] reprocessamento de dados globais
+[x] processamento modular de filas (Retry, Pause, Cancel, Start)
+[x] reprocessamento de dados globais sob-demanda
 
 ---
 
-# Observabilidade
+# Observabilidade e UI
 
-[x] endpoint de health
-[x] endpoint de integrações
-[x] métricas de sync
-[x] logs estruturados
+[x] Dashboard UI Estilo Deep Dark Glassmorphism 
+[x] Componente Global Timer UI Tracker (Tempo Regressivo/Sincronizando)
+[x] Endpoint de Telemetria Contínua (Polling 1.5s)
+[x] Métricas de sync (Progresso Delta: Novas Inserções, Hits de Base)
+[x] Modal de Auditoria de Erros Específicos e Log em Tabela
+[x] Proteção Anti-Congelamento (Escudo Try/Catch nas requisições HTTPs)
