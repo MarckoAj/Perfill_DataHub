@@ -6,6 +6,7 @@ import glpiClient from "../integrations/glpi/glpiClient.js";
 import alertEngine from "./alertEngine.js";
 import alertRepository from "../repositories/alertRepository.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
+import systemStatusService from "./systemStatusService.js";
 
 class GlpiSyncService {
   constructor() {
@@ -135,13 +136,14 @@ class GlpiSyncService {
     }
   }
 
-  async runQueue(entitiesToSync) {
+  async runQueue(entitiesToSync = null, filters = null) {
       if (this.syncState.status === 'RUNNING' || this.syncState.status === 'PAUSED') {
           throw new Error("Uma fila já está em andamento ou pausada.");
       }
 
       this.syncState.status = 'RUNNING';
       this.syncState.message = "Verificando fila GLPI...";
+      systemStatusService.setSyncing(true, 'GLPI');
       
       const allEntities = [
          { id: 'novo', label: 'Tickets novos' },
@@ -153,9 +155,17 @@ class GlpiSyncService {
          { id: 'fechado', label: 'Tickets fechados' }
       ];
 
+      let modifiedEntities = allEntities;
+      if (filters && filters.excludeStatus) {
+         modifiedEntities = modifiedEntities.filter(e => !filters.excludeStatus.includes(e.id));
+      }
+      if (filters && filters.includeStatus) {
+         modifiedEntities = modifiedEntities.filter(e => filters.includeStatus.includes(e.id));
+      }
+
       const toProcess = entitiesToSync && entitiesToSync.length > 0 
-          ? allEntities.filter(e => entitiesToSync.includes(e.id))
-          : allEntities;
+          ? modifiedEntities.filter(e => entitiesToSync.includes(e.id))
+          : modifiedEntities;
 
       this.syncState.historyId = await syncLogRepository.createHistory('GLPI');
 
@@ -210,6 +220,8 @@ class GlpiSyncService {
              const hStatus = this.syncState.status === 'PARTIAL' ? 'PARTIAL' : (this.syncState.status === 'ERROR' ? 'ERROR' : (this.syncState.status === 'CANCELED' ? 'CANCELED' : 'SUCCESS'));
              await syncLogRepository.updateHistory(this.syncState.historyId, hStatus, totalProcessed, totalErrors);
           }
+          
+          systemStatusService.setSyncing(false);
       }
   }
 

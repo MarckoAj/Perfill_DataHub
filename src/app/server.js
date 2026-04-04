@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { runMigrations } from "../database/migrations.js";
-import startJobs from "../jobs/cronJob.js";
+import dynamicScheduler from "../jobs/dynamicScheduler.js";
 import buildExpressApp from "./express.js";
 
 dotenv.config();
@@ -8,7 +8,7 @@ dotenv.config();
 export default async function startServer() {
   const app = buildExpressApp();
   await runMigrations();
-  startJobs();
+  dynamicScheduler.startManager();
 
   const port = process.env.PORT || 3000;
   app.listen(port, () => {

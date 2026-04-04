@@ -7,6 +7,7 @@ import auvoTaskRepository from "../repositories/auvo/auvoTaskRepository.js";
 import auvoQuestionnaireRepository from "../repositories/auvo/auvoQuestionnaireRepository.js";
 import auvoTaskTypeRepository from "../repositories/auvo/auvoTaskTypeRepository.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
+import systemStatusService from "./systemStatusService.js";
 
 class AuvoSyncService {
   constructor() {
@@ -229,6 +230,7 @@ class AuvoSyncService {
 
       this.syncState.status = 'RUNNING';
       this.syncState.message = "Verificando fila de entidades...";
+      systemStatusService.setSyncing(true, 'AUVO');
       
       const allEntities = [
          { id: 'users', label: 'Usuários' },
@@ -302,6 +304,8 @@ class AuvoSyncService {
              const hStatus = this.syncState.status === 'PARTIAL' ? 'PARTIAL' : (this.syncState.status === 'ERROR' ? 'ERROR' : (this.syncState.status === 'CANCELED' ? 'CANCELED' : 'SUCCESS'));
              await syncLogRepository.updateHistory(this.syncState.historyId, hStatus, totalProcessed, totalErrors);
           }
+          
+          systemStatusService.setSyncing(false);
       }
   }
 

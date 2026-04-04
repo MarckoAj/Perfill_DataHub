@@ -521,8 +521,8 @@
     <div
       style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2);"
       title="A sincronização automática está ativada no servidor a cada 2 horas">
-      <div class="dot-cron"></div>
-      <span style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (2h)</span>
+      <div class="dot-cron" id="globalAutoSyncDot"></div>
+      <span id="globalAutoSyncTimer" style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (Cálculo...)</span>
     </div>
   </header>
 
@@ -598,6 +598,73 @@
 
   <script>
     let pollInterval = null;
+    let globalTimerState = { targetDate: null, isSyncing: false, entity: null };
+
+    // Relógio Lógico: roda a cada segundo
+    setInterval(() => {
+        const span = document.getElementById('globalAutoSyncTimer');
+        const dot = document.getElementById('globalAutoSyncDot');
+        
+        if (globalTimerState.isSyncing) {
+            span.innerHTML = `Sincronizando ${globalTimerState.entity}...`;
+            span.style.color = '#f59e0b';
+            dot.style.background = '#f59e0b';
+            dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
+        } else if (globalTimerState.targetDate) {
+            const now = new Date();
+            const target = new Date(globalTimerState.targetDate);
+            const diffMs = target - now;
+            
+            if (diffMs <= 0) {
+                 span.innerHTML = 'Disparando Cron...';
+                 return;
+            }
+            
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+            
+            const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            span.innerHTML = `Auto-Sync Cron Ativo (${timeStr})`;
+            span.style.color = '#10b981';
+            dot.style.background = '#10b981';
+            dot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
+        }
+    }, 1000);
+
+    // Bater no servidor a cada 30 segundos
+    async function fetchGlobalTimer() {
+        try {
+            const res = await fetch('/api/system/status');
+            const data = await res.json();
+            
+            if (data.isSyncing) {
+                globalTimerState.isSyncing = true;
+                globalTimerState.entity = data.currentEntity;
+                globalTimerState.targetDate = null;
+            } else {
+                globalTimerState.isSyncing = false;
+                
+                // Escolher quem roda primeiro
+                const auvoT = data.nextAuvoRun ? new Date(data.nextAuvoRun).getTime() : Infinity;
+                const glpiT = data.nextGlpiRun ? new Date(data.nextGlpiRun).getTime() : Infinity;
+                
+                if (auvoT === Infinity && glpiT === Infinity) {
+                    globalTimerState.targetDate = null;
+                } else if (auvoT <= glpiT) {
+                    globalTimerState.targetDate = data.nextAuvoRun;
+                } else {
+                    globalTimerState.targetDate = data.nextGlpiRun;
+                }
+            }
+        } catch (e) {
+            // Se der erro de fetch silencioso
+        }
+    }
+    
+    fetchGlobalTimer();
+    setInterval(fetchGlobalTimer, 30000);
+
     let currentTab = 'auvo';
 
     // Estado Isolado
