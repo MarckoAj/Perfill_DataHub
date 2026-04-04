@@ -39,14 +39,10 @@ export const getGlpiStats = asyncHandler(async (req, res) => {
 export const syncGlpiManual = asyncHandler(async (req, res) => {
   const { entities, startDate, endDate } = req.body || {}; 
   
-  try {
-      await glpiSyncService.runQueue(entities, startDate, endDate);
-  } catch(e) {
-      if (e.message.includes("já está em andamento")) {
-           return res.status(409).json({ success: false, message: e.message });
-      }
+  // Processo precisa rodar sem prender o Event Loop
+  glpiSyncService.runQueue(entities, startDate, endDate).catch((e) => {
       console.error("RunQueue GLPI Failed: ", e.message);
-  }
+  });
   
   res.status(202).json({
       success: true,

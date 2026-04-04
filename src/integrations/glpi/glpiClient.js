@@ -3,6 +3,9 @@ import glpiUrlBuilder from "../../utils/glpiUrlBuilder.js";
 
 dotenv.config();
 
+// Ignora erros de certificado expirado/auto-assinado na conexão com o GLPI
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 class GlpiClient {
   constructor() {
     this.userToken = process.env.GLPI_APIKEY;
@@ -59,11 +62,16 @@ class GlpiClient {
     const header = await this.sessionHeaderPromise;
 
     if (!header) {
-      console.error("Tentativa de requisição sem header de autenticação válido.");
-      return null;
+      // Se não autenticou no boot, tenta de novo para recuperar zumbis
+      this.sessionHeaderPromise = this.getGlpiHeader();
+      const retryHeader = await this.sessionHeaderPromise;
+      if (!retryHeader) {
+          throw new Error("Falha Crítica do Certificado/Rede no GLPI. Recarregue a API ou verifique sua VPN.");
+      }
     }
 
-    const response = await this.request(url, method, header, body);
+    const validHeader = header || (await this.sessionHeaderPromise);
+    const response = await this.request(url, method, validHeader, body);
 
     if (!response || response.data === undefined) {
       console.error(`Erro na requisição GLPI: ${endPoint}`);

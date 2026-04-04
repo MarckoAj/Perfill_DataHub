@@ -510,6 +510,71 @@
       opacity: 0.6;
       width: 12px;
     }
+
+    .btn-config-engine {
+      margin-left: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.3s;
+    }
+    .btn-config-engine:hover {
+      background: linear-gradient(135deg, #334155, #1e293b);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+      z-index: 2000; justify-content: center; align-items: center; padding: 20px;
+    }
+    .modal-body-glass {
+      background: #1e293b; width: 100%; max-width: 900px; max-height: 90vh;
+      border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .modal-header-glass {
+      padding: 18px 24px; background: #0f172a; border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header-glass h3 { margin: 0; color: #f8fafc; font-size: 18px; }
+    .close-btn { background: none; border: none; color: #94a3b8; font-size: 26px; cursor: pointer; }
+    .close-btn:hover { color: #fff; }
+    
+    .cron-table { width: 100%; border-collapse: collapse; color: #cbd5e1; font-size: 13px; }
+    .cron-table th { background: #334155; padding: 12px 16px; text-align: left; font-weight: 600; color: #fff; position: sticky; top: 0;}
+    .cron-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; color: white; transition: 0.2s;}
+    .btn-sm-del { background: #ef4444; }
+    .btn-sm-del:hover { background: #dc2626; }
+
+    .schedule-form {
+      padding: 24px; background: #0f172a; border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    .form-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
+    .form-group label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; }
+    .form-input { 
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;
+      padding: 10px; border-radius: 6px; font-family: inherit; font-size: 14px; width: 100%; box-sizing: border-box;
+    }
+    .form-input:focus { border-color: #3b82f6; outline: none; }
+    
+    .checkbox-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 5px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);}
+    .check-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #cbd5e1; cursor: pointer; padding: 4px 8px;}
+    .check-item:hover { color: #fff; background: rgba(255,255,255,0.05); border-radius: 4px;}
+    .check-item input { cursor: pointer; accent-color: #10b981; }
   </style>
 </head>
 
@@ -518,12 +583,13 @@
   <header>
     <div class="logo-ball"></div>
     <strong>PerfillBI | Sincronizador de Dados (AUVO Engine)</strong>
-    <div
-      style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2);"
-      title="A sincronização automática está ativada no servidor a cada 2 horas">
+    <div id="globalAutoSyncContainer"
+      style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2); cursor: help;"
+      title="Aguardando conexão com os Motores de Auto-Sync...">
       <div class="dot-cron" id="globalAutoSyncDot"></div>
       <span id="globalAutoSyncTimer" style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (Cálculo...)</span>
     </div>
+    <button class="btn-config-engine" onclick="openSchedulesModal()">⚙️ Configurar Motores</button>
   </header>
 
   <div class="tabs-container">
@@ -598,15 +664,21 @@
 
   <script>
     let pollInterval = null;
-    let globalTimerState = { targetDate: null, isSyncing: false, entity: null };
+    let globalTimerState = { targetDate: null, isSyncing: false, entity: null, nextDesc: null, currentDesc: null, activeMotorsCount: 0 };
 
     // Relógio Lógico: roda a cada segundo
     setInterval(() => {
         const span = document.getElementById('globalAutoSyncTimer');
         const dot = document.getElementById('globalAutoSyncDot');
+        const container = document.getElementById('globalAutoSyncContainer');
+        
+        if (!span || !dot) return;
         
         if (globalTimerState.isSyncing) {
-            span.innerHTML = `Sincronizando ${globalTimerState.entity}...`;
+            const desc = globalTimerState.currentDesc || globalTimerState.entity || 'Fila';
+            span.innerHTML = `Sincronizando: ${desc}...`;
+            if (container) container.title = `Execução Ativa: Sincronizando ${desc} no Backend.`;
+            
             span.style.color = '#f59e0b';
             dot.style.background = '#f59e0b';
             dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
@@ -625,10 +697,21 @@
             const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
             
             const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            span.innerHTML = `Auto-Sync Cron Ativo (${timeStr})`;
+            const nextDesc = globalTimerState.nextDesc || 'Motor Padrão';
+            
+            span.innerHTML = `Auto-Sync (${globalTimerState.activeMotorsCount} Motores) | Próximo: ${nextDesc} em ${timeStr}`;
+            if (container) container.title = `Agendamento Automático: O próximo disparo (${nextDesc}) iniciará a carga silenciosa.`;
+            
             span.style.color = '#10b981';
             dot.style.background = '#10b981';
             dot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
+        } else {
+            span.innerHTML = `Auto-Sync (0 Ativos) | Motores Desativados`;
+            if (container) container.title = `Nenhuma rotina cadastrada de auto-sync no painel.`;
+            
+            span.style.color = '#94a3b8';
+            dot.style.background = '#475569';
+            dot.style.boxShadow = 'none';
         }
     }, 1000);
 
@@ -641,9 +724,12 @@
             if (data.isSyncing) {
                 globalTimerState.isSyncing = true;
                 globalTimerState.entity = data.currentEntity;
+                globalTimerState.currentDesc = data.currentDesc;
                 globalTimerState.targetDate = null;
             } else {
                 globalTimerState.isSyncing = false;
+                globalTimerState.activeMotorsCount = data.activeMotorsCount || 0;
+                globalTimerState.nextDesc = data.nextDesc;
                 
                 // Escolher quem roda primeiro
                 const auvoT = data.nextAuvoRun ? new Date(data.nextAuvoRun).getTime() : Infinity;
@@ -734,13 +820,12 @@
         div.className = "entity-card selected";
         selectedIds[currentTab].add(ent.id);
 
-        const isLight = ent.color === '#ffffff';
-
-        div.style.backgroundColor = ent.color || '#3b82f6';
-        div.style.color = isLight ? '#0f172a' : 'white';
-        div.style.borderColor = isLight ? 'transparent' : 'rgba(255,255,255,0.3)';
-
-        if (isLight) div.classList.add("light");
+        div.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
+        div.style.color = '#f8fafc';
+        div.style.borderColor = ent.color || '#3b82f6';
+        div.style.borderWidth = '2px';
+        div.style.borderStyle = 'solid';
+        div.style.boxShadow = `0 4px 15px ${ent.color}20`;
 
         div.innerHTML = `
                 <div class="toggle-switch"></div>
@@ -796,6 +881,17 @@
       if (tab !== currentTab) return;
 
       if (uiStatus) uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
+      
+      const titleSpan = document.querySelector(`#${tab}App .console-title`);
+      if (titleSpan) {
+         if (state.status === 'RUNNING' || state.status === 'PAUSED' || state.status === 'SYNCING') {
+             titleSpan.innerText = `Fila de ${tab.toUpperCase()} [${state.origin || 'Disparo Manual'}]`;
+             titleSpan.style.color = '#3b82f6';
+         } else {
+             titleSpan.innerText = `Fila de ${tab.toUpperCase()} [Ociosa]`;
+             titleSpan.style.color = '#94a3b8';
+         }
+      }
 
       if (bStart) bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'PARTIAL' || state.status === 'CANCELED' || state.status === 'ERROR') ? 'block' : 'none';
       if (bPause) bPause.style.display = state.status === 'RUNNING' ? 'block' : 'none';
@@ -832,8 +928,8 @@
         if (ent.deltas && (ent.status === 'DONE' || ent.status === 'SYNCING' || ent.status === 'CANCELED')) {
           deltaString = `
                   <div style="font-size: 12px; margin-top: 6px; color: #a1a1aa; display: flex; gap: 10px; background: rgba(0,0,0,0.15); padding: 4px 8px; border-radius: 4px; width: fit-content;">
-                     <span style="color: #4ade80; font-weight: 500;">+${ent.deltas.inserts || 0} novos</span>
-                     <span style="color: #60a5fa; font-weight: 500;">~${ent.deltas.updates || 0} confirm. na base</span>
+                     <span style="color: #4ade80; font-weight: 500;">+${ent.deltas.inserts || 0} incluídos/novos</span>
+                     <span style="color: #60a5fa; font-weight: 500;">~${ent.deltas.updates || 0} atualizados</span>
                      ${ent.deltas.deletes ? `<span style="color: #f87171; font-weight: 500;">-${ent.deltas.deletes} apagados</span>` : ''}
                      ${ent.deltas.errors ? `<span style="color: #fca5a5; font-weight: 500; cursor: pointer; text-decoration: underline;" onclick="openErrorModal(${state.historyId})" title="Clique para ver os logs">⚠ ${ent.deltas.errors} erros</span>` : ''}
                   </div>
@@ -985,6 +1081,161 @@
       if (dd) dd.classList.remove("active");
     });
 
+    const friendlyCronNames = {
+        '*/5 * * * *': 'A cada 5 minutos',
+        '*/10 * * * *': 'A cada 10 minutos',
+        '*/30 * * * *': 'A cada 30 minutos',
+        '0 * * * *': 'A cada 1 Hora',
+        '0 */2 * * *': 'A cada 2 Horas',
+        '0 */4 * * *': 'A cada 4 Horas',
+        '0 */6 * * *': 'A cada 6 Horas',
+        '0 */12 * * *': 'A cada 12 Horas',
+        '0 0 * * *': 'Diariamente (00:00)',
+        '0 3 * * *': 'Diariamente (03:00)',
+        '0 0 * * 1': 'Semanalmente',
+        '0 0 1 * *': 'Mensalmente'
+    };
+
+    function toggleCustomCron() {
+       const sel = document.getElementById('formCronFriendly').value;
+       document.getElementById('formCronCustom').style.display = sel === 'custom' ? 'block' : 'none';
+    }
+
+    const auvoEntsArray = [
+      { id: 'users', label: 'Usuários' }, { id: 'segments', label: 'Segmentos' }, { id: 'groups', label: 'Grupos' },
+      { id: 'customers', label: 'Clientes' }, { id: 'questionnaires', label: 'Questionários' },
+      { id: 'taskTypes', label: 'Tipos de Tarefa' }, { id: 'tasks', label: 'Tarefas' }
+    ];
+    const glpiEntsArray = [
+      { id: 'novo', label: 'Novo' }, { id: 'planejado', label: 'Planejado' }, { id: 'atribuido', label: 'Atribuído' },
+      { id: 'solucionado', label: 'Solucionado' }, { id: 'pendente', label: 'Pendente' }, { id: 'atrasado', label: 'Atrasado' },
+      { id: 'fechado', label: 'Fechado' }
+    ];
+
+    function openSchedulesModal() {
+      document.getElementById('schedulesModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      fetchSchedules();
+      updateEntityCheckboxes();
+    }
+    function closeSchedulesModal() {
+      document.getElementById('schedulesModal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    async function fetchSchedules() {
+      const tbody = document.getElementById('schedulesTableBody');
+      try {
+         const res = await fetch('/api/schedules');
+         const data = await res.json();
+         if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum Cron Ativo.</td></tr>';
+            return;
+         }
+         tbody.innerHTML = data.map(s => {
+            let fJson = s.filters;
+            try { if(typeof fJson === 'string') fJson = JSON.parse(fJson); } catch(e){}
+            
+            let entsStr = 'Tudo/Padrão';
+            if (fJson && fJson.entities && fJson.entities.length > 0) entsStr = fJson.entities.join(', ');
+            else if (fJson && fJson.excludeStatus) entsStr = 'Exceto: ' + fJson.excludeStatus.join(',');
+            else if (fJson && fJson.includeStatus) entsStr = 'Apenas: ' + fJson.includeStatus.join(',');
+
+            let friendlyCron = friendlyCronNames[s.cron_expression] || 'Personalizado';
+            const friendlyRangeNames = { 'WEEK': 'Últimos 7 dias', 'MONTH': 'Mês Atual/30d', 'YEAR': 'Últimos 365d', 'FULL': 'Sempre Tudo' };
+            const rangeStr = friendlyRangeNames[s.date_range] || s.date_range || 'Sempre Tudo';
+
+            return `
+              <tr>
+                <td><span style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;">${s.system}</span></td>
+                <td>${rangeStr}</td>
+                <td style="color: #94a3b8; font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${entsStr}">${entsStr}</td>
+                <td>
+                   <strong style="color: #60a5fa">${friendlyCron}</strong>
+                   <div style="font-size: 10px; color: #94a3b8; font-family: monospace; letter-spacing: 1px;">${s.cron_expression}</div>
+                </td>
+                <td>${s.description || ''}</td>
+                <td style="text-align: right;">
+                   <button class="btn-sm btn-sm-del" onclick="deleteSchedule(${s.id})">Deletar</button>
+                </td>
+              </tr>
+            `;
+         }).join('');
+      } catch(e) {
+         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Erro: ${e.message}</td></tr>`;
+      }
+    }
+
+    function updateEntityCheckboxes() {
+      const sys = document.getElementById('formSystem').value;
+      const cBox = document.getElementById('entityCheckboxes');
+      const list = sys === 'AUVO' ? auvoEntsArray : glpiEntsArray;
+      
+      cBox.innerHTML = list.map(e => `
+        <label class="check-item">
+           <input type="checkbox" value="${e.id}" class="engine-ent-chk"> 
+           ${e.label}
+        </label>
+      `).join('');
+    }
+
+    async function saveSchedule() {
+      const system = document.getElementById('formSystem').value;
+      const range = document.getElementById('formRange').value;
+      const desc = document.getElementById('formDesc').value;
+      
+      let cron = document.getElementById('formCronFriendly').value;
+      if (cron === 'custom') {
+         cron = document.getElementById('formCronCustom').value;
+      }
+      
+      if (!cron) return alert("Expressão Cron obrigatória");
+
+      const checks = document.querySelectorAll('.engine-ent-chk:checked');
+      const selectedEnts = Array.from(checks).map(c => c.value);
+      
+      const payload = {
+         system: system,
+         cron_expression: cron,
+         date_range: range,
+         description: desc,
+         is_active: 1
+      };
+
+      if (selectedEnts.length > 0) {
+         payload.filters = { entities: selectedEnts };
+      }
+
+      try {
+         const res = await fetch('/api/schedules', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+         });
+         if(res.ok) {
+            document.getElementById('formCronFriendly').value = '*/30 * * * *';
+            document.getElementById('formCronCustom').value = '';
+            document.getElementById('formCronCustom').style.display = 'none';
+            document.getElementById('formDesc').value = '';
+            updateEntityCheckboxes();
+            fetchSchedules();
+            fetchGlobalTimer();
+         } else {
+            const data = await res.json();
+            alert("Erro: " + data.error);
+         }
+      } catch(e) { alert("Erro de comunicação."); }
+    }
+
+    async function deleteSchedule(id) {
+       if(!confirm("Certeza que deseja escluir este agendamento?")) return;
+       try {
+          await fetch(`/api/schedules/${id}`, { method: 'DELETE' });
+          fetchSchedules();
+          fetchGlobalTimer();
+       } catch(e) { alert("Falha ao deletar."); }
+    }
+
     // Boot Up
     switchTab('auvo');
     setTimeout(setInitialDates, 500); // Aguarda render async
@@ -1014,6 +1265,87 @@
           <tbody id="errorTableBody">
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Auto Sync Config -->
+  <div id="schedulesModal" class="modal-overlay">
+    <div class="modal-body-glass">
+      <div class="modal-header-glass">
+        <h3>Parâmetros de Auto-Sync (Cron Jobs do Banco)</h3>
+        <button class="close-btn" onclick="closeSchedulesModal()">&times;</button>
+      </div>
+      <div style="flex: 1; overflow-y: auto; background: #0f172a;">
+        <table class="cron-table">
+          <thead>
+            <tr>
+              <th>Motor</th>
+              <th>Propagação (Range)</th>
+              <th>Entidades Vinculadas</th>
+              <th>Expressão Cron</th>
+              <th>Descrição Extra</th>
+              <th style="text-align: right;">🔧</th>
+            </tr>
+          </thead>
+          <tbody id="schedulesTableBody">
+             <tr><td colspan="6" style="text-align: center;">Carregando tabelas do banco...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="schedule-form">
+        <h4 style="margin: 0 0 5px 0; color: #fff; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; width: fit-content;">Criar Fila Independente</h4>
+        <div class="form-row">
+          <div class="form-group" style="max-width: 120px;">
+            <label>Sistema</label>
+            <select id="formSystem" class="form-input" onchange="updateEntityCheckboxes()">
+              <option value="AUVO">API AUVO</option>
+              <option value="GLPI">API GLPI</option>
+            </select>
+          </div>
+          <div class="form-group" style="min-width: 200px; flex: 1.5;">
+            <label>Frequência (Cron)</label>
+            <select id="formCronFriendly" class="form-input" onchange="toggleCustomCron()">
+              <option value="*/5 * * * *">A cada 5 minutos</option>
+              <option value="*/10 * * * *">A cada 10 minutos</option>
+              <option value="*/30 * * * *" selected>A cada 30 minutos</option>
+              <option value="0 * * * *">A cada 1 Hora</option>
+              <option value="0 */2 * * *">A cada 2 Horas</option>
+              <option value="0 */4 * * *">A cada 4 Horas</option>
+              <option value="0 */6 * * *">A cada 6 Horas</option>
+              <option value="0 */12 * * *">A cada 12 Horas</option>
+              <option value="0 0 * * *">Diariamente (00:00)</option>
+              <option value="0 3 * * *">Diariamente (03:00)</option>
+              <option value="0 0 * * 1">Semanalmente (Segunda)</option>
+              <option value="0 0 1 * *">Mensalmente (Dia 1)</option>
+              <option value="custom">Avançado (Cron Textual)...</option>
+            </select>
+            <input type="text" id="formCronCustom" class="form-input" style="display:none; margin-top: 6px;" placeholder="ex: 0 */4 * * *">
+          </div>
+          <div class="form-group" style="max-width: 130px;">
+            <label>Intervalo Data</label>
+            <select id="formRange" class="form-input">
+              <option value="FULL">Sempre Tudo</option>
+              <option value="WEEK">Últimos 7 dias</option>
+              <option value="MONTH">Mês Atual/30d</option>
+              <option value="YEAR">Últimos 365d</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label>Identificador Visual</label>
+            <input type="text" id="formDesc" class="form-input" placeholder="Ex: Update Flash nas Tarefas e Seg...">
+          </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Checklist de Independência (Ignora Padrão se Marcado)</label>
+            <div id="entityCheckboxes" class="checkbox-grid">
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+           <button class="btn-resume" onclick="saveSchedule()" style="padding: 10px 20px; font-size: 13px;">➕ Acoplar Motor no Banco</button>
+        </div>
       </div>
     </div>
   </div>

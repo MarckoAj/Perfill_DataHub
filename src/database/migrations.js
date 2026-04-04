@@ -133,7 +133,7 @@ export async function runMigrations() {
         // Novas tabelas de Auditoria de Sincronizacao
         await createSyncLogsTables();
         await createSyncSchedulesTable();
-        await runScheduleSeeds();
+        // await runScheduleSeeds();
 
     } catch (error) {
         console.error("Migration Erro:", error);

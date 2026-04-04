@@ -223,14 +223,16 @@ class AuvoSyncService {
       }
   }
 
-  async runQueue(entitiesToSync, startDate, endDate) {
+  async runQueue(entitiesToSync = null, startDate = null, endDate = null, originDesc = 'Gatilho Manual') {
       if (this.syncState.status === 'RUNNING' || this.syncState.status === 'PAUSED') {
           throw new Error("Uma fila já está em andamento ou pausada.");
       }
 
       this.syncState.status = 'RUNNING';
-      this.syncState.message = "Verificando fila de entidades...";
-      systemStatusService.setSyncing(true, 'AUVO');
+      this.syncState.message = "Verificando fila AUVO...";
+      this.syncState.origin = originDesc;
+      
+      systemStatusService.setSyncing(true, 'AUVO', null, originDesc);
       
       const allEntities = [
          { id: 'users', label: 'Usuários' },

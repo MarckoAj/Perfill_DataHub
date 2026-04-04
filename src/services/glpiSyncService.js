@@ -136,49 +136,49 @@ class GlpiSyncService {
     }
   }
 
-  async runQueue(entitiesToSync = null, filters = null) {
+  async runQueue(entitiesToSync = null, filters = null, originDesc = 'Gatilho Manual') {
       if (this.syncState.status === 'RUNNING' || this.syncState.status === 'PAUSED') {
           throw new Error("Uma fila já está em andamento ou pausada.");
       }
 
       this.syncState.status = 'RUNNING';
       this.syncState.message = "Verificando fila GLPI...";
-      systemStatusService.setSyncing(true, 'GLPI');
+      this.syncState.origin = originDesc;
+      systemStatusService.setSyncing(true, 'GLPI', null, originDesc);
       
-      const allEntities = [
-         { id: 'novo', label: 'Tickets novos' },
-         { id: 'planejado', label: 'Tickets planejados' },
-         { id: 'atribuido', label: 'Tickets atribuídos' },
-         { id: 'solucionado', label: 'Tickets solucionados' },
-         { id: 'atrasado', label: 'Tickets atrasados' },
-         { id: 'pendente', label: 'Tickets pendentes' },
-         { id: 'fechado', label: 'Tickets fechados' }
-      ];
-
-      let modifiedEntities = allEntities;
-      if (filters && filters.excludeStatus) {
-         modifiedEntities = modifiedEntities.filter(e => !filters.excludeStatus.includes(e.id));
-      }
-      if (filters && filters.includeStatus) {
-         modifiedEntities = modifiedEntities.filter(e => filters.includeStatus.includes(e.id));
-      }
-
-      const toProcess = entitiesToSync && entitiesToSync.length > 0 
-          ? modifiedEntities.filter(e => entitiesToSync.includes(e.id))
-          : modifiedEntities;
-
-      this.syncState.historyId = await syncLogRepository.createHistory('GLPI');
-
-      this.syncState.entities = toProcess.map(e => ({
-          ...e,
-          status: 'PENDING',
-          page: 0,
-          count: 0,
-          targetCount: '?',
-          deltas: { inserts: 0, updates: 0, skips: 0, errors: 0, deletes: 0 }
-      }));
-
       try {
+          const allEntities = [
+             { id: 'novo', label: 'Tickets novos' },
+             { id: 'planejado', label: 'Tickets planejados' },
+             { id: 'atribuido', label: 'Tickets atribuídos' },
+             { id: 'solucionado', label: 'Tickets solucionados' },
+             { id: 'atrasado', label: 'Tickets atrasados' },
+             { id: 'pendente', label: 'Tickets pendentes' },
+             { id: 'fechado', label: 'Tickets fechados' }
+          ];
+
+          let modifiedEntities = allEntities;
+          if (filters && filters.excludeStatus) {
+             modifiedEntities = modifiedEntities.filter(e => !filters.excludeStatus.includes(e.id));
+          }
+          if (filters && filters.includeStatus) {
+             modifiedEntities = modifiedEntities.filter(e => filters.includeStatus.includes(e.id));
+          }
+
+          const toProcess = entitiesToSync && entitiesToSync.length > 0 
+              ? modifiedEntities.filter(e => entitiesToSync.includes(e.id))
+              : modifiedEntities;
+
+          this.syncState.historyId = await syncLogRepository.createHistory('GLPI');
+
+          this.syncState.entities = toProcess.map(e => ({
+              ...e,
+              status: 'PENDING',
+              page: 0,
+              count: 0,
+              targetCount: '?',
+              deltas: { inserts: 0, updates: 0, skips: 0, errors: 0, deletes: 0 }
+          }));
           for (const ent of toProcess) {
               await this._checkPause();
               if (this.syncState.status === 'CANCELED') break;

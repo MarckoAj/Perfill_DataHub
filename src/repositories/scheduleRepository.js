@@ -19,7 +19,7 @@ class ScheduleRepository {
   async createSchedule(data) {
     const filtersStr = data.filters ? JSON.stringify(data.filters) : null;
     const [result] = await db.query(
-      `INSERT INTO sync_schedules (system, cron_expression, date_range, filters, is_active, description) 
+      `INSERT INTO sync_schedules (\`system\`, cron_expression, date_range, filters, is_active, description) 
        VALUES (?, ?, ?, ?, ?, ?)`,
       [data.system, data.cron_expression, data.date_range, filtersStr, data.is_active ?? true, data.description || '']
     );
@@ -30,7 +30,7 @@ class ScheduleRepository {
     const filtersStr = data.filters ? JSON.stringify(data.filters) : null;
     await db.query(
       `UPDATE sync_schedules 
-       SET system = ?, cron_expression = ?, date_range = ?, filters = ?, is_active = ?, description = ? 
+       SET \`system\` = ?, cron_expression = ?, date_range = ?, filters = ?, is_active = ?, description = ? 
        WHERE id = ?`,
       [data.system, data.cron_expression, data.date_range, filtersStr, data.is_active, data.description || '', id]
     );

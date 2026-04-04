@@ -26,27 +26,30 @@ class DynamicScheduler {
         // Mantem os timers preditivos
         let nextAuvo = Infinity;
         let nextGlpi = Infinity;
+        let closestGlobal = Infinity;
+        let closestDesc = 'Motor Padrão';
         
         for (const rule of schedules) {
             const cronStr = rule.cron_expression;
             
-            // Predição Visual pro Painel
             try {
                 const interval = CronExpressionParser.parse(cronStr);
                 const predictedTime = interval.next().toDate().getTime();
                 
                 if (rule.system === 'AUVO' && predictedTime < nextAuvo) nextAuvo = predictedTime;
                 if (rule.system === 'GLPI' && predictedTime < nextGlpi) nextGlpi = predictedTime;
+
+                if (predictedTime < closestGlobal) {
+                    closestGlobal = predictedTime;
+                    closestDesc = rule.description || rule.system;
+                }
             } catch (e) {
                 console.error(`Erro ao fazer parse da expressao ${cronStr} do ID ${rule.id}`);
             }
             
-            // Cadastra no motor
             const jobTask = cron.schedule(cronStr, async () => {
                 console.log(`[CRON ${rule.system} - Regra ID: ${rule.id}] Disparando (Range: ${rule.date_range})...`);
                 await this.executeJob(rule);
-                
-                // Recalcula o próximo logo depois que terminar
                 this._recalculateNextDatesSilently();
             });
             
@@ -55,6 +58,8 @@ class DynamicScheduler {
         
         if (nextAuvo !== Infinity) systemStatusService.setNextAuvoRun(new Date(nextAuvo).toISOString());
         if (nextGlpi !== Infinity) systemStatusService.setNextGlpiRun(new Date(nextGlpi).toISOString());
+        
+        systemStatusService.setGlobalNext(closestDesc, schedules.length);
         
         console.log(`✅ Foram agendadas ${schedules.length} tarefas globais dinamicamente do Banco.`);
     } catch (error) {
@@ -67,6 +72,8 @@ class DynamicScheduler {
         const schedules = await scheduleRepository.getActiveSchedules();
         let nextAuvo = Infinity;
         let nextGlpi = Infinity;
+        let closestGlobal = Infinity;
+        let closestDesc = 'Motor Padrão';
         
         for (const rule of schedules) {
             try {
@@ -74,11 +81,18 @@ class DynamicScheduler {
                 const predictedTime = interval.next().toDate().getTime();
                 if (rule.system === 'AUVO' && predictedTime < nextAuvo) nextAuvo = predictedTime;
                 if (rule.system === 'GLPI' && predictedTime < nextGlpi) nextGlpi = predictedTime;
+
+                if (predictedTime < closestGlobal) {
+                    closestGlobal = predictedTime;
+                    closestDesc = rule.description || rule.system;
+                }
             } catch (e) { }
         }
         
         if (nextAuvo !== Infinity) systemStatusService.setNextAuvoRun(new Date(nextAuvo).toISOString());
         if (nextGlpi !== Infinity) systemStatusService.setNextGlpiRun(new Date(nextGlpi).toISOString());
+        
+        systemStatusService.setGlobalNext(closestDesc, schedules.length);
       } catch (e) { }
   }
 
@@ -117,9 +131,10 @@ class DynamicScheduler {
                    console.log(`[DynamicJob AUVO] Omitido. Já existe sincronização ativa.`);
                    return;
               }
+              systemStatusService.setSyncing(true, 'AUVO', rule.description || rule.system);
               const bounds = this.getDateBoundaries(rule.date_range);
-              // Injeta os limits de Data e nulo (pra ir todas entidades default do payload null do runQueue).
-              await auvoSyncService.runQueue(null, bounds.startDate, bounds.endDate);
+              const entitiesToSync = filters && filters.entities && filters.entities.length > 0 ? filters.entities : null;
+              await auvoSyncService.runQueue(entitiesToSync, bounds.startDate, bounds.endDate, `Motor Automático (${rule.description || rule.system})`);
               console.log(`✅ [DynamicJob AUVO] Carga de '${rule.date_range}' com sucesso.`);
               
           } else if (rule.system === 'GLPI') {
@@ -128,10 +143,10 @@ class DynamicScheduler {
                    return;
               }
               
-              // O GLPI intercepta "filters", passamos pelo runQueue Dynamic Mode
-              // Como GLPI por default não usa start/end date no array original, a gente envia "filters" pra ele decaptar na array de allEntities
-              await glpiSyncService.runQueue(null, filters);
-              console.log(`✅ [DynamicJob GLPI] Extrator finalizado.`);
+              systemStatusService.setSyncing(true, 'GLPI', rule.description || rule.system);
+              const entitiesToSync = filters && filters.entities && filters.entities.length > 0 ? filters.entities : null;
+              await glpiSyncService.runQueue(entitiesToSync, null, `Motor Automático (${rule.description || rule.system})`);
+              console.log(`✅ [DynamicJob GLPI] Carga concluída.`);
           }
       } catch (e) {
           console.error(`❌ [DynamicJob ${rule.system}] Erro fatal contido da rotina:`, e.message);
