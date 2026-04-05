@@ -36,8 +36,26 @@ export async function runMigrations() {
             idTecnicoAtribuido INT,
             nomeTecnico VARCHAR(255),
             isAtrasado TINYINT DEFAULT 0,
+            tipo VARCHAR(100),
+            projeto VARCHAR(100),
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             KEY idx_tickets_updated (updated_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+
+    const glpiTasksTableQuery = `
+        CREATE TABLE IF NOT EXISTS glpi_tickettasks (
+            id BIGINT PRIMARY KEY,
+            tickets_id BIGINT NOT NULL,
+            users_id BIGINT,
+            nomeAutor VARCHAR(255),
+            date_creation DATETIME,
+            date_mod DATETIME,
+            begin DATETIME,
+            end DATETIME,
+            content LONGTEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_glpi_tickettasks_ticketsId (tickets_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
 
@@ -97,6 +115,7 @@ export async function runMigrations() {
         await pool.query(usersTableQuery);
         console.log("Migration: Tabela 'users' verificada/criada com sucesso.");
         await pool.query(ticketsTableQuery);
+        await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");

@@ -12,6 +12,7 @@ import auvoRoutes from "../routes/auvoRoutes.js";
 import glpiRoutes from "../routes/glpiRoutes.js";
 import systemRoutes from "../routes/systemRoutes.js";
 import scheduleRoutes from "../routes/scheduleRoutes.js";
+import dashboardRoutes from "../routes/dashboardRoutes.js";
 
 const customExpress = () => {
   const app = express();
@@ -27,6 +28,7 @@ const customExpress = () => {
   app.use("/api/glpi", glpiRoutes);
   app.use("/api/system", systemRoutes);
   app.use("/api/schedules", scheduleRoutes);
+  app.use("/api", dashboardRoutes);
   app.use("/api", routes);
   app.use("/", healthRoutes); // Acopla /live, /health, /ready na raiz
   app.use("/panel", express.static("public")); // Micro-frontend desacoplado (UI)

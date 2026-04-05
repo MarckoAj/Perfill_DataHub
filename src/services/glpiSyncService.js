@@ -1,6 +1,7 @@
 import glpiTickets from "../services/glpi_service.js";
 import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 import glpiRawRepository from "../repositories/glpi/glpiRawRepository.js";
+import glpiTicketTaskService from "./glpiTicketTaskService.js";
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpiClient from "../integrations/glpi/glpiClient.js";
 import alertEngine from "./alertEngine.js";
@@ -154,7 +155,8 @@ class GlpiSyncService {
              { id: 'solucionado', label: 'Tickets solucionados' },
              { id: 'atrasado', label: 'Tickets atrasados' },
              { id: 'pendente', label: 'Tickets pendentes' },
-             { id: 'fechado', label: 'Tickets fechados' }
+             { id: 'fechado', label: 'Tickets fechados' },
+             { id: 'tarefas', label: 'Tarefas de Chamados (Secundárias)' }
           ];
 
           let modifiedEntities = allEntities;
@@ -189,6 +191,12 @@ class GlpiSyncService {
                   this._setEntityState(ent.id, { status: 'SYNCING' });
                   await glpiTicketRepository.resetAtrasadoFlags();
                   await this.syncStatus("atrasado"); 
+              } else if (ent.id === 'tarefas') {
+                  this._setEntityState(ent.id, { status: 'SYNCING' });
+                  const tDeltas = await glpiTicketTaskService.syncRecentTasks(2000);
+                  this._setEntityState(ent.id, {
+                      status: 'DONE', count: tDeltas.inserts + tDeltas.updates, targetCount: tDeltas.inserts + tDeltas.updates, deltas: tDeltas
+                  });
               } else {
                   await this.syncStatus(ent.id);
               }
@@ -245,7 +253,7 @@ class GlpiSyncService {
 
   async syncAll() {
       // Alias para legacy background jobs
-      return this.runQueue(["novo", "atribuido", "planejado", "pendente", "solucionado", "fechado", "atrasado"]);
+      return this.runQueue(["novo", "atribuido", "planejado", "pendente", "solucionado", "fechado", "atrasado", "tarefas"]);
   }
 }
 

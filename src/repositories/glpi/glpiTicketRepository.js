@@ -13,8 +13,8 @@ class GlpiTicketRepository {
       INSERT INTO tickets (
         ticketId, nomeCliente, titulo, descricao, dataCriacao, status,
         dataFechamento, dataAtualizacao, categoriaSla, tempoSla,
-        statusSla, motivoPausa, idTecnicoAtribuido, nomeTecnico, isAtrasado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        statusSla, motivoPausa, idTecnicoAtribuido, nomeTecnico, isAtrasado, tipo, projeto
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         nomeCliente = VALUES(nomeCliente),
         titulo = VALUES(titulo),
@@ -29,6 +29,8 @@ class GlpiTicketRepository {
         idTecnicoAtribuido = VALUES(idTecnicoAtribuido),
         nomeTecnico = VALUES(nomeTecnico),
         isAtrasado = VALUES(isAtrasado),
+        tipo = VALUES(tipo),
+        projeto = VALUES(projeto),
         updated_at = CURRENT_TIMESTAMP()
     `;
 
@@ -49,6 +51,8 @@ class GlpiTicketRepository {
         t.idTecnicoAtribuido ? parseInt(t.idTecnicoAtribuido, 10) : null,
         t.nomeTecnico ? String(t.nomeTecnico).substring(0, 255) : null,
         t.isAtrasado ? 1 : 0,
+        t.tipo ? String(t.tipo).substring(0, 100) : null,
+        t.projeto ? String(t.projeto).substring(0, 100) : null
       ];
 
       try {

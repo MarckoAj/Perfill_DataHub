@@ -82,6 +82,19 @@ class TicketMapper {
       const statusSla = this.checkSLAStatus(ticket["151"], ticket["15"]);
       const tempoSla = this.handlingTimeSlaText(ticket["151"], ticket["12"]);
 
+      let projeto = "Outros";
+      if (rawCustomer.includes("> PI-NOVO >") || rawCustomer.includes("> PI NOVO >")) {
+          projeto = "PI-NOVO";
+      } else if (rawCustomer.includes("> LEGADO >")) {
+          projeto = "LEGADO";
+      } else if (rawCustomer.includes("> CFTV >")) {
+          projeto = "CFTV";
+      }
+
+      const rawTipo = ticket["80"] || "";
+      const filterTipo = rawTipo.includes(">") ? rawTipo.split(">") : [rawTipo];
+      const [tipo] = filterTipo.slice(-1);
+
       return {
         ticketId: ticket["2"],
         nomeCliente: nomeCliente ? nomeCliente.trim() : "Não informado",
@@ -96,6 +109,8 @@ class TicketMapper {
         statusSla,
         motivoPausa: ticket["400"] || null,
         idTecnicoAtribuido: ticket["5"] || null,
+        tipo: tipo ? tipo.trim() : "Não informado",
+        projeto: projeto
       };
     });
   }
