@@ -89,6 +89,96 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      padding-top: 50px;
+      /* Ajuste para o navbar fixo */
+    }
+
+    /* ===== NAVBAR GLOBAL FIXA ===== */
+    .global-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background: #2b3d5b;
+      /* Azul levemente mais claro que o fundo padrão */
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 40px;
+      box-sizing: border-box;
+      z-index: 2000;
+      /* Acima de tudo */
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-logo img {
+      height: 30px;
+      vertical-align: middle;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 25px;
+      margin-left: auto;
+    }
+
+    .nav-item {
+      position: relative;
+    }
+
+    .nav-link {
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 15px 0;
+      transition: opacity 0.2s;
+    }
+
+    .nav-link:hover {
+      opacity: 0.8;
+    }
+
+    .nav-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      min-width: 200px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+      padding: 10px 0;
+      display: none;
+      z-index: 2001;
+    }
+
+    .nav-item:hover .nav-dropdown {
+      display: block;
+    }
+
+    .dropdown-link {
+      display: block;
+      padding: 10px 20px;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .dropdown-link:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .dropdown-sep {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.05);
+      margin: 5px 15px;
     }
 
     header {
@@ -526,6 +616,7 @@
       font-size: 13px;
       transition: all 0.3s;
     }
+
     .btn-config-engine:hover {
       background: linear-gradient(135deg, #334155, #1e293b);
       border-color: rgba(255, 255, 255, 0.3);
@@ -533,52 +624,198 @@
     }
 
     .modal-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
-      z-index: 2000; justify-content: center; align-items: center; padding: 20px;
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
     }
+
     .modal-body-glass {
-      background: #1e293b; width: 100%; max-width: 900px; max-height: 90vh;
-      border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: #1e293b;
+      width: 100%;
+      max-width: 900px;
+      max-height: 90vh;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
+
     .modal-header-glass {
-      padding: 18px 24px; background: #0f172a; border-bottom: 1px solid rgba(255,255,255,0.05);
-      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 24px;
+      background: #0f172a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .modal-header-glass h3 { margin: 0; color: #f8fafc; font-size: 18px; }
-    .close-btn { background: none; border: none; color: #94a3b8; font-size: 26px; cursor: pointer; }
-    .close-btn:hover { color: #fff; }
-    
-    .cron-table { width: 100%; border-collapse: collapse; color: #cbd5e1; font-size: 13px; }
-    .cron-table th { background: #334155; padding: 12px 16px; text-align: left; font-weight: 600; color: #fff; position: sticky; top: 0;}
-    .cron-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; color: white; transition: 0.2s;}
-    .btn-sm-del { background: #ef4444; }
-    .btn-sm-del:hover { background: #dc2626; }
+
+    .modal-header-glass h3 {
+      margin: 0;
+      color: #f8fafc;
+      font-size: 18px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 26px;
+      cursor: pointer;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+    }
+
+    .cron-table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+
+    .cron-table th {
+      background: #334155;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #fff;
+      position: sticky;
+      top: 0;
+    }
+
+    .cron-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      color: white;
+      transition: 0.2s;
+    }
+
+    .btn-sm-del {
+      background: #ef4444;
+    }
+
+    .btn-sm-del:hover {
+      background: #dc2626;
+    }
 
     .schedule-form {
-      padding: 24px; background: #0f172a; border-top: 1px solid rgba(255,255,255,0.05);
-      display: flex; flex-direction: column; gap: 15px;
+      padding: 24px;
+      background: #0f172a;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
     }
-    .form-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
-    .form-group label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; }
-    .form-input { 
-      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;
-      padding: 10px; border-radius: 6px; font-family: inherit; font-size: 14px; width: 100%; box-sizing: border-box;
+
+    .form-row {
+      display: flex;
+      gap: 15px;
+      align-items: flex-end;
+      flex-wrap: wrap;
     }
-    .form-input:focus { border-color: #3b82f6; outline: none; }
-    
-    .checkbox-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 5px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);}
-    .check-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #cbd5e1; cursor: pointer; padding: 4px 8px;}
-    .check-item:hover { color: #fff; background: rgba(255,255,255,0.05); border-radius: 4px;}
-    .check-item input { cursor: pointer; accent-color: #10b981; }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .form-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      border-color: #3b82f6;
+      outline: none;
+    }
+
+    .checkbox-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 5px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #cbd5e1;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .check-item:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    .check-item input {
+      cursor: pointer;
+      accent-color: #10b981;
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- NAVBAR GLOBAL -->
+  <nav class="global-nav">
+    <div class="nav-logo">
+      <img src="perfill_logo.png" alt="Perfill Logo">
+    </div>
+    <div class="nav-menu">
+      <div class="nav-item">
+        <a href="/panel/glpi-dashboard.html" class="nav-link">Chamados</a>
+      </div>
+      <div class="nav-item">
+        <a href="/panel/" class="nav-link">Sincronizações</a>
+      </div>
+    </div>
+  </nav>
 
   <header>
     <div class="logo-ball"></div>
@@ -587,7 +824,8 @@
       style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2); cursor: help;"
       title="Aguardando conexão com os Motores de Auto-Sync...">
       <div class="dot-cron" id="globalAutoSyncDot"></div>
-      <span id="globalAutoSyncTimer" style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo (Cálculo...)</span>
+      <span id="globalAutoSyncTimer" style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo
+        (Cálculo...)</span>
     </div>
     <button class="btn-config-engine" onclick="openSchedulesModal()">⚙️ Configurar Motores</button>
   </header>
@@ -668,86 +906,86 @@
 
     // Relógio Lógico: roda a cada segundo
     setInterval(() => {
-        const span = document.getElementById('globalAutoSyncTimer');
-        const dot = document.getElementById('globalAutoSyncDot');
-        const container = document.getElementById('globalAutoSyncContainer');
-        
-        if (!span || !dot) return;
-        
-        if (globalTimerState.isSyncing) {
-            const desc = globalTimerState.currentDesc || globalTimerState.entity || 'Fila';
-            span.innerHTML = `Sincronizando: ${desc}...`;
-            if (container) container.title = `Execução Ativa: Sincronizando ${desc} no Backend.`;
-            
-            span.style.color = '#f59e0b';
-            dot.style.background = '#f59e0b';
-            dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
-        } else if (globalTimerState.targetDate) {
-            const now = new Date();
-            const target = new Date(globalTimerState.targetDate);
-            const diffMs = target - now;
-            
-            if (diffMs <= 0) {
-                 span.innerHTML = 'Disparando Cron...';
-                 return;
-            }
-            
-            const hours = Math.floor(diffMs / (1000 * 60 * 60));
-            const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
-            
-            const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            const nextDesc = globalTimerState.nextDesc || 'Motor Padrão';
-            
-            span.innerHTML = `Auto-Sync (${globalTimerState.activeMotorsCount} Motores) | Próximo: ${nextDesc} em ${timeStr}`;
-            if (container) container.title = `Agendamento Automático: O próximo disparo (${nextDesc}) iniciará a carga silenciosa.`;
-            
-            span.style.color = '#10b981';
-            dot.style.background = '#10b981';
-            dot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
-        } else {
-            span.innerHTML = `Auto-Sync (0 Ativos) | Motores Desativados`;
-            if (container) container.title = `Nenhuma rotina cadastrada de auto-sync no painel.`;
-            
-            span.style.color = '#94a3b8';
-            dot.style.background = '#475569';
-            dot.style.boxShadow = 'none';
+      const span = document.getElementById('globalAutoSyncTimer');
+      const dot = document.getElementById('globalAutoSyncDot');
+      const container = document.getElementById('globalAutoSyncContainer');
+
+      if (!span || !dot) return;
+
+      if (globalTimerState.isSyncing) {
+        const desc = globalTimerState.currentDesc || globalTimerState.entity || 'Fila';
+        span.innerHTML = `Sincronizando: ${desc}...`;
+        if (container) container.title = `Execução Ativa: Sincronizando ${desc} no Backend.`;
+
+        span.style.color = '#f59e0b';
+        dot.style.background = '#f59e0b';
+        dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
+      } else if (globalTimerState.targetDate) {
+        const now = new Date();
+        const target = new Date(globalTimerState.targetDate);
+        const diffMs = target - now;
+
+        if (diffMs <= 0) {
+          span.innerHTML = 'Disparando Cron...';
+          return;
         }
+
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        const nextDesc = globalTimerState.nextDesc || 'Motor Padrão';
+
+        span.innerHTML = `Auto-Sync (${globalTimerState.activeMotorsCount} Motores) | Próximo: ${nextDesc} em ${timeStr}`;
+        if (container) container.title = `Agendamento Automático: O próximo disparo (${nextDesc}) iniciará a carga silenciosa.`;
+
+        span.style.color = '#10b981';
+        dot.style.background = '#10b981';
+        dot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
+      } else {
+        span.innerHTML = `Auto-Sync (0 Ativos) | Motores Desativados`;
+        if (container) container.title = `Nenhuma rotina cadastrada de auto-sync no painel.`;
+
+        span.style.color = '#94a3b8';
+        dot.style.background = '#475569';
+        dot.style.boxShadow = 'none';
+      }
     }, 1000);
 
     // Bater no servidor a cada 30 segundos
     async function fetchGlobalTimer() {
-        try {
-            const res = await fetch('/api/system/status');
-            const data = await res.json();
-            
-            if (data.isSyncing) {
-                globalTimerState.isSyncing = true;
-                globalTimerState.entity = data.currentEntity;
-                globalTimerState.currentDesc = data.currentDesc;
-                globalTimerState.targetDate = null;
-            } else {
-                globalTimerState.isSyncing = false;
-                globalTimerState.activeMotorsCount = data.activeMotorsCount || 0;
-                globalTimerState.nextDesc = data.nextDesc;
-                
-                // Escolher quem roda primeiro
-                const auvoT = data.nextAuvoRun ? new Date(data.nextAuvoRun).getTime() : Infinity;
-                const glpiT = data.nextGlpiRun ? new Date(data.nextGlpiRun).getTime() : Infinity;
-                
-                if (auvoT === Infinity && glpiT === Infinity) {
-                    globalTimerState.targetDate = null;
-                } else if (auvoT <= glpiT) {
-                    globalTimerState.targetDate = data.nextAuvoRun;
-                } else {
-                    globalTimerState.targetDate = data.nextGlpiRun;
-                }
-            }
-        } catch (e) {
-            // Se der erro de fetch silencioso
+      try {
+        const res = await fetch('/api/system/status');
+        const data = await res.json();
+
+        if (data.isSyncing) {
+          globalTimerState.isSyncing = true;
+          globalTimerState.entity = data.currentEntity;
+          globalTimerState.currentDesc = data.currentDesc;
+          globalTimerState.targetDate = null;
+        } else {
+          globalTimerState.isSyncing = false;
+          globalTimerState.activeMotorsCount = data.activeMotorsCount || 0;
+          globalTimerState.nextDesc = data.nextDesc;
+
+          // Escolher quem roda primeiro
+          const auvoT = data.nextAuvoRun ? new Date(data.nextAuvoRun).getTime() : Infinity;
+          const glpiT = data.nextGlpiRun ? new Date(data.nextGlpiRun).getTime() : Infinity;
+
+          if (auvoT === Infinity && glpiT === Infinity) {
+            globalTimerState.targetDate = null;
+          } else if (auvoT <= glpiT) {
+            globalTimerState.targetDate = data.nextAuvoRun;
+          } else {
+            globalTimerState.targetDate = data.nextGlpiRun;
+          }
         }
+      } catch (e) {
+        // Se der erro de fetch silencioso
+      }
     }
-    
+
     fetchGlobalTimer();
     setInterval(fetchGlobalTimer, 30000);
 
@@ -867,30 +1105,30 @@
     // 3. Renderiza o Console
     function renderConsole(state, overrideTab = null) {
       const tab = overrideTab || currentTab;
-      
+
       const isFinished = state.status === 'COMPLETED' || state.status === 'ERROR' || state.status === 'CANCELED' || state.status === 'IDLE';
       const wasRunning = lastSyncStatus[tab] === 'RUNNING' || lastSyncStatus[tab] === 'PAUSED';
-      
+
       if (wasRunning && isFinished) {
-          loadStats();
+        loadStats();
       }
-      
+
       lastSyncStatus[tab] = state.status;
 
       // Evita re-renderizar aba oculta (mas se for a visivel, processa normalmente)
       if (tab !== currentTab) return;
 
       if (uiStatus) uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
-      
+
       const titleSpan = document.querySelector(`#${tab}App .console-title`);
       if (titleSpan) {
-         if (state.status === 'RUNNING' || state.status === 'PAUSED' || state.status === 'SYNCING') {
-             titleSpan.innerText = `Fila de ${tab.toUpperCase()} [${state.origin || 'Disparo Manual'}]`;
-             titleSpan.style.color = '#3b82f6';
-         } else {
-             titleSpan.innerText = `Fila de ${tab.toUpperCase()} [Ociosa]`;
-             titleSpan.style.color = '#94a3b8';
-         }
+        if (state.status === 'RUNNING' || state.status === 'PAUSED' || state.status === 'SYNCING') {
+          titleSpan.innerText = `Fila de ${tab.toUpperCase()} [${state.origin || 'Disparo Manual'}]`;
+          titleSpan.style.color = '#3b82f6';
+        } else {
+          titleSpan.innerText = `Fila de ${tab.toUpperCase()} [Ociosa]`;
+          titleSpan.style.color = '#94a3b8';
+        }
       }
 
       if (bStart) bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'PARTIAL' || state.status === 'CANCELED' || state.status === 'ERROR') ? 'block' : 'none';
@@ -1082,23 +1320,23 @@
     });
 
     const friendlyCronNames = {
-        '*/5 * * * *': 'A cada 5 minutos',
-        '*/10 * * * *': 'A cada 10 minutos',
-        '*/30 * * * *': 'A cada 30 minutos',
-        '0 * * * *': 'A cada 1 Hora',
-        '0 */2 * * *': 'A cada 2 Horas',
-        '0 */4 * * *': 'A cada 4 Horas',
-        '0 */6 * * *': 'A cada 6 Horas',
-        '0 */12 * * *': 'A cada 12 Horas',
-        '0 0 * * *': 'Diariamente (00:00)',
-        '0 3 * * *': 'Diariamente (03:00)',
-        '0 0 * * 1': 'Semanalmente',
-        '0 0 1 * *': 'Mensalmente'
+      '*/5 * * * *': 'A cada 5 minutos',
+      '*/10 * * * *': 'A cada 10 minutos',
+      '*/30 * * * *': 'A cada 30 minutos',
+      '0 * * * *': 'A cada 1 Hora',
+      '0 */2 * * *': 'A cada 2 Horas',
+      '0 */4 * * *': 'A cada 4 Horas',
+      '0 */6 * * *': 'A cada 6 Horas',
+      '0 */12 * * *': 'A cada 12 Horas',
+      '0 0 * * *': 'Diariamente (00:00)',
+      '0 3 * * *': 'Diariamente (03:00)',
+      '0 0 * * 1': 'Semanalmente',
+      '0 0 1 * *': 'Mensalmente'
     };
 
     function toggleCustomCron() {
-       const sel = document.getElementById('formCronFriendly').value;
-       document.getElementById('formCronCustom').style.display = sel === 'custom' ? 'block' : 'none';
+      const sel = document.getElementById('formCronFriendly').value;
+      document.getElementById('formCronCustom').style.display = sel === 'custom' ? 'block' : 'none';
     }
 
     const auvoEntsArray = [
@@ -1126,26 +1364,26 @@
     async function fetchSchedules() {
       const tbody = document.getElementById('schedulesTableBody');
       try {
-         const res = await fetch('/api/schedules');
-         const data = await res.json();
-         if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum Cron Ativo.</td></tr>';
-            return;
-         }
-         tbody.innerHTML = data.map(s => {
-            let fJson = s.filters;
-            try { if(typeof fJson === 'string') fJson = JSON.parse(fJson); } catch(e){}
-            
-            let entsStr = 'Tudo/Padrão';
-            if (fJson && fJson.entities && fJson.entities.length > 0) entsStr = fJson.entities.join(', ');
-            else if (fJson && fJson.excludeStatus) entsStr = 'Exceto: ' + fJson.excludeStatus.join(',');
-            else if (fJson && fJson.includeStatus) entsStr = 'Apenas: ' + fJson.includeStatus.join(',');
+        const res = await fetch('/api/schedules');
+        const data = await res.json();
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum Cron Ativo.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(s => {
+          let fJson = s.filters;
+          try { if (typeof fJson === 'string') fJson = JSON.parse(fJson); } catch (e) { }
 
-            let friendlyCron = friendlyCronNames[s.cron_expression] || 'Personalizado';
-            const friendlyRangeNames = { 'WEEK': 'Últimos 7 dias', 'MONTH': 'Mês Atual/30d', 'YEAR': 'Últimos 365d', 'FULL': 'Sempre Tudo' };
-            const rangeStr = friendlyRangeNames[s.date_range] || s.date_range || 'Sempre Tudo';
+          let entsStr = 'Tudo/Padrão';
+          if (fJson && fJson.entities && fJson.entities.length > 0) entsStr = fJson.entities.join(', ');
+          else if (fJson && fJson.excludeStatus) entsStr = 'Exceto: ' + fJson.excludeStatus.join(',');
+          else if (fJson && fJson.includeStatus) entsStr = 'Apenas: ' + fJson.includeStatus.join(',');
 
-            return `
+          let friendlyCron = friendlyCronNames[s.cron_expression] || 'Personalizado';
+          const friendlyRangeNames = { 'WEEK': 'Últimos 7 dias', 'MONTH': 'Mês Atual/30d', 'YEAR': 'Últimos 365d', 'FULL': 'Sempre Tudo' };
+          const rangeStr = friendlyRangeNames[s.date_range] || s.date_range || 'Sempre Tudo';
+
+          return `
               <tr>
                 <td><span style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;">${s.system}</span></td>
                 <td>${rangeStr}</td>
@@ -1160,9 +1398,9 @@
                 </td>
               </tr>
             `;
-         }).join('');
-      } catch(e) {
-         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Erro: ${e.message}</td></tr>`;
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Erro: ${e.message}</td></tr>`;
       }
     }
 
@@ -1170,7 +1408,7 @@
       const sys = document.getElementById('formSystem').value;
       const cBox = document.getElementById('entityCheckboxes');
       const list = sys === 'AUVO' ? auvoEntsArray : glpiEntsArray;
-      
+
       cBox.innerHTML = list.map(e => `
         <label class="check-item">
            <input type="checkbox" value="${e.id}" class="engine-ent-chk"> 
@@ -1183,57 +1421,57 @@
       const system = document.getElementById('formSystem').value;
       const range = document.getElementById('formRange').value;
       const desc = document.getElementById('formDesc').value;
-      
+
       let cron = document.getElementById('formCronFriendly').value;
       if (cron === 'custom') {
-         cron = document.getElementById('formCronCustom').value;
+        cron = document.getElementById('formCronCustom').value;
       }
-      
+
       if (!cron) return alert("Expressão Cron obrigatória");
 
       const checks = document.querySelectorAll('.engine-ent-chk:checked');
       const selectedEnts = Array.from(checks).map(c => c.value);
-      
+
       const payload = {
-         system: system,
-         cron_expression: cron,
-         date_range: range,
-         description: desc,
-         is_active: 1
+        system: system,
+        cron_expression: cron,
+        date_range: range,
+        description: desc,
+        is_active: 1
       };
 
       if (selectedEnts.length > 0) {
-         payload.filters = { entities: selectedEnts };
+        payload.filters = { entities: selectedEnts };
       }
 
       try {
-         const res = await fetch('/api/schedules', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-         });
-         if(res.ok) {
-            document.getElementById('formCronFriendly').value = '*/30 * * * *';
-            document.getElementById('formCronCustom').value = '';
-            document.getElementById('formCronCustom').style.display = 'none';
-            document.getElementById('formDesc').value = '';
-            updateEntityCheckboxes();
-            fetchSchedules();
-            fetchGlobalTimer();
-         } else {
-            const data = await res.json();
-            alert("Erro: " + data.error);
-         }
-      } catch(e) { alert("Erro de comunicação."); }
+        const res = await fetch('/api/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          document.getElementById('formCronFriendly').value = '*/30 * * * *';
+          document.getElementById('formCronCustom').value = '';
+          document.getElementById('formCronCustom').style.display = 'none';
+          document.getElementById('formDesc').value = '';
+          updateEntityCheckboxes();
+          fetchSchedules();
+          fetchGlobalTimer();
+        } else {
+          const data = await res.json();
+          alert("Erro: " + data.error);
+        }
+      } catch (e) { alert("Erro de comunicação."); }
     }
 
     async function deleteSchedule(id) {
-       if(!confirm("Certeza que deseja escluir este agendamento?")) return;
-       try {
-          await fetch(`/api/schedules/${id}`, { method: 'DELETE' });
-          fetchSchedules();
-          fetchGlobalTimer();
-       } catch(e) { alert("Falha ao deletar."); }
+      if (!confirm("Certeza que deseja escluir este agendamento?")) return;
+      try {
+        await fetch(`/api/schedules/${id}`, { method: 'DELETE' });
+        fetchSchedules();
+        fetchGlobalTimer();
+      } catch (e) { alert("Falha ao deletar."); }
     }
 
     // Boot Up
@@ -1289,12 +1527,16 @@
             </tr>
           </thead>
           <tbody id="schedulesTableBody">
-             <tr><td colspan="6" style="text-align: center;">Carregando tabelas do banco...</td></tr>
+            <tr>
+              <td colspan="6" style="text-align: center;">Carregando tabelas do banco...</td>
+            </tr>
           </tbody>
         </table>
       </div>
       <div class="schedule-form">
-        <h4 style="margin: 0 0 5px 0; color: #fff; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; width: fit-content;">Criar Fila Independente</h4>
+        <h4
+          style="margin: 0 0 5px 0; color: #fff; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; width: fit-content;">
+          Criar Fila Independente</h4>
         <div class="form-row">
           <div class="form-group" style="max-width: 120px;">
             <label>Sistema</label>
@@ -1320,7 +1562,8 @@
               <option value="0 0 1 * *">Mensalmente (Dia 1)</option>
               <option value="custom">Avançado (Cron Textual)...</option>
             </select>
-            <input type="text" id="formCronCustom" class="form-input" style="display:none; margin-top: 6px;" placeholder="ex: 0 */4 * * *">
+            <input type="text" id="formCronCustom" class="form-input" style="display:none; margin-top: 6px;"
+              placeholder="ex: 0 */4 * * *">
           </div>
           <div class="form-group" style="max-width: 130px;">
             <label>Intervalo Data</label>
@@ -1336,15 +1579,16 @@
             <input type="text" id="formDesc" class="form-input" placeholder="Ex: Update Flash nas Tarefas e Seg...">
           </div>
         </div>
-        
+
         <div class="form-group">
-            <label>Checklist de Independência (Ignora Padrão se Marcado)</label>
-            <div id="entityCheckboxes" class="checkbox-grid">
-            </div>
+          <label>Checklist de Independência (Ignora Padrão se Marcado)</label>
+          <div id="entityCheckboxes" class="checkbox-grid">
+          </div>
         </div>
 
         <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
-           <button class="btn-resume" onclick="saveSchedule()" style="padding: 10px 20px; font-size: 13px;">➕ Acoplar Motor no Banco</button>
+          <button class="btn-resume" onclick="saveSchedule()" style="padding: 10px 20px; font-size: 13px;">➕ Acoplar
+            Motor no Banco</button>
         </div>
       </div>
     </div>

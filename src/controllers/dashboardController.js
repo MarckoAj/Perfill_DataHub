@@ -12,12 +12,13 @@ class DashboardController {
 
   async getGlpiData(req, res) {
     try {
-      const { status, projeto, tipo, tecnico } = req.query;
+      const { status, projeto, tipo, tecnico, categoria } = req.query;
       const filters = {
         status: status || "",
         projeto: projeto || "",
         tipo: tipo || "",
-        tecnico: tecnico || ""
+        tecnico: tecnico || "",
+        categoria: categoria || ""
       };
       
       const data = await dashboardRepository.getGlpiGrafanaData(filters);

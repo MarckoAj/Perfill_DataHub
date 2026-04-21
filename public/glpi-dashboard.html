@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PerfillBI – Dashboard de Chamados GLPI</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      /* Força o navegador a renderizar menus nativos em modo escuro */
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #ffffff;
+      --text-muted: #94a3b8;
+      --font-family: system-ui, -apple-system, sans-serif;
+      --primary: #19c5ff;
+      --purple: #7b3cff;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --radius: 12px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 50px;
+      /* Ajuste para o navbar fixo */
+    }
+
+    /* ===== NAVBAR GLOBAL FIXA ===== */
+    .global-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background: #2b3d5b;
+      /* Azul levemente mais claro que o fundo padrão */
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 40px;
+      box-sizing: border-box;
+      z-index: 2000;
+      /* Acima de tudo */
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-logo {
+      margin-right: 30px;
+    }
+
+    .nav-logo img {
+      height: 30px;
+      vertical-align: middle;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 25px;
+      margin-left: auto;
+    }
+
+    .nav-item {
+      position: relative;
+    }
+
+    .nav-link {
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 15px 0;
+      transition: opacity 0.2s;
+    }
+
+    .nav-link:hover {
+      opacity: 0.8;
+    }
+
+    .nav-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      min-width: 200px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+      padding: 10px 0;
+      display: none;
+      z-index: 2001;
+    }
+
+    .nav-item:hover .nav-dropdown {
+      display: block;
+    }
+
+    .dropdown-link {
+      display: block;
+      padding: 10px 20px;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .dropdown-link:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .dropdown-sep {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.05);
+      margin: 5px 15px;
+    }
+
+    /* ===== TOPBAR COM ABAS ===== */
+    header {
+      width: 100%;
+      padding: 0 40px;
+      height: 58px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(10, 17, 36, 0.97);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      position: sticky;
+      top: 50px;
+      /* Ajuste para prender abaixo da navbar global */
+      z-index: 100;
+      backdrop-filter: blur(16px);
+    }
+
+    .logo-ball {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #aa3bff, #3b82f6);
+      flex-shrink: 0;
+    }
+
+    .header-brand {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .header-sep {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-refresh {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(25, 197, 255, 0.1);
+      border: 1px solid rgba(25, 197, 255, 0.3);
+      color: var(--primary);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(25, 197, 255, 0.2);
+    }
+
+    /* ===== CONTAINER PRINCIPAL ===== */
+    .page {
+      width: 1300px;
+      max-width: 96%;
+      margin: 28px 0 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* ===== CARDS DE RESUMO ===== */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 14px;
+    }
+
+    .summary-card {
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .summary-card.active-filter {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Border colors for cards */
+    .card--novo {
+      border-color: var(--primary);
+    }
+
+    .card--planejado {
+      border-color: #6366f1;
+    }
+
+    .card--atribuido {
+      border-color: var(--purple);
+    }
+
+    .card--solucionado {
+      border-color: var(--green);
+    }
+
+    .card--atrasado {
+      border-color: var(--red);
+    }
+
+    .card--pendente {
+      border-color: var(--amber);
+    }
+
+    .card--fechado {
+      border-color: #475569;
+    }
+
+    .card-icon {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .card-count {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card--novo::before {
+      background: var(--primary);
+    }
+
+    .card--novo .card-count {
+      color: var(--primary);
+    }
+
+    .card--planejado::before {
+      background: #6366f1;
+    }
+
+    .card--planejado .card-count {
+      color: #818cf8;
+    }
+
+    .card--atribuido::before {
+      background: var(--purple);
+    }
+
+    .card--atribuido .card-count {
+      color: #a78bfa;
+    }
+
+    .card--solucionado::before {
+      background: var(--green);
+    }
+
+    .card--solucionado .card-count {
+      color: var(--green);
+    }
+
+    .card--atrasado::before {
+      background: var(--red);
+    }
+
+    .card--atrasado .card-count {
+      color: #f87171;
+    }
+
+    .card--pendente::before {
+      background: var(--amber);
+    }
+
+    .card--pendente .card-count {
+      color: var(--amber);
+    }
+
+    .card--fechado::before {
+      background: #ffffff;
+    }
+
+    .card--fechado .card-count {
+      color: #94a3b8;
+    }
+
+    /* ===== FILTROS ===== */
+    .filters-box {
+      background: #0f172a;
+      /* Azul escuro sólido para contraste */
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .filter-field {
+      flex: 1 1 150px;
+    }
+
+    .filter-field label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #38bdf8;
+      margin-bottom: 5px;
+    }
+
+    .filter-field select,
+    .filter-field input {
+      width: 100%;
+      background: #475569;
+      /* Azul profundo (Slate-950) para maior visibilidade */
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #a7a6b9;
+      /* Texto em azul celeste para destaque */
+      padding: 9px 12px;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .filter-field select:hover,
+    .filter-field input:hover {
+      border-color: #38bdf8;
+      background: #0f172a;
+    }
+
+    .filter-field select:focus,
+    .filter-field input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+      background: #0f172a;
+      outline: none;
+    }
+
+    .filter-field select option {
+      background-color: #0f172a;
+      /* Tons de azul escuro para as opções */
+      color: #38bdf8;
+      /* Azul celeste na lista de opções */
+      font-weight: 600;
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .btn-search {
+      padding: 9px 24px;
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      color: #0f172a;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 700;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(25, 197, 255, 0.25);
+    }
+
+    .btn-search:hover {
+      background: #38bdf8;
+      border-color: #38bdf8;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(25, 197, 255, 0.4);
+    }
+
+    .btn-clear {
+      padding: 9px 16px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    /* ===== SWITCH TOGGLE ===== */
+    .switch-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-right: auto;
+      /* Empurra os botoes de acao pra direita */
+      user-select: none;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: var(--primary);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(16px);
+      background-color: #0f172a;
+    }
+
+    /* ===== TABELA ===== */
+    .table-box {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius);
+      /* overflow removido para que o hover card possa "vazar" sem criar barra de rolagem */
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+    }
+
+    .table-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .table-count {
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 100px;
+      padding: 3px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .table-scroll {
+      overflow: visible;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    th {
+      padding: 11px 14px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: default;
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    tbody tr.row-open {
+      background: rgba(25, 197, 255, 0.04);
+    }
+
+    td {
+      padding: 11px 14px;
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    .td-id {
+      width: 60px;
+      padding: 4px 6px;
+    }
+
+    .ticket-id {
+      font-size: 13px; /* Aumentado a pedido do dev */
+      font-weight: 700;
+      color: #38bdf8; /* Azul destaque */
+      display: inline-block;
+      min-width: 50px;
+    }
+
+    .td-titulo,
+    .td-local {
+      text-align: left !important;
+    }
+
+    .td-titulo {
+      cursor: help;
+      position: relative;
+    }
+
+    .td-titulo>span {
+      display: inline-block;
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    /* Gatilho apenas no Título */
+    .td-titulo:hover .ticket-hover-card {
+      visibility: visible;
+      opacity: 1;
+      transform: translateY(0);
+      z-index: 2000;
+    }
+
+    /* Garante que a célula do título fique acima das outras no hover para o card não ser cortado */
+    .td-titulo:hover {
+      z-index: 1000;
+    }
+
+    .ticket-hover-card {
+      position: absolute;
+      left: 10px;
+      top: 100%;
+      width: 450px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      z-index: 2000;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    .hover-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .hover-section {
+      margin-bottom: 12px;
+    }
+
+    .hover-section.full {
+      grid-column: span 2;
+    }
+
+    .hover-section strong {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .hover-section p {
+      font-size: 12px;
+      color: #e2e8f0;
+      line-height: 1.5;
+      max-height: none !important;
+      overflow: visible !important;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      min-width: 90px;
+      text-align: center;
+      padding: 4px 10px;
+      border-radius: 100px;
+      border: 1px solid;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .sla--vencido {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .sla--atencao {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .sla--noprazo {
+      background: rgba(74, 222, 128, 0.15);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    .sla--proativo {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: #6366f1;
+      color: #6366f1;
+    }
+
+    .sla--pausado {
+      background: rgba(148, 163, 184, 0.15);
+      border-color: #94a3b8;
+      color: #94a3b8;
+    }
+
+    .upd--recente {
+      background: rgba(74, 222, 128, 0.15);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    .upd--verificar {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .upd--atualizar {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .proj--pinovo {
+      background: rgba(14, 165, 233, 0.12);
+      border-color: #0ea5e9;
+      color: #0ea5e9;
+    }
+
+    .proj--legado {
+      background: rgba(139, 92, 246, 0.12);
+      border-color: #8b5cf6;
+      color: #8b5cf6;
+    }
+
+    .proj--cftv {
+      background: rgba(34, 211, 238, 0.12);
+      border-color: #22d3ee;
+      color: #22d3ee;
+    }
+
+    .proj--outros {
+      background: rgba(148, 163, 184, 0.12);
+      border-color: #94a3b8;
+      color: #94a3b8;
+    }
+
+    .st--novo {
+      background: rgba(25, 197, 255, 0.1);
+      border-color: #19c5ff;
+      color: #19c5ff;
+    }
+
+    .st--planejado {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: #6366f1;
+      color: #818cf8;
+    }
+
+    .st--atribuido {
+      background: rgba(123, 60, 255, 0.1);
+      border-color: #7b3cff;
+      color: #a78bfa;
+    }
+
+    .st--pendente {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .st--solucionado {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .st--fechado {
+      background: rgba(71, 85, 105, 0.1);
+      border-color: #475569;
+      color: #94a3b8;
+    }
+
+    /* ===== PAGINAÇÃO ===== */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn-page {
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+
+    .btn-page:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-page:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    code.ticket-id {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: var(--primary);
+      font-family: ui-monospace, monospace;
+    }
+
+    .table-state td {
+      padding: 50px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .dot-cron {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR GLOBAL -->
+  <nav class="global-nav">
+    <div class="nav-logo">
+      <img src="perfill_logo.png" alt="Perfill Logo">
+    </div>
+    <div class="nav-menu">
+      <div class="nav-item">
+        <a href="/panel/glpi-dashboard.html" class="nav-link">Chamados</a>
+      </div>
+      <div class="nav-item">
+        <a href="/panel/" class="nav-link">Sincronizações</a>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+
+    <div class="header-sep"></div>
+
+    <div class="header-right">
+      <div
+        style="display:flex;align-items:center;gap:8px;background:rgba(16,185,129,0.1);padding:5px 12px;border-radius:20px;border:1px solid rgba(16,185,129,0.2);">
+        <div class="dot-cron"></div>
+        <span style="color:#10b981;font-size:12px;font-weight:600;">Ao Vivo</span>
+      </div>
+      <button class="btn-refresh" onclick="loadDashboard()">↻ Atualizar</button>
+    </div>
+  </header>
+
+  <!-- ===== CONTEÚDO ===== -->
+  <main class="page">
+
+    <div>
+      <div style="font-size:20px;font-weight:700;color:#e2e8f0;">Chamados GLPI</div>
+    </div>
+
+    <!-- Cards de resumo -->
+    <div class="summary-grid">
+      <div class="summary-card card--novo" data-filter="novo" onclick="applyStatusFilter('novo')">
+        <div class="card-icon">🔵</div>
+        <div class="card-count" id="cnt_novo">—</div>
+        <div class="card-label">Novos</div>
+      </div>
+      <div class="summary-card card--planejado" data-filter="planejado" onclick="applyStatusFilter('planejado')">
+        <div class="card-icon">📘</div>
+        <div class="card-count" id="cnt_planejado">—</div>
+        <div class="card-label">Planejados</div>
+      </div>
+      <div class="summary-card card--atribuido" data-filter="atribuido" onclick="applyStatusFilter('atribuido')">
+        <div class="card-icon">👤</div>
+        <div class="card-count" id="cnt_atribuido">—</div>
+        <div class="card-label">Atribuídos</div>
+      </div>
+      <div class="summary-card card--solucionado" data-filter="solucionado" onclick="applyStatusFilter('solucionado')">
+        <div class="card-icon">✅</div>
+        <div class="card-count" id="cnt_solucionado">—</div>
+        <div class="card-label">Solucionados</div>
+      </div>
+      <div class="summary-card card--atrasado" data-filter="atrasado" onclick="applyStatusFilter('atrasado')">
+        <div class="card-icon">🔴</div>
+        <div class="card-count" id="cnt_atrasado">—</div>
+        <div class="card-label">Atrasados</div>
+      </div>
+      <div class="summary-card card--pendente" data-filter="pendente" onclick="applyStatusFilter('pendente')">
+        <div class="card-icon">⏳</div>
+        <div class="card-count" id="cnt_pendente">—</div>
+        <div class="card-label">Pendentes</div>
+      </div>
+      <div class="summary-card card--fechado" data-filter="fechado" onclick="applyStatusFilter('fechado')">
+        <div class="card-icon">🔒</div>
+        <div class="card-count" id="cnt_fechado">—</div>
+        <div class="card-label">Fechados</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-box">
+      <div class="filters-row">
+        <div class="filter-field">
+          <label>Status</label>
+          <select id="f_status">
+            <option value="">Todos</option>
+            <option value="novo">Novo</option>
+            <option value="planejado">Planejado</option>
+            <option value="atribuido">Atribuído</option>
+            <option value="pendente">Pendente</option>
+            <option value="solucionado">Solucionado</option>
+            <option value="fechado">Fechado</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>Projeto</label>
+          <select id="f_projeto">
+            <option value="">Todos</option>
+            <option value="PI-NOVO">PI-NOVO</option>
+            <option value="LEGADO">LEGADO</option>
+            <option value="CFTV">CFTV</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>SLA</label>
+          <select id="f_sla">
+            <option value="">Todos</option>
+            <option value="Vencido">Vencido</option>
+            <option value="Atenção">Atenção</option>
+            <option value="No prazo">No prazo</option>
+            <option value="Proativo">Proativo</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>Categoria</label>
+          <select id="f_categoria">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-actions" style="width: 100%; display: flex;">
+          <label class="switch-label" title="Incluir chamados encerrados">
+            <div class="switch">
+              <input type="checkbox" id="f_incluir_fechados" onchange="renderPage()">
+              <span class="slider"></span>
+            </div>
+            Incluir Fechados
+          </label>
+          <button class="btn-clear" onclick="clearFilters()" title="Redefinir filtros">Limpar ✕</button>
+          <button class="btn-search" onclick="loadDashboard()"> Aplicar Filtros</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-box">
+      <div class="table-header">
+        <div class="table-title">
+          Lista de Chamados
+          <span class="table-count" id="tableCount">—</span>
+        </div>
+        <span style="font-size:12px;color:var(--text-muted);" id="lastUpdate"></span>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Título</th>
+              <th class="td-local">Local / Ativo</th>
+              <th>Categoria</th>
+              <th>Tarefa de Campo</th>
+              <th>Projeto</th>
+              <th>SLA</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsTbody">
+            <tr class="table-state">
+              <td colspan="8">Clique em <strong>↻ Atualizar</strong> para carregar os chamados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button class="btn-page" id="btnPrev" onclick="changePage(-1)" disabled>← Anterior</button>
+        <span id="pageInfo" style="font-size:12px;">—</span>
+        <button class="btn-page" id="btnNext" onclick="changePage(1)" disabled>Próximo →</button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let allData = [], page = 1;
+    const PER_PAGE = 50;
+
+    const SLA_MAP = { 'Vencido': 'sla--vencido', 'Atenção': 'sla--atencao', 'No prazo': 'sla--noprazo', 'Proativo': 'sla--proativo', 'SLA Pausado': 'sla--pausado' };
+    const UPD_MAP = { 'RECENTE': 'upd--recente', 'VERIFICAR': 'upd--verificar', 'ATUALIZAR': 'upd--atualizar' };
+    const PROJ_MAP = { 'PI-NOVO': 'proj--pinovo', 'LEGADO': 'proj--legado', 'CFTV': 'proj--cftv', 'Outros': 'proj--outros' };
+    const ST_MAP = { 'novo': 'st--novo', 'planejado': 'st--planejado', 'atribuído': 'st--atribuido', 'atribuido': 'st--atribuido', 'pendente': 'st--pendente', 'solucionado': 'st--solucionado', 'fechado': 'st--fechado' };
+
+    function badge(val, map) {
+      const cls = map?.[val] || map?.[val?.toLowerCase()];
+      if (!val) return `<span style="color:#64748b;">—</span>`;
+      if (!cls) return `<span class="badge" style="border-color:rgba(148,163,184,0.3);color:#94a3b8;">${val}</span>`;
+      return `<span class="badge ${cls}">${val}</span>`;
+    }
+
+    function dateFmt(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function loadDashboard() {
+      const tbody = document.getElementById('ticketsTbody');
+      tbody.innerHTML = '<tr class="table-state"><td colspan="8">⏳ Carregando chamados...</td></tr>';
+      document.getElementById('tableCount').textContent = 'Buscando...';
+
+      const p = new URLSearchParams();
+      const fs = document.getElementById('f_status').value;
+      const fp = document.getElementById('f_projeto').value;
+      const fl = document.getElementById('f_sla').value;
+      const fc = document.getElementById('f_categoria').value;
+
+      if (fs) p.append('status', fs);
+      if (fp) p.append('projeto', fp);
+      if (fl) p.append('sla', fl);
+      if (fc) p.append('categoria', fc);
+
+      try {
+        const res = await fetch('/api/dashboard/glpi?' + p.toString());
+        const json = await res.json();
+        allData = json.data || [];
+        page = 1;
+
+        populateCategories(allData);
+        updateCards();
+        document.getElementById('lastUpdate').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+        renderPage();
+      } catch (e) {
+        tbody.innerHTML = `<tr class="table-state"><td colspan="8" style="color:#f87171;">Erro ao conectar: ${e.message}</td></tr>`;
+        document.getElementById('tableCount').textContent = 'Erro';
+      }
+    }
+
+    function populateCategories(data) {
+      const sel = document.getElementById('f_categoria');
+      if (sel.options.length > 1) return; // Ja populado
+
+      const activeTickets = data.filter(t => {
+        const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return s !== 'fechado';
+      });
+
+      const uniqueCats = [...new Set(activeTickets.map(t => t.Categoria).filter(Boolean))].sort();
+      uniqueCats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+      });
+    }
+
+    function updateCards() {
+      const c = { novo: 0, planejado: 0, atribuido: 0, solucionado: 0, atrasado: 0, pendente: 0, fechado: 0 };
+      allData.forEach(t => {
+        const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (s === 'novo') c.novo++;
+        else if (s === 'planejado') c.planejado++;
+        else if (s === 'atribuido') c.atribuido++;
+        else if (s === 'solucionado') c.solucionado++;
+        else if (s === 'pendente') c.pendente++;
+        else if (s === 'fechado') c.fechado++;
+        if ((t['Status do SLA'] || '') === 'Vencido') c.atrasado++;
+      });
+      Object.entries(c).forEach(([k, v]) => {
+        const el = document.getElementById('cnt_' + k);
+        if (el) el.textContent = v;
+      });
+    }
+
+    function applyStatusFilter(status) {
+      const sel = document.getElementById('f_status');
+      sel.value = sel.value === status ? '' : status;
+      document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
+      if (sel.value) document.querySelector(`[data-filter="${sel.value}"]`)?.classList.add('active-filter');
+      loadDashboard();
+    }
+
+    function renderPage() {
+      const tbody = document.getElementById('ticketsTbody');
+
+      const incF = document.getElementById('f_incluir_fechados').checked;
+      let viewData = allData;
+
+      if (!incF) {
+        viewData = viewData.filter(t => {
+          const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          return s !== 'fechado';
+        });
+      }
+
+      const from = (page - 1) * PER_PAGE;
+      const slice = viewData.slice(from, from + PER_PAGE);
+      const total = viewData.length;
+      const totalPages = Math.ceil(total / PER_PAGE) || 1;
+
+      document.getElementById('tableCount').textContent = `${total} chamados`;
+      document.getElementById('pageInfo').textContent = `Página ${page} de ${totalPages}`;
+      document.getElementById('btnPrev').disabled = page <= 1;
+      document.getElementById('btnNext').disabled = page >= totalPages;
+
+      if (!slice.length) {
+        tbody.innerHTML = '<tr class="table-state"><td colspan="8">Nenhum chamado encontrado.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = slice.map((t, i) => {
+        const idx = from + i;
+        const rowId = 'row_' + idx;
+        const locParts = (t['Cliente Local'] || '').split('>');
+        const shortLoc = locParts[locParts.length - 1].trim() || '—';
+
+        const hasAuvo = t['Técnico Auvo'] && t['Técnico Auvo'] !== 'null';
+        const auvoTech = t['Técnico Auvo'] || 'Não atribuído';
+        const auvoStatus = t['Status Auvo'] || 'Sem status';
+        const auvoLink = t['Link Auvo'] || '#';
+
+        let auvoStatusColor = 'var(--text-muted)';
+        if (auvoStatus === 'No Local') auvoStatusColor = 'var(--green)';
+        else if (auvoStatus === 'Em deslocamento') auvoStatusColor = 'var(--amber)';
+        else if (auvoStatus === 'Finalizada') auvoStatusColor = '#38bdf8';
+
+        const auvoHtml = hasAuvo
+          ? `<div style="line-height:1.2;">
+                 <a href="${auvoLink}" target="_blank" title="Abrir tarefa no AUVO" style="text-decoration:none; color:var(--text); font-weight:600; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
+                     ${auvoTech.split(' ')[0]}
+                 </a>
+                 <span style="display:block; font-size:10px; color:${auvoStatusColor}; font-weight:700; text-transform:uppercase; margin-top:4px;">
+                    ${auvoStatus}
+                 </span>
+               </div>`
+          : `<span style="color:var(--text-muted); font-size:12px;">—</span>`;
+
+        return `
+          <tr id="${rowId}">
+            <td class="td-id">
+              <a href="${t.taskGLPI || '#'}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;">
+                <code class="ticket-id" style="cursor:pointer;">#${t.Ticket || '—'}</code>
+              </a>
+            </td>
+            <td>${badge(t.Projeto, PROJ_MAP)}</td>
+            <td class="td-titulo">
+              <span title="${t.Chamado || ''}">${t.Chamado || '—'}</span>
+              <div class="ticket-hover-card">
+                <div class="hover-grid">
+                  <div class="hover-section full">
+                    <strong>Descrição</strong>
+                    <p>${t['Descrição'] || '—'}</p>
+                  </div>
+                  <div class="hover-section full">
+                    <strong>Última Tarefa</strong>
+                    <p>${t['Última Tarefa'] || 'Sem tarefas'}</p>
+                    ${t['Início Tarefa'] ? `<p style="font-size:10px;color:var(--text-muted);margin-top:2px;">🕐 ${dateFmt(t['Início Tarefa'])}</p>` : ''}
+                  </div>
+                  <div class="hover-section">
+                    <strong>Criação</strong>
+                    <p>${dateFmt(t['Data de Criação'])}</p>
+                  </div>
+                  <div class="hover-section">
+                    <strong>Última Atualização</strong>
+                    <p>${dateFmt(t['Última Atualização'])}</p>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="td-local"><span style="font-size:11px;font-weight:600;color:var(--text);" title="${t['Cliente Local'] || ''}">${shortLoc}</span></td>
+            <td><span style="font-weight:700; font-size:11.5px; color:#38bdf8; letter-spacing: 0.02em;">${t.Categoria || '—'}</span></td>
+            <td>${auvoHtml}</td>
+            <td>${badge(t['Status do SLA'], SLA_MAP)}</td>
+            <td>${badge(t['Status do Chamado'], ST_MAP)}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function changePage(dir) {
+      const incF = document.getElementById('f_incluir_fechados').checked;
+      const viewData = incF ? allData : allData.filter(t => {
+        const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return s !== 'fechado';
+      });
+
+      page = Math.max(1, Math.min(Math.ceil(viewData.length / PER_PAGE), page + dir));
+      renderPage();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function clearFilters() {
+      ['f_status', 'f_projeto', 'f_sla', 'f_categoria'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('f_incluir_fechados').checked = false;
+      document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
+      loadDashboard();
+    }
+
+    loadDashboard();
+  </script>
+
+</body>
+
+</html>

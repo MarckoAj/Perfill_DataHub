@@ -26,7 +26,7 @@ class DashboardRepository {
   }
 
   async getGlpiGrafanaData(filters = {}) {
-    const { status = '', projeto = '', tipo = '', tecnico = '' } = filters;
+    const { status = '', projeto = '', tipo = '', tecnico = '', categoria = '' } = filters;
 
     // Adaptado perfeitamente baseando-se no layout limpo e otimizado do DataHub
     const query = `
@@ -57,9 +57,22 @@ class DashboardRepository {
         CONCAT('https://glpi.perfilltecnologia.com.br/front/ticket.form.php?id=', t.ticketId) AS "taskGLPI",
 
         t.projeto AS "Projeto",
+        t.categoriaSla AS "Categoria",
         t.statusSla AS "Status do SLA",
         t.status AS "Status do Chamado",
-        t.tipo AS "TIPO"
+        t.tipo AS "TIPO",
+
+        ua.name AS "Técnico Auvo",
+        ta.taskUrl AS "Link Auvo",
+        CASE
+          WHEN ta.taskStatusID = 1 THEN 'Aberto'
+          WHEN ta.taskStatusID = 2 THEN 'Em deslocamento'
+          WHEN ta.taskStatusID = 3 THEN 'No Local'
+          WHEN ta.taskStatusID = 4 THEN 'Pausada'
+          WHEN ta.taskStatusID = 5 THEN 'Finalizada'
+          WHEN ta.taskStatusID = 6 THEN 'Pausada'
+          ELSE ta.taskStatusID
+        END AS "Status Auvo"
 
       FROM tickets t
 
@@ -72,7 +85,17 @@ class DashboardRepository {
           LIMIT 1
       )
 
-      WHERE 
+      /* Relacionamento com tarefas AUVO */
+      LEFT JOIN (
+          SELECT t1.*, ROW_NUMBER() OVER(PARTITION BY t1.externalId ORDER BY t1.TaskDate DESC) as rn
+          FROM tasks_auvo t1
+          WHERE t1.externalId IS NOT NULL 
+            AND t1.externalId != ''
+            AND t1.tasksTypesId NOT IN (144733, 210031, 210030)
+      ) ta ON ta.externalId = t.ticketId AND ta.rn = 1
+      LEFT JOIN users_auvo ua ON ta.userToId = ua.userId
+
+      WHERE  
           ( ? = '' OR FIND_IN_SET(t.status, ?) > 0 )
         AND 
           ( ? = '' OR FIND_IN_SET(t.projeto, ?) > 0 )
@@ -80,6 +103,8 @@ class DashboardRepository {
           ( ? = '' OR FIND_IN_SET(t.tipo, ?) > 0 )
         AND 
           ( ? = '' OR t.nomeTecnico = ? )
+        AND 
+          ( ? = '' OR FIND_IN_SET(t.categoriaSla, ?) > 0 )
       
       ORDER BY t.dataCriacao DESC;
     `;
@@ -88,7 +113,8 @@ class DashboardRepository {
       status, status,
       projeto, projeto,
       tipo, tipo,
-      tecnico, tecnico
+      tecnico, tecnico,
+      categoria, categoria
     ];
 
     const [rows] = await pool.query(query, values);

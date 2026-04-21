@@ -96,6 +96,7 @@ export async function runAuvoMigrations() {
                     deletedAt DATETIME NULL,
                     lastSyncAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     sourceUpdatedAt DATETIME NULL,
+                    insertedByAlternativeMethod BOOLEAN DEFAULT 0,
                     CONSTRAINT fk_users_userstypes_auvo FOREIGN KEY (userType) REFERENCES userstypes_auvo (userTypeId)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             `
@@ -342,5 +343,17 @@ export async function runAuvoMigrations() {
     } catch (error) {
         console.error(`Erro ao alterar coluna tasks_auvo.externalId:`, error.message);
         throw error;
+    }
+
+    try {
+        await pool.query("ALTER TABLE users_auvo ADD COLUMN insertedByAlternativeMethod BOOLEAN DEFAULT 0;");
+        console.log("Migration AUVO: Coluna insertedByAlternativeMethod garantida na users_auvo.");
+    } catch (error) {
+        if (error.code === 'ER_DUP_FIELDNAME') {
+            console.log("Migration AUVO: Coluna insertedByAlternativeMethod ja existe na users_auvo.");
+        } else {
+            console.error(`Erro ao adicionar coluna insertedByAlternativeMethod em users_auvo:`, error.message);
+            throw error;
+        }
     }
 }
