@@ -22,6 +22,10 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Credenciais inválidas" });
     }
 
+    if (user.requires_password_change) {
+      return res.status(200).json({ requirePasswordChange: true, username: user.username });
+    }
+
     const secretToken = process.env.API_AUTH_TOKEN;
     return res.status(200).json({ token: secretToken });
 
@@ -54,6 +58,37 @@ router.post("/register", authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error("Erro no Cadastro:", error);
+    return res.status(500).json({ error: "Erro interno no servidor" });
+  }
+});
+
+// Rota para trocar a senha no primeiro login
+router.post("/change-password", async (req, res) => {
+  const { username, oldPassword, newPassword } = req.body;
+
+  if (!username || !oldPassword || !newPassword) {
+    return res.status(400).json({ error: "Dados incompletos" });
+  }
+
+  try {
+    const user = await userRepository.findUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({ error: "Usuário não encontrado" });
+    }
+
+    const isMatch = await bcryptjs.compare(oldPassword, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Senha atual incorreta" });
+    }
+
+    const hash = await bcryptjs.hash(newPassword, 10);
+    await userRepository.updatePassword(user.id, hash);
+
+    const secretToken = process.env.API_AUTH_TOKEN;
+    return res.status(200).json({ message: "Senha atualizada com sucesso", token: secretToken });
+
+  } catch (error) {
+    console.error("Erro ao alterar senha:", error);
     return res.status(500).json({ error: "Erro interno no servidor" });
   }
 });

@@ -4,6 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Auth Guard — redireciona para login se não houver token
+    (function() {
+      if (!localStorage.getItem('authToken')) {
+        window.location.replace('/panel/login.html');
+      }
+    })();
+  </script>
   <title>PerfillBI – Dashboard de Chamados GLPI</title>
   <style>
     :root {
@@ -922,8 +930,17 @@
       <div class="nav-item">
         <a href="/panel/" class="nav-link">Sincronizações</a>
       </div>
+      <div class="nav-item">
+        <a class="nav-link" onclick="doLogout()" style="cursor:pointer;color:#f87171;">⏻ Sair</a>
+      </div>
     </div>
   </nav>
+  <script>
+    function doLogout() {
+      localStorage.removeItem('authToken');
+      window.location.replace('/panel/login.html');
+    }
+  </script>
 
   <header>
 

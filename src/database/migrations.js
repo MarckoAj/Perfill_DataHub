@@ -15,6 +15,7 @@ export async function runMigrations() {
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(100) NOT NULL UNIQUE,
             password_hash VARCHAR(255) NOT NULL,
+            requires_password_change BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
@@ -114,6 +115,18 @@ export async function runMigrations() {
     try {
         await pool.query(usersTableQuery);
         console.log("Migration: Tabela 'users' verificada/criada com sucesso.");
+
+        try {
+            await pool.query("ALTER TABLE users ADD COLUMN requires_password_change BOOLEAN DEFAULT 1;");
+            console.log("Migration: Coluna requires_password_change adicionada na tabela users.");
+        } catch (error) {
+            if (error.code === 'ER_DUP_FIELDNAME') {
+                console.log("Migration: Coluna requires_password_change ja existe na tabela users.");
+            } else {
+                console.error("Erro ao adicionar coluna requires_password_change:", error.message);
+            }
+        }
+
         await pool.query(ticketsTableQuery);
         await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
@@ -137,18 +150,29 @@ export async function runMigrations() {
 
             const defaultUser = process.env.DASHBOARD_USER || "admin";
             const defaultPass = process.env.DASHBOARD_PASS || "admin";
-            
+
             // Criptografar a senha padrão
             const hash = await bcryptjs.hash(defaultPass, 10);
 
             await pool.query(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)", 
+                "INSERT INTO users (username, password_hash, requires_password_change) VALUES (?, ?, 0)",
                 [defaultUser, hash]
             );
             console.log(`Migration: Usuário '${defaultUser}' criado com sucesso.`);
         }
+
+        // Sincronizar usuários do AUVO para a tabela de autenticação
+        console.log("Migration: Sincronizando usuários do AUVO para a tabela de autenticação...");
+        const defaultPassword = "Perfill0102@";
+        const defaultAuvoHash = await bcryptjs.hash(defaultPassword, 10);
         
-        
+        await pool.query(`
+            INSERT IGNORE INTO users (username, password_hash, requires_password_change)
+            SELECT email, ?, 1 FROM users_auvo WHERE email IS NOT NULL AND email != ''
+        `, [defaultAuvoHash]);
+        console.log("Migration: Sincronização de usuários do AUVO concluída.");
+
+
         // Novas tabelas de Auditoria de Sincronizacao
         await createSyncLogsTables();
         await createSyncSchedulesTable();
