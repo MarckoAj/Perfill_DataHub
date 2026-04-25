@@ -168,7 +168,7 @@ export async function runMigrations() {
         
         await pool.query(`
             INSERT IGNORE INTO users (username, password_hash, requires_password_change)
-            SELECT email, ?, 1 FROM users_auvo WHERE email IS NOT NULL AND email != ''
+            SELECT login, ?, 1 FROM users_auvo WHERE login IS NOT NULL AND login != ''
         `, [defaultAuvoHash]);
         console.log("Migration: Sincronização de usuários do AUVO concluída.");
 
