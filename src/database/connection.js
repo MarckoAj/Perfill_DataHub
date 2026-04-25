@@ -3,9 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = process.env.DB_URL
+let dbUrl = process.env.DB_URL;
+if (dbUrl && dbUrl.includes('ssl-mode=')) {
+  dbUrl = dbUrl.replace(/(\?|&)(ssl-mode|sslmode)=[^&]*/g, "");
+}
+
+const pool = dbUrl
   ? mysql.createPool({ 
-      uri: process.env.DB_URL, 
+      uri: dbUrl, 
       ssl: { rejectUnauthorized: false },
       waitForConnections: true, 
       connectionLimit: 10, 

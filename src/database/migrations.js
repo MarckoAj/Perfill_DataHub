@@ -152,20 +152,25 @@ export async function runMigrations() {
         await runAuvoMigrations();
         await runAuvoSeeds();
 
-        // Garantir existência do usuário administrador nativo (admin)
-        const [adminExists] = await pool.query("SELECT id FROM users WHERE username = 'admin'");
-        if (adminExists.length === 0) {
-            console.log("Migration: Usuário 'admin' não encontrado. Criando...");
-            const adminPassword = "Perfill0102@";
-            const adminHash = await bcryptjs.hash(adminPassword, 10);
-            
+        // Garantir existência e senha do usuário administrador nativo (admin)
+        console.log("Migration: Garantindo integridade do usuário 'admin'...");
+        const adminPassword = "Perfill0102@";
+        const adminHash = await bcryptjs.hash(adminPassword, 10);
+        
+        const [adminRows] = await pool.query("SELECT id FROM users WHERE username = 'admin'");
+        if (adminRows.length === 0) {
             await pool.query(
                 "INSERT INTO users (username, password_hash, requires_password_change) VALUES (?, ?, 0)",
                 ['admin', adminHash]
             );
-            console.log("Migration: Usuário 'admin' criado com sucesso (Senha: Perfill0102@).");
+            console.log("Migration: Usuário 'admin' criado com sucesso.");
         } else {
-            console.log("Migration: Usuário 'admin' já existe no sistema.");
+            // Forçar a senha correta solicitada pelo usuário
+            await pool.query(
+                "UPDATE users SET password_hash = ?, requires_password_change = 0 WHERE username = 'admin'",
+                [adminHash]
+            );
+            console.log("Migration: Senha do usuário 'admin' atualizada/confirmada.");
         }
 
         // Sincronizar usuários do AUVO para a tabela de autenticação
