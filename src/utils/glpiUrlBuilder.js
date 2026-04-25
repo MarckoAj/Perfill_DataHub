@@ -91,7 +91,7 @@ class GlpiUrlBuilder {
 
   _appendForceDisplay(params) {
     // Força o GLPI a retornar Entity (80), Location (83) e Assigments além dos defaults, formatados em String.
-    const requiredFields = [1, 2, 5, 7, 12, 15, 19, 21, 80, 83, 151, 400];
+    const requiredFields = [1, 2, 5, 7, 12, 15, 16, 17, 19, 21, 80, 83, 151, 400];
     requiredFields.forEach((fieldId, index) => {
         params.set(`forcedisplay[${index}]`, String(fieldId));
     });

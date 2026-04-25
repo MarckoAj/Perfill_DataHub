@@ -29,6 +29,7 @@ export async function runMigrations() {
             dataCriacao DATETIME,
             status VARCHAR(50),
             dataFechamento DATETIME,
+            dataSolucao DATETIME,
             dataAtualizacao DATETIME,
             categoriaSla VARCHAR(100),
             tempoSla VARCHAR(100),
@@ -128,6 +129,14 @@ export async function runMigrations() {
         }
 
         await pool.query(ticketsTableQuery);
+        try {
+            await pool.query("ALTER TABLE tickets ADD COLUMN dataSolucao DATETIME AFTER dataFechamento;");
+            console.log("Migration: Coluna dataSolucao adicionada na tabela tickets.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error("Erro ao adicionar coluna dataSolucao:", error.message);
+            }
+        }
         await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
@@ -143,32 +152,30 @@ export async function runMigrations() {
         await runAuvoMigrations();
         await runAuvoSeeds();
 
-        // Verifica se há usuários cadastrados
-        const [rows] = await pool.query("SELECT COUNT(*) as count FROM users");
-        if (rows[0].count === 0) {
-            console.log("Migration: Tabela 'users' vazia. Criando usuário admin inicial...");
-
-            const defaultUser = process.env.DASHBOARD_USER || "admin";
-            const defaultPass = process.env.DASHBOARD_PASS || "admin";
-
-            // Criptografar a senha padrão
-            const hash = await bcryptjs.hash(defaultPass, 10);
-
+        // Garantir existência do usuário administrador nativo (admin)
+        const [adminExists] = await pool.query("SELECT id FROM users WHERE username = 'admin'");
+        if (adminExists.length === 0) {
+            console.log("Migration: Usuário 'admin' não encontrado. Criando...");
+            const adminPassword = "Perfill0102@";
+            const adminHash = await bcryptjs.hash(adminPassword, 10);
+            
             await pool.query(
                 "INSERT INTO users (username, password_hash, requires_password_change) VALUES (?, ?, 0)",
-                [defaultUser, hash]
+                ['admin', adminHash]
             );
-            console.log(`Migration: Usuário '${defaultUser}' criado com sucesso.`);
+            console.log("Migration: Usuário 'admin' criado com sucesso (Senha: Perfill0102@).");
+        } else {
+            console.log("Migration: Usuário 'admin' já existe no sistema.");
         }
 
         // Sincronizar usuários do AUVO para a tabela de autenticação
         console.log("Migration: Sincronizando usuários do AUVO para a tabela de autenticação...");
-        const defaultPassword = "Perfill0102@";
-        const defaultAuvoHash = await bcryptjs.hash(defaultPassword, 10);
+        const defaultAuvoPassword = "Perfill0102@";
+        const defaultAuvoHash = await bcryptjs.hash(defaultAuvoPassword, 10);
         
         await pool.query(`
             INSERT IGNORE INTO users (username, password_hash, requires_password_change)
-            SELECT login, ?, 1 FROM users_auvo WHERE login IS NOT NULL AND login != ''
+            SELECT login, ?, 1 FROM users_auvo WHERE login IS NOT NULL AND login != '' AND login != 'admin'
         `, [defaultAuvoHash]);
         console.log("Migration: Sincronização de usuários do AUVO concluída.");
 

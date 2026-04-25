@@ -29,9 +29,14 @@ class TicketMapper {
       .trim();
   }
 
-  checkSLAStatus(handlingTime, openDate) {
+  checkSLAStatus(handlingTime, openDate, statusId, solutionDate) {
+    // Se o chamado está solucionado (5) ou fechado (6), usamos a data de solução como referência
+    // Caso contrário (está aberto ou foi reaberto), usamos o horário atual.
+    const isFinished = statusId === 5 || statusId === 6;
+    const referenceDate = (isFinished && solutionDate) ? solutionDate : undefined;
+
     const totalSla = customDate.calculateTimeDif(handlingTime, openDate);
-    const executionTime = customDate.calculateTimeDif(handlingTime);
+    const executionTime = customDate.calculateTimeDif(handlingTime, referenceDate);
 
     let slaStatus;
 
@@ -46,14 +51,17 @@ class TicketMapper {
     return slaStatus;
   }
 
-  handlingTimeSlaText(handlingTimeSla, ticketStaus) {
+  handlingTimeSlaText(handlingTimeSla, ticketStatus, solutionDate) {
     let text;
     if (handlingTimeSla === null) {
       text = "Proativo";
-    } else if (ticketStaus === 4) {
+    } else if (ticketStatus === 4) {
       text = "SLA Pausado";
     } else {
-      text = customDate.calculateTimeInterval(handlingTimeSla);
+      // Se resolvido/fechado, congela o texto do intervalo usando a data de solução
+      const isFinished = ticketStatus === 5 || ticketStatus === 6;
+      const referenceDate = (isFinished && solutionDate) ? solutionDate : undefined;
+      text = customDate.calculateTimeInterval(handlingTimeSla, referenceDate);
     }
     return text;
   }
@@ -79,8 +87,11 @@ class TicketMapper {
       const filterCustomer = rawCustomer.includes(">") ? rawCustomer.split(">") : [rawCustomer];
       const [nomeCliente] = filterCustomer.slice(-1);
       
-      const statusSla = this.checkSLAStatus(ticket["151"], ticket["15"]);
-      const tempoSla = this.handlingTimeSlaText(ticket["151"], ticket["12"]);
+      const statusId = parseInt(ticket["12"], 10);
+      const solutionDate = ticket["17"] || null;
+
+      const statusSla = this.checkSLAStatus(ticket["151"], ticket["15"], statusId, solutionDate);
+      const tempoSla = this.handlingTimeSlaText(ticket["151"], statusId, solutionDate);
 
       let projeto = "Outros";
       if (rawCustomer.includes("> PI-NOVO >") || rawCustomer.includes("> PI NOVO >")) {
@@ -102,7 +113,8 @@ class TicketMapper {
         descricao,
         dataCriacao: ticket["15"],
         status: this.glpiTicketStatus[ticket["12"]] || "Indefinido",
-        dataFechamento: null,
+        dataFechamento: ticket["16"] || null,
+        dataSolucao: solutionDate,
         dataAtualizacao: ticket["19"],
         categoriaSla,
         tempoSla,

@@ -23,9 +23,12 @@ class GlpiUltils {
     return str.replace(/\n/g, '').replace(/<a[^>]*>.*?<\/a>/g, '').trim();
   }
 
-  checkSLAStatus(handlingTime, openDate) {
+  checkSLAStatus(handlingTime, openDate, statusId, solutionDate) {
+    const isFinished = statusId === 5 || statusId === 6;
+    const referenceDate = (isFinished && solutionDate) ? solutionDate : undefined;
+
     const totalSla = customDate.calculateTimeDif(handlingTime, openDate)
-    const executionTime = customDate.calculateTimeDif(handlingTime)
+    const executionTime = customDate.calculateTimeDif(handlingTime, referenceDate)
 
     let slaStatus
 
@@ -42,14 +45,16 @@ class GlpiUltils {
     return slaStatus
   }
 
-  handlingTimeSlaText(handlingTimeSla, ticketStaus) {
+  handlingTimeSlaText(handlingTimeSla, ticketStatus, solutionDate) {
     let text
     if (handlingTimeSla === null) {
       text = "Proativo"
-    } else if (ticketStaus === 4) {
+    } else if (ticketStatus === 4) {
       text = "SLA Pausado"
     } else {
-      text = customDate.calculateTimeInterval(handlingTimeSla)
+      const isFinished = ticketStatus === 5 || ticketStatus === 6;
+      const referenceDate = (isFinished && solutionDate) ? solutionDate : undefined;
+      text = customDate.calculateTimeInterval(handlingTimeSla, referenceDate)
     }
     return text
   }
@@ -64,8 +69,10 @@ class GlpiUltils {
       const descriptionField = this.removePTags(this.removeLineBreaksAndAttachments(withoutHtmlTags));
       const filterCustomer = ticket['83'].split('>');
       const customerNameField = filterCustomer.slice(-1);
-      const status = this.checkSLAStatus(ticket['151'], ticket['15'])
-      const handlingTimeSla = this.handlingTimeSlaText(ticket['151'], ticket['12'])
+      const statusId = parseInt(ticket['12'], 10);
+      const solutionDate = ticket['17'] || null;
+      const status = this.checkSLAStatus(ticket['151'], ticket['15'], statusId, solutionDate)
+      const handlingTimeSla = this.handlingTimeSlaText(ticket['151'], statusId, solutionDate)
 
       return {
         ticketId: ticket['2'],

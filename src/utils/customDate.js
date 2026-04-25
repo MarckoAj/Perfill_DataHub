@@ -15,7 +15,7 @@ class CustomDate {
   }
 
   calculateTimeDif(date1, date2 = moment()) {
-    return moment(date1, 'YYYY-MM-DD HH:mm:ss').diff(date2)
+    return moment(date1, 'YYYY-MM-DD HH:mm:ss').diff(moment(date2, 'YYYY-MM-DD HH:mm:ss'))
   }
 
   getDate(interval) {
@@ -49,10 +49,10 @@ class CustomDate {
     return date;
   }
 
-  calculateTimeInterval(targetDate) {
-    const now = moment();
+  calculateTimeInterval(targetDate, referenceDate = moment()) {
+    const ref = moment(referenceDate, 'YYYY-MM-DD HH:mm:ss');
     const target = moment(targetDate, 'YYYY-MM-DD HH:mm:ss');
-    const diff = target.diff(now);
+    const diff = target.diff(ref);
 
     const duration = moment.duration(Math.abs(diff));
     const days = Math.floor(duration.asDays());
