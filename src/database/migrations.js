@@ -155,6 +155,24 @@ export async function runMigrations() {
                 console.error("Erro ao adicionar coluna 'projeto' em tickets:", error.message);
             }
         }
+        try {
+            await pool.query("ALTER TABLE tickets ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;");
+            console.log("Migration: Coluna 'updated_at' adicionada na tabela tickets.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error("Erro ao adicionar coluna 'updated_at' em tickets:", error.message);
+            }
+        }
+
+        try {
+            await pool.query("ALTER TABLE tickets ADD INDEX idx_tickets_updated (updated_at);");
+            console.log("Migration: Indice 'idx_tickets_updated' adicionado na tabela tickets.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_KEYNAME') {
+                console.error("Erro ao adicionar indice 'idx_tickets_updated':", error.message);
+            }
+        }
+
         await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
