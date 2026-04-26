@@ -3,96 +3,45 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     // Auth Guard — redireciona para login se não houver token
     (function() {
       if (!localStorage.getItem('authToken')) {
-        window.location.replace('/panel/login.html');
+        window.location.replace('/login.html');
       }
     })();
   </script>
-  <title>PerfillBI - Sincronizador de Entidades</title>
+  <title>PerfillBI – Dashboard de Chamados GLPI</title>
   <style>
     :root {
+      color-scheme: dark;
+      /* Força o navegador a renderizar menus nativos em modo escuro */
       --bg: #0f172a;
-      /* Fundo Deep Dark */
       --card-bg: #1e293b;
-      /* Console Box */
       --text: #ffffff;
       --text-muted: #94a3b8;
       --font-family: system-ui, -apple-system, sans-serif;
+      --primary: #19c5ff;
+      --purple: #7b3cff;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --radius: 12px;
     }
 
-    .tabs-container {
-      display: flex;
-      justify-content: flex-start;
-      gap: 20px;
-      padding: 25px 45px;
-      background: var(--bg);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .tab-btn {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 14px;
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--text-muted);
-      padding: 8px 18px;
-      font-size: 15px;
-      font-weight: 700;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: 0.3s;
-      min-width: 190px;
-    }
-
-    .tab-btn img {
-      height: 35px;
-      width: 62px;
-      border-radius: 8px;
-      object-fit: contain;
-      background: transparent;
-      padding: 2px;
-    }
-
-    #tabBtn_auvo img {
-      background: rgb(109, 38, 194);
-    }
-
-    #tabBtn_glpi img {
-      background: #000000;
-    }
-
-    .tab-btn:hover {
-      border-color: rgba(255, 255, 255, 0.3);
-      color: white;
-      background: #334155;
-    }
-
-    .tab-btn.active#tabBtn_auvo {
-      background: rgb(109, 38, 194);
-      /* Cor Exata Sugerida */
-      border-color: rgba(255, 255, 255, 0.3);
-      color: #ffffff;
-      box-shadow: 0 4px 15px rgba(255, 255, 255, );
-    }
-
-    .tab-btn.active#tabBtn_glpi {
-      background: #000000;
-      /* Preto GLPI */
-      border-color: #334155;
-      color: white;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: var(--font-family);
-      margin: 0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -118,6 +67,10 @@
       z-index: 2000;
       /* Acima de tudo */
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-logo {
+      margin-right: 30px;
     }
 
     .nav-logo img {
@@ -189,621 +142,778 @@
       margin: 5px 15px;
     }
 
+    /* ===== TOPBAR COM ABAS ===== */
     header {
       width: 100%;
-      padding: 20px 40px;
+      padding: 0 40px;
+      height: 58px;
       box-sizing: border-box;
       display: flex;
       align-items: center;
-      gap: 15px;
-      background: rgba(15, 23, 42, 0.9);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      gap: 16px;
+      background: rgba(10, 17, 36, 0.97);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      position: sticky;
+      top: 50px;
+      /* Ajuste para prender abaixo da navbar global */
+      z-index: 100;
+      backdrop-filter: blur(16px);
     }
 
     .logo-ball {
-      width: 25px;
-      height: 25px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       background: linear-gradient(135deg, #aa3bff, #3b82f6);
-    }
-
-    .container {
-      width: 1200px;
-      max-width: 95%;
-      margin: 40px 0;
-    }
-
-    /* Cards (Toggles) */
-    .cards-title {
-      font-size: 18px;
-      margin-bottom: 20px;
-      font-weight: 600;
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 15px;
-      margin-bottom: 30px;
-    }
-
-    .entity-card {
-      padding: 45px 20px 20px 20px;
-      border-radius: 12px;
-      cursor: pointer;
-      color: white;
-      transition: all 0.2s;
-      border: 3px solid transparent;
-      opacity: 0.4;
-      position: relative;
-    }
-
-    .entity-card.selected {
-      opacity: 1;
-      transform: translateY(-3px);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .entity-card .count {
-      font-size: 26px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .entity-card .label {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    .entity-card .date {
-      font-size: 11px;
-      margin-top: 10px;
-      opacity: 0.7;
-    }
-
-    .toggle-switch {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 36px;
-      height: 20px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.2);
-      transition: all 0.3s ease;
-      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
-    }
-
-    .toggle-switch::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: white;
-      transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .entity-card.selected .toggle-switch {
-      background: #10b981;
-    }
-
-    .entity-card.selected .toggle-switch::after {
-      transform: translateX(16px);
-    }
-
-    .entity-card.light.selected .toggle-switch {
-      background: #0f172a;
-    }
-
-    .progress-track {
-      width: 100%;
-      height: 6px;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 4px;
-      margin-top: 10px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      border-radius: 4px;
-      width: 0%;
-      transition: width 0.3s ease-out, background-color 0.3s;
-    }
-
-    @keyframes strip {
-      0% {
-        background-position: 0 0;
-      }
-
-      100% {
-        background-position: 50px 50px;
-      }
-    }
-
-    .progress-fill.active {
-      background-image: linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-      background-size: 50px 50px;
-      animation: strip 2s linear infinite;
-    }
-
-    /* Actions */
-    .actions {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 40px;
-    }
-
-    button {
-      padding: 14px 30px;
-      border-radius: 8px;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
-      color: white;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-start {
-      background: #3b82f6;
-    }
-
-    /* Azul */
-    .btn-pause {
-      background: #eab308;
-      color: #000;
-    }
-
-    /* Amarelo */
-    .btn-resume {
-      background: #22c55e;
-    }
-
-    /* Verde */
-    .btn-cancel {
-      background: #ef4444;
-    }
-
-    /* Vermelho */
-
-    button:hover:not(:disabled) {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-    }
-
-    /* Console Block */
-    .console-box {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 30px;
-      min-height: 250px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .console-header {
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-    }
-
-    .console-title {
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .console-status {
-      font-family: monospace;
-      color: var(--text-muted);
-    }
-
-    .checklist {
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 15px;
-    }
-
-    .log-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 18px;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 6px;
-      transition: background 0.3s;
-    }
-
-    .status-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      margin-right: 15px;
       flex-shrink: 0;
     }
 
-    .dot-pending {
+    .header-brand {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .header-sep {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-refresh {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(25, 197, 255, 0.1);
+      border: 1px solid rgba(25, 197, 255, 0.3);
+      color: var(--primary);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(25, 197, 255, 0.2);
+    }
+
+    /* ===== CONTAINER PRINCIPAL ===== */
+    .page {
+      width: 1300px;
+      max-width: 96%;
+      margin: 28px 0 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* ===== CARDS DE RESUMO ===== */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 14px;
+    }
+
+    .summary-card {
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .summary-card.active-filter {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Border colors for cards */
+    .card--novo {
+      border-color: var(--primary);
+    }
+
+    .card--planejado {
+      border-color: #6366f1;
+    }
+
+    .card--atribuido {
+      border-color: var(--purple);
+    }
+
+    .card--solucionado {
+      border-color: var(--green);
+    }
+
+    .card--atrasado {
+      border-color: var(--red);
+    }
+
+    .card--pendente {
+      border-color: var(--amber);
+    }
+
+    .card--fechado {
+      border-color: #475569;
+    }
+
+    .card-icon {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .card-count {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card--novo::before {
+      background: var(--primary);
+    }
+
+    .card--novo .card-count {
+      color: var(--primary);
+    }
+
+    .card--planejado::before {
+      background: #6366f1;
+    }
+
+    .card--planejado .card-count {
+      color: #818cf8;
+    }
+
+    .card--atribuido::before {
+      background: var(--purple);
+    }
+
+    .card--atribuido .card-count {
+      color: #a78bfa;
+    }
+
+    .card--solucionado::before {
+      background: var(--green);
+    }
+
+    .card--solucionado .card-count {
+      color: var(--green);
+    }
+
+    .card--atrasado::before {
+      background: var(--red);
+    }
+
+    .card--atrasado .card-count {
+      color: #f87171;
+    }
+
+    .card--pendente::before {
+      background: var(--amber);
+    }
+
+    .card--pendente .card-count {
+      color: var(--amber);
+    }
+
+    .card--fechado::before {
+      background: #ffffff;
+    }
+
+    .card--fechado .card-count {
+      color: #94a3b8;
+    }
+
+    /* ===== FILTROS ===== */
+    .filters-box {
+      background: #0f172a;
+      /* Azul escuro sólido para contraste */
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .filter-field {
+      flex: 1 1 150px;
+    }
+
+    .filter-field label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #38bdf8;
+      margin-bottom: 5px;
+    }
+
+    .filter-field select,
+    .filter-field input {
+      width: 100%;
       background: #475569;
+      /* Azul profundo (Slate-950) para maior visibilidade */
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #a7a6b9;
+      /* Texto em azul celeste para destaque */
+      padding: 9px 12px;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
     }
 
-    .dot-syncing {
-      background: #eab308;
-      box-shadow: 0 0 12px #eab308;
-      animation: pulse 1s infinite;
+    .filter-field select:hover,
+    .filter-field input:hover {
+      border-color: #38bdf8;
+      background: #0f172a;
     }
 
-    .dot-done {
-      background: #22c55e;
-      box-shadow: 0 0 12px #22c55e;
+    .filter-field select:focus,
+    .filter-field input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+      background: #0f172a;
+      outline: none;
     }
 
-    .dot-error {
-      background: #ef4444;
+    .filter-field select option {
+      background-color: #0f172a;
+      /* Tons de azul escuro para as opções */
+      color: #38bdf8;
+      /* Azul celeste na lista de opções */
+      font-weight: 600;
     }
 
-    .log-content {
-      flex-grow: 1;
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin-left: auto;
     }
 
-    .log-entity {
-      font-weight: bold;
-      color: white;
-      width: 180px;
+    .btn-search {
+      padding: 9px 24px;
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      color: #0f172a;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 700;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(25, 197, 255, 0.25);
+    }
+
+    .btn-search:hover {
+      background: #38bdf8;
+      border-color: #38bdf8;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(25, 197, 255, 0.4);
+    }
+
+    .btn-clear {
+      padding: 9px 16px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    /* ===== SWITCH TOGGLE ===== */
+    .switch-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-right: auto;
+      /* Empurra os botoes de acao pra direita */
+      user-select: none;
+    }
+
+    .switch {
+      position: relative;
       display: inline-block;
+      width: 36px;
+      height: 20px;
     }
 
-    .log-details {
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: var(--primary);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(16px);
+      background-color: #0f172a;
+    }
+
+    /* ===== TABELA ===== */
+    .table-box {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius);
+      /* overflow removido para que o hover card possa "vazar" sem criar barra de rolagem */
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+    }
+
+    .table-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .table-count {
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 100px;
+      padding: 3px 12px;
+      font-size: 12px;
       color: var(--text-muted);
     }
 
-    .log-tag {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-right: 10px;
+    .table-scroll {
+      overflow: visible;
     }
 
-    @keyframes pulse {
-      0% {
-        transform: scale(0.9);
-        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7);
-      }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
 
-      70% {
-        transform: scale(1.1);
-        box-shadow: 0 0 0 10px rgba(234, 179, 8, 0);
-      }
+    thead tr {
+      background: rgba(0, 0, 0, 0.25);
+    }
 
-      100% {
-        transform: scale(0.9);
-        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
-      }
+    th {
+      padding: 11px 14px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: default;
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    tbody tr.row-open {
+      background: rgba(25, 197, 255, 0.04);
+    }
+
+    td {
+      padding: 11px 14px;
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    .td-id {
+      width: 60px;
+      padding: 4px 6px;
+    }
+
+    .ticket-id {
+      font-size: 13px;
+      /* Aumentado a pedido do dev */
+      font-weight: 700;
+      color: #38bdf8;
+      /* Azul destaque */
+      display: inline-block;
+      min-width: 50px;
+    }
+
+    .td-titulo,
+    .td-local {
+      text-align: left !important;
+    }
+
+    .td-titulo {
+      cursor: help;
+      position: relative;
+    }
+
+    .td-titulo>span {
+      display: inline-block;
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    /* Gatilho apenas no Título */
+    .td-titulo:hover .ticket-hover-card {
+      visibility: visible;
+      opacity: 1;
+      transform: translateY(0);
+      z-index: 2000;
+    }
+
+    /* Garante que a célula do título fique acima das outras no hover para o card não ser cortado */
+    .td-titulo:hover {
+      z-index: 1000;
+    }
+
+    .ticket-hover-card {
+      position: absolute;
+      left: 10px;
+      top: 100%;
+      width: 450px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      z-index: 2000;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    .hover-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .hover-section {
+      margin-bottom: 12px;
+    }
+
+    .hover-section.full {
+      grid-column: span 2;
+    }
+
+    .hover-section strong {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .hover-section p {
+      font-size: 12px;
+      color: #e2e8f0;
+      line-height: 1.5;
+      max-height: none !important;
+      overflow: visible !important;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      min-width: 90px;
+      text-align: center;
+      padding: 4px 10px;
+      border-radius: 100px;
+      border: 1px solid;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .sla--vencido {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .sla--atencao {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .sla--noprazo {
+      background: rgba(74, 222, 128, 0.15);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    .sla--proativo {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: #6366f1;
+      color: #6366f1;
+    }
+
+    .sla--pausado {
+      background: rgba(148, 163, 184, 0.15);
+      border-color: #94a3b8;
+      color: #94a3b8;
+    }
+
+    .upd--recente {
+      background: rgba(74, 222, 128, 0.15);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    .upd--verificar {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .upd--atualizar {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .proj--pinovo {
+      background: rgba(14, 165, 233, 0.12);
+      border-color: #0ea5e9;
+      color: #0ea5e9;
+    }
+
+    .proj--legado {
+      background: rgba(139, 92, 246, 0.12);
+      border-color: #8b5cf6;
+      color: #8b5cf6;
+    }
+
+    .proj--cftv {
+      background: rgba(34, 211, 238, 0.12);
+      border-color: #22d3ee;
+      color: #22d3ee;
+    }
+
+    .proj--outros {
+      background: rgba(148, 163, 184, 0.12);
+      border-color: #94a3b8;
+      color: #94a3b8;
+    }
+
+    .st--novo {
+      background: rgba(25, 197, 255, 0.1);
+      border-color: #19c5ff;
+      color: #19c5ff;
+    }
+
+    .st--planejado {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: #6366f1;
+      color: #818cf8;
+    }
+
+    .st--atribuido {
+      background: rgba(123, 60, 255, 0.1);
+      border-color: #7b3cff;
+      color: #a78bfa;
+    }
+
+    .st--pendente {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .st--solucionado {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .st--fechado {
+      background: rgba(71, 85, 105, 0.1);
+      border-color: #475569;
+      color: #94a3b8;
+    }
+
+    /* ===== PAGINAÇÃO ===== */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn-page {
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+
+    .btn-page:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-page:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    code.ticket-id {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: var(--primary);
+      font-family: ui-monospace, monospace;
+    }
+
+    .table-state td {
+      padding: 50px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
     }
 
     .dot-cron {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 8px #10b981;
-      animation: pulseGreen 2s infinite;
+      background: var(--green);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
     }
 
-    @keyframes pulseGreen {
-      0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-      }
+    @keyframes pulse {
 
-      70% {
-        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
-      }
-
+      0%,
       100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        opacity: 1;
+        transform: scale(1);
       }
-    }
 
-    /* Floating Dropdown Period Configuration */
-    .card-period-dropdown {
-      position: absolute;
-      top: 40px;
-      /* Logo abaixo dos botoes do topo */
-      left: 0;
-      width: 190px;
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 14px;
-      display: none;
-      /* Toggled via class .active */
-      flex-direction: column;
-      gap: 10px;
-      z-index: 1000;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    }
-
-    .card-period-dropdown.active {
-      display: flex;
-    }
-
-    .period-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .period-row label {
-      font-size: 10px;
-      text-transform: uppercase;
-      color: #94a3b8;
-      font-weight: 600;
-    }
-
-    .minimal-date {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: white;
-      padding: 5px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-      outline: none;
-      width: 110px;
-      font-family: inherit;
-    }
-
-    .minimal-date:focus {
-      border-color: #3b82f6;
-    }
-
-    .btn-period-config {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 10px;
-      background: #000000 !important;
-      /* Fundo Preto de Alto Contraste */
-      color: #ffffff !important;
-      /* Fonte Branca */
-      padding: 0 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      height: 22px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      /* Bordas Brancas */
-      white-space: nowrap;
-      z-index: 10;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .btn-period-config:hover {
-      background: #111111 !important;
-      border-color: rgba(255, 255, 255, 0.5);
-      transform: scale(1.02);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    }
-
-    .entity-card.light .btn-period-config {
-      border-color: rgba(0, 0, 0, 0.3);
-    }
-
-    ::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-      cursor: pointer;
-      opacity: 0.6;
-      width: 12px;
-    }
-
-    .btn-config-engine {
-      margin-left: 15px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #cbd5e1;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 13px;
-      transition: all 0.3s;
-    }
-
-    .btn-config-engine:hover {
-      background: linear-gradient(135deg, #334155, #1e293b);
-      border-color: rgba(255, 255, 255, 0.3);
-      color: #fff;
-    }
-
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(4px);
-      z-index: 2000;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-
-    .modal-body-glass {
-      background: #1e293b;
-      width: 100%;
-      max-width: 900px;
-      max-height: 90vh;
-      border-radius: 12px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .modal-header-glass {
-      padding: 18px 24px;
-      background: #0f172a;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modal-header-glass h3 {
-      margin: 0;
-      color: #f8fafc;
-      font-size: 18px;
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 26px;
-      cursor: pointer;
-    }
-
-    .close-btn:hover {
-      color: #fff;
-    }
-
-    .cron-table {
-      width: 100%;
-      border-collapse: collapse;
-      color: #cbd5e1;
-      font-size: 13px;
-    }
-
-    .cron-table th {
-      background: #334155;
-      padding: 12px 16px;
-      text-align: left;
-      font-weight: 600;
-      color: #fff;
-      position: sticky;
-      top: 0;
-    }
-
-    .cron-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 11px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      color: white;
-      transition: 0.2s;
-    }
-
-    .btn-sm-del {
-      background: #ef4444;
-    }
-
-    .btn-sm-del:hover {
-      background: #dc2626;
-    }
-
-    .schedule-form {
-      padding: 24px;
-      background: #0f172a;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .form-row {
-      display: flex;
-      gap: 15px;
-      align-items: flex-end;
-      flex-wrap: wrap;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-      min-width: 150px;
-    }
-
-    .form-group label {
-      font-size: 11px;
-      color: #94a3b8;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
-    .form-input {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #fff;
-      padding: 10px;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 14px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    .form-input:focus {
-      border-color: #3b82f6;
-      outline: none;
-    }
-
-    .checkbox-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 5px;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .check-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: #cbd5e1;
-      cursor: pointer;
-      padding: 4px 8px;
-    }
-
-    .check-item:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
-    }
-
-    .check-item input {
-      cursor: pointer;
-      accent-color: #10b981;
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
     }
   </style>
 </head>
@@ -817,10 +927,10 @@
     </div>
     <div class="nav-menu">
       <div class="nav-item">
-        <a href="/panel/glpi-dashboard.html" class="nav-link">Chamados</a>
+        <a href="/" class="nav-link">Chamados</a>
       </div>
       <div class="nav-item">
-        <a href="/panel/" class="nav-link">Sincronizações</a>
+        <a href="/sync.html" class="nav-link">Sincronizações</a>
       </div>
       <div class="nav-item">
         <a class="nav-link" onclick="doLogout()" style="cursor:pointer;color:#f87171;">⏻ Sair</a>
@@ -830,786 +940,384 @@
   <script>
     function doLogout() {
       localStorage.removeItem('authToken');
-      window.location.replace('/panel/login.html');
+      window.location.replace('/login.html');
     }
   </script>
 
   <header>
-    <div class="logo-ball"></div>
-    <strong>PerfillBI | Sincronizador de Dados (AUVO Engine)</strong>
-    <div id="globalAutoSyncContainer"
-      style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2); cursor: help;"
-      title="Aguardando conexão com os Motores de Auto-Sync...">
-      <div class="dot-cron" id="globalAutoSyncDot"></div>
-      <span id="globalAutoSyncTimer" style="color: #10b981; font-size: 13px; font-weight: 600;">Auto-Sync Cron Ativo
-        (Cálculo...)</span>
+
+    <div class="header-sep"></div>
+
+    <div class="header-right">
+      <div
+        style="display:flex;align-items:center;gap:8px;background:rgba(16,185,129,0.1);padding:5px 12px;border-radius:20px;border:1px solid rgba(16,185,129,0.2);">
+        <div class="dot-cron"></div>
+        <span style="color:#10b981;font-size:12px;font-weight:600;">Ao Vivo</span>
+      </div>
+      <button class="btn-refresh" onclick="loadDashboard()">↻ Atualizar</button>
     </div>
-    <button class="btn-config-engine" onclick="openSchedulesModal()">⚙️ Configurar Motores</button>
   </header>
 
-  <div class="tabs-container">
-    <button class="tab-btn active" id="tabBtn_auvo" onclick="switchTab('auvo')">
-      <img src="auvo_logo.png" alt="AUVO O" onerror="this.style.display='none'">
-      API AUVO
-    </button>
-    <button class="tab-btn" id="tabBtn_glpi" onclick="switchTab('glpi')">
-      <img src="glpi_logo.png" alt="GLPI" onerror="this.style.display='none'">
-      API GLPI
-    </button>
-  </div>
+  <!-- ===== CONTEÚDO ===== -->
+  <main class="page">
 
-  <!-- ABA AUVO -->
-  <div class="container" id="auvoApp">
-    <div class="cards-title">1. Selecione as Entidades a Sincronizar (AUVO)</div>
-    <div class="cards-grid" id="auvoCardsGrid">
-      Carregando estatísticas do servidor...
+    <div>
+      <div style="font-size:20px;font-weight:700;color:#e2e8f0;">Chamados GLPI</div>
     </div>
 
-    <div class="actions">
-      <button class="btn-start" id="auvoBtnStart" onclick="runAction('start', 'auvo')">▶ Iniciar Selecionados</button>
-      <button class="btn-pause" id="auvoBtnPause" onclick="runAction('pause', 'auvo')" style="display:none;">⏸ Pausar
-        Progresso</button>
-      <button class="btn-resume" id="auvoBtnResume" onclick="runAction('resume', 'auvo')" style="display:none;">▶
-        Continuar</button>
-      <button class="btn-cancel" id="auvoBtnCancel" onclick="runAction('cancel', 'auvo')" style="display:none;">⏹
-        Cancelar</button>
-    </div>
-
-    <div class="console-box">
-      <div class="console-header">
-        <span class="console-title">Fila de Sincronização (AUVO)</span>
-        <span class="console-status" id="auvoStatus">Estado: IDLE</span>
+    <!-- Cards de resumo -->
+    <div class="summary-grid">
+      <div class="summary-card card--novo" data-filter="novo" onclick="applyStatusFilter('novo')">
+        <div class="card-icon">🔵</div>
+        <div class="card-count" id="cnt_novo">—</div>
+        <div class="card-label">Novos</div>
       </div>
-      <div class="checklist" id="auvoChecklist">
-        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique
-          em Iniciar.</div>
+      <div class="summary-card card--planejado" data-filter="planejado" onclick="applyStatusFilter('planejado')">
+        <div class="card-icon">📘</div>
+        <div class="card-count" id="cnt_planejado">—</div>
+        <div class="card-label">Planejados</div>
       </div>
-    </div>
-  </div>
-
-  <!-- ABA GLPI -->
-  <div class="container" id="glpiApp" style="display: none;">
-    <div class="cards-title">1. Selecione as Entidades a Sincronizar (GLPI)</div>
-    <div class="cards-grid" id="glpiCardsGrid">
-      <!-- Injetado via JS -->
-      Carregando estatísticas do servidor...
-    </div>
-
-    <div class="actions">
-      <button class="btn-start" id="glpiBtnStart" onclick="runAction('start', 'glpi')">▶ Iniciar Selecionados</button>
-      <button class="btn-pause" id="glpiBtnPause" onclick="runAction('pause', 'glpi')" style="display:none;">⏸ Pausar
-        Progresso</button>
-      <button class="btn-resume" id="glpiBtnResume" onclick="runAction('resume', 'glpi')" style="display:none;">▶
-        Continuar</button>
-      <button class="btn-cancel" id="glpiBtnCancel" onclick="runAction('cancel', 'glpi')" style="display:none;">⏹
-        Cancelar</button>
-    </div>
-
-    <div class="console-box">
-      <div class="console-header">
-        <span class="console-title">Fila de Sincronização (GLPI)</span>
-        <span class="console-status" id="glpiStatus">Estado: IDLE</span>
+      <div class="summary-card card--atribuido" data-filter="atribuido" onclick="applyStatusFilter('atribuido')">
+        <div class="card-icon">👤</div>
+        <div class="card-count" id="cnt_atribuido">—</div>
+        <div class="card-label">Atribuídos</div>
       </div>
-      <div class="checklist" id="glpiChecklist">
-        <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique
-          em Iniciar.</div>
+      <div class="summary-card card--solucionado" data-filter="solucionado" onclick="applyStatusFilter('solucionado')">
+        <div class="card-icon">✅</div>
+        <div class="card-count" id="cnt_solucionado">—</div>
+        <div class="card-label">Solucionados</div>
+      </div>
+      <div class="summary-card card--atrasado" data-filter="atrasado" onclick="applyStatusFilter('atrasado')">
+        <div class="card-icon">🔴</div>
+        <div class="card-count" id="cnt_atrasado">—</div>
+        <div class="card-label">Atrasados</div>
+      </div>
+      <div class="summary-card card--pendente" data-filter="pendente" onclick="applyStatusFilter('pendente')">
+        <div class="card-icon">⏳</div>
+        <div class="card-count" id="cnt_pendente">—</div>
+        <div class="card-label">Pendentes</div>
+      </div>
+      <div class="summary-card card--fechado" data-filter="fechado" onclick="applyStatusFilter('fechado')">
+        <div class="card-icon">🔒</div>
+        <div class="card-count" id="cnt_fechado">—</div>
+        <div class="card-label">Fechados</div>
       </div>
     </div>
-  </div>
 
-  <script>
-    let pollInterval = null;
-    let globalTimerState = { targetDate: null, isSyncing: false, entity: null, nextDesc: null, currentDesc: null, activeMotorsCount: 0 };
-
-    // Relógio Lógico: roda a cada segundo
-    setInterval(() => {
-      const span = document.getElementById('globalAutoSyncTimer');
-      const dot = document.getElementById('globalAutoSyncDot');
-      const container = document.getElementById('globalAutoSyncContainer');
-
-      if (!span || !dot) return;
-
-      if (globalTimerState.isSyncing) {
-        const desc = globalTimerState.currentDesc || globalTimerState.entity || 'Fila';
-        span.innerHTML = `Sincronizando: ${desc}...`;
-        if (container) container.title = `Execução Ativa: Sincronizando ${desc} no Backend.`;
-
-        span.style.color = '#f59e0b';
-        dot.style.background = '#f59e0b';
-        dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
-      } else if (globalTimerState.targetDate) {
-        const now = new Date();
-        const target = new Date(globalTimerState.targetDate);
-        const diffMs = target - now;
-
-        if (diffMs <= 0) {
-          span.innerHTML = 'Disparando Cron...';
-          return;
-        }
-
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
-
-        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        const nextDesc = globalTimerState.nextDesc || 'Motor Padrão';
-
-        span.innerHTML = `Auto-Sync (${globalTimerState.activeMotorsCount} Motores) | Próximo: ${nextDesc} em ${timeStr}`;
-        if (container) container.title = `Agendamento Automático: O próximo disparo (${nextDesc}) iniciará a carga silenciosa.`;
-
-        span.style.color = '#10b981';
-        dot.style.background = '#10b981';
-        dot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
-      } else {
-        span.innerHTML = `Auto-Sync (0 Ativos) | Motores Desativados`;
-        if (container) container.title = `Nenhuma rotina cadastrada de auto-sync no painel.`;
-
-        span.style.color = '#94a3b8';
-        dot.style.background = '#475569';
-        dot.style.boxShadow = 'none';
-      }
-    }, 1000);
-
-    // Bater no servidor a cada 30 segundos
-    async function fetchGlobalTimer() {
-      try {
-        const res = await fetch('/api/system/status');
-        const data = await res.json();
-
-        if (data.isSyncing) {
-          globalTimerState.isSyncing = true;
-          globalTimerState.entity = data.currentEntity;
-          globalTimerState.currentDesc = data.currentDesc;
-          globalTimerState.targetDate = null;
-        } else {
-          globalTimerState.isSyncing = false;
-          globalTimerState.activeMotorsCount = data.activeMotorsCount || 0;
-          globalTimerState.nextDesc = data.nextDesc;
-
-          // Escolher quem roda primeiro
-          const auvoT = data.nextAuvoRun ? new Date(data.nextAuvoRun).getTime() : Infinity;
-          const glpiT = data.nextGlpiRun ? new Date(data.nextGlpiRun).getTime() : Infinity;
-
-          if (auvoT === Infinity && glpiT === Infinity) {
-            globalTimerState.targetDate = null;
-          } else if (auvoT <= glpiT) {
-            globalTimerState.targetDate = data.nextAuvoRun;
-          } else {
-            globalTimerState.targetDate = data.nextGlpiRun;
-          }
-        }
-      } catch (e) {
-        // Se der erro de fetch silencioso
-      }
-    }
-
-    fetchGlobalTimer();
-    setInterval(fetchGlobalTimer, 30000);
-
-    let currentTab = 'auvo';
-
-    // Estado Isolado
-    let selectedIds = { auvo: new Set(), glpi: new Set() };
-    let availableEntities = { auvo: [], glpi: [] };
-    let lastSyncStatus = { auvo: 'IDLE', glpi: 'IDLE' };
-
-    // Variaveis Dinâmicas do DOM
-    let uiGrid, uiChecklist, uiStatus;
-    let bStart, bPause, bResume, bCancel;
-
-    // Formata Data
-    function formatDate(iso) {
-      if (!iso) return "Nunca atualizado";
-      const d = new Date(iso);
-      return isNaN(d.getTime()) ? iso : d.toLocaleString('pt-BR');
-    }
-
-    // Gerenciamento de Abas
-    function switchTab(tabId) {
-      currentTab = tabId;
-
-      // Update styling
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('tabBtn_' + tabId).classList.add('active');
-
-      // Toggle UI
-      document.getElementById('auvoApp').style.display = tabId === 'auvo' ? 'block' : 'none';
-      document.getElementById('glpiApp').style.display = tabId === 'glpi' ? 'block' : 'none';
-
-      // Link DOM Elements to active tab
-      uiGrid = document.getElementById(tabId + "CardsGrid");
-      uiChecklist = document.getElementById(tabId + "Checklist");
-      uiStatus = document.getElementById(tabId + "Status");
-      bStart = document.getElementById(tabId + "BtnStart");
-      bPause = document.getElementById(tabId + "BtnPause");
-      bResume = document.getElementById(tabId + "BtnResume");
-      bCancel = document.getElementById(tabId + "BtnCancel");
-
-      // Reload data for this tab
-      loadStats();
-      startPolling(); // Restart polling for new endpoint
-    }
-
-    // 1. Carrega Estatísticas Iniciais
-    async function loadStats() {
-      try {
-        const res = await fetch(`/api/${currentTab}/stats`);
-        // Se a API GLPI ainda nao existir, vai cair no fallback e renderizar vazio/erro.
-        if (!res.ok) throw new Error("Rota não disponível (Ainda em desenvolvimento)");
-        const json = await res.json();
-        availableEntities[currentTab] = json.stats || [];
-        renderCards();
-      } catch (e) {
-        if (uiGrid) uiGrid.innerHTML = `<div style="color: #f87171; padding: 20px;">Falha ao buscar entidades: ${e.message}</div>`;
-      }
-    }
-
-    // 2. Renderiza as "Caixas de Seleção Coloridas"
-    function renderCards() {
-      if (!uiGrid) return;
-      uiGrid.innerHTML = "";
-      const ents = availableEntities[currentTab] || [];
-
-      ents.forEach(ent => {
-        const div = document.createElement("div");
-        div.className = "entity-card selected";
-        selectedIds[currentTab].add(ent.id);
-
-        div.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
-        div.style.color = '#f8fafc';
-        div.style.borderColor = ent.color || '#3b82f6';
-        div.style.borderWidth = '2px';
-        div.style.borderStyle = 'solid';
-        div.style.boxShadow = `0 4px 15px ${ent.color}20`;
-
-        div.innerHTML = `
-                <div class="toggle-switch"></div>
-                <div class="count">${ent.count?.toLocaleString('pt-BR') || 0}</div>
-                <div class="label">${ent.label}</div>
-                <div class="date">${ent.lastDate ? 'Verificado: ' + formatDate(ent.lastDate) : 'Sinc. Pendente'}</div>
-                ${ent.id === 'tasks' && currentTab === 'auvo' ? `
-                    <div class="btn-period-config" onclick="event.stopPropagation(); toggleTasksDropdown()">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        Período
-                    </div>
-                    <div class="card-period-dropdown" id="tasksDropdown" onclick="event.stopPropagation()">
-                        <div class="period-row">
-                            <label>Início</label>
-                            <input type="date" id="inputStartDate" class="minimal-date">
-                        </div>
-                        <div class="period-row">
-                            <label>Fim</label>
-                            <input type="date" id="inputEndDate" class="minimal-date">
-                        </div>
-                    </div>
-                ` : ''}
-             `;
-
-        div.onclick = () => {
-          if (selectedIds[currentTab].has(ent.id)) {
-            selectedIds[currentTab].delete(ent.id);
-            div.classList.remove("selected");
-          } else {
-            selectedIds[currentTab].add(ent.id);
-            div.classList.add("selected");
-          }
-        };
-
-        uiGrid.appendChild(div);
-      });
-    }
-
-    // 3. Renderiza o Console
-    function renderConsole(state, overrideTab = null) {
-      const tab = overrideTab || currentTab;
-
-      const isFinished = state.status === 'COMPLETED' || state.status === 'ERROR' || state.status === 'CANCELED' || state.status === 'IDLE';
-      const wasRunning = lastSyncStatus[tab] === 'RUNNING' || lastSyncStatus[tab] === 'PAUSED';
-
-      if (wasRunning && isFinished) {
-        loadStats();
-      }
-
-      lastSyncStatus[tab] = state.status;
-
-      // Evita re-renderizar aba oculta (mas se for a visivel, processa normalmente)
-      if (tab !== currentTab) return;
-
-      if (uiStatus) uiStatus.innerText = `Estado: ${state.status} - ${state.message}`;
-
-      const titleSpan = document.querySelector(`#${tab}App .console-title`);
-      if (titleSpan) {
-        if (state.status === 'RUNNING' || state.status === 'PAUSED' || state.status === 'SYNCING') {
-          titleSpan.innerText = `Fila de ${tab.toUpperCase()} [${state.origin || 'Disparo Manual'}]`;
-          titleSpan.style.color = '#3b82f6';
-        } else {
-          titleSpan.innerText = `Fila de ${tab.toUpperCase()} [Ociosa]`;
-          titleSpan.style.color = '#94a3b8';
-        }
-      }
-
-      if (bStart) bStart.style.display = (state.status === 'IDLE' || state.status === 'COMPLETED' || state.status === 'PARTIAL' || state.status === 'CANCELED' || state.status === 'ERROR') ? 'block' : 'none';
-      if (bPause) bPause.style.display = state.status === 'RUNNING' ? 'block' : 'none';
-      if (bResume) bResume.style.display = state.status === 'PAUSED' ? 'block' : 'none';
-      if (bCancel) bCancel.style.display = (state.status === 'RUNNING' || state.status === 'PAUSED') ? 'block' : 'none';
-
-      if (!state.entities || state.entities.length === 0) return;
-
-      if (uiChecklist) uiChecklist.innerHTML = "";
-
-      state.entities.forEach(ent => {
-        let dotClass = "dot-pending";
-        if (ent.status === 'SYNCING') dotClass = "dot-syncing";
-        if (ent.status === 'DONE') dotClass = "dot-done";
-        if (ent.status === 'ERROR') dotClass = "dot-error";
-        if (ent.status === 'CANCELED') dotClass = "dot-error";
-
-        const row = document.createElement("div");
-        row.className = "log-row";
-        row.style.background = ent.status === 'SYNCING' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)';
-
-        let pageTotal = ent.totalPages > 0 ? ent.totalPages : '?';
-        let targetTotal = ent.targetCount > 0 ? ent.targetCount : '?';
-
-        if (ent.status === 'DONE') {
-          if (pageTotal === '?') pageTotal = ent.page;
-          if (targetTotal === '?') targetTotal = ent.count;
-        }
-
-        const pageText = `${ent.page}/${pageTotal}`;
-        const countText = `${ent.count}/${targetTotal}`;
-
-        let deltaString = '';
-        if (ent.deltas && (ent.status === 'DONE' || ent.status === 'SYNCING' || ent.status === 'CANCELED')) {
-          deltaString = `
-                  <div style="font-size: 12px; margin-top: 6px; color: #a1a1aa; display: flex; gap: 10px; background: rgba(0,0,0,0.15); padding: 4px 8px; border-radius: 4px; width: fit-content;">
-                     <span style="color: #4ade80; font-weight: 500;">+${ent.deltas.inserts || 0} incluídos/novos</span>
-                     <span style="color: #60a5fa; font-weight: 500;">~${ent.deltas.updates || 0} atualizados</span>
-                     ${ent.deltas.deletes ? `<span style="color: #f87171; font-weight: 500;">-${ent.deltas.deletes} apagados</span>` : ''}
-                     ${ent.deltas.errors ? `<span style="color: #fca5a5; font-weight: 500; cursor: pointer; text-decoration: underline;" onclick="openErrorModal(${state.historyId})" title="Clique para ver os logs">⚠ ${ent.deltas.errors} erros</span>` : ''}
-                  </div>
-               `;
-        }
-
-        let progressHtml = '';
-        if (ent.status === 'SYNCING' || ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR' || ent.status === 'CANCELED') {
-          let percentage = 0;
-          let targetTot = ent.targetCount > 0 ? ent.targetCount : (ent.count > 0 ? ent.count : 1);
-
-          if (ent.status === 'DONE' || ent.status === 'PARTIAL' || ent.status === 'ERROR') percentage = 100;
-          else percentage = Math.min((ent.count / targetTot) * 100, 100);
-
-          let fillClass = ent.status === 'SYNCING' ? 'progress-fill active' : 'progress-fill';
-          let fillColor = ent.status === 'ERROR' ? '#f87171' : (ent.status === 'CANCELED' ? '#94a3b8' : (ent.status === 'SYNCING' ? '#3b82f6' : '#10b981'));
-
-          progressHtml = `
-                  <div class="progress-track">
-                     <div class="${fillClass}" style="width: ${percentage.toFixed(1)}%; background-color: ${fillColor};"></div>
-                  </div>
-                `;
-        }
-
-        row.innerHTML = `
-               <div class="status-dot ${dotClass}"></div>
-               <div class="log-content" style="flex: 1; width: 100%;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                      <span class="log-entity">${ent.label}</span>
-                      <span class="log-details" style="margin-left: auto;">
-                         ${ent.status === 'PENDING' ? 'Aguardando na fila...' : ''}
-                         ${ent.status === 'DONE' ? `<span class="log-tag">✅ Concluído</span> Registros Processados: ${countText}` : ''}
-                         ${ent.status === 'SYNCING' ? `<span class="log-tag">⏳ Sincronizando</span> Progresso: ${pageText} | Processados: ${countText}` : ''}
-                         ${ent.status === 'CANCELED' ? `<span class="log-tag" style="background: rgba(248, 113, 113, 0.2); color: #f87171;">🚫 Abortado</span> Parou em: ${pageText} | Processados: ${countText}` : ''}
-                      </span>
-                  </div>
-                  ${progressHtml}
-                  ${deltaString}
-               </div>
-            `;
-        uiChecklist.appendChild(row);
-      });
-    }
-
-    // 4. Mecanica de Polling (Loop infinito isolado por contexto)
-    async function startPolling() {
-      if (pollInterval) clearInterval(pollInterval);
-      const pollingForTab = currentTab;
-      pollInterval = setInterval(async () => {
-        // Só faz fetch se a aba não mudou
-        if (currentTab !== pollingForTab) return;
-        try {
-          const res = await fetch(`/api/${currentTab}/sync/status`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json.status) renderConsole(json.status, pollingForTab);
-          }
-        } catch (e) { }
-      }, 1500);
-    }
-
-    // Ações de Botões (Start / Pause / Resume / Cancel)
-    window.runAction = async (action, targetTab) => {
-      try {
-        if (action === 'start') {
-          const arr = Array.from(selectedIds[targetTab]);
-          if (arr.length === 0) return alert("Selecione pelo menos uma entidade nas caixas acima!");
-
-          let reqBody = { entities: arr };
-
-          if (targetTab === 'auvo') {
-            const elS = document.getElementById("inputStartDate");
-            const elE = document.getElementById("inputEndDate");
-            if (elS && elE) {
-              reqBody.startDate = elS.value;
-              reqBody.endDate = elE.value;
-            }
-          }
-
-          await fetch(`/api/${targetTab}/sync/control`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' })
-          });
-
-          await fetch(`/api/${targetTab}/sync`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reqBody)
-          });
-        } else {
-          await fetch(`/api/${targetTab}/sync/control`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: action })
-          });
-        }
-        startPolling();
-      } catch (e) { alert("Erro de comunicação: " + e.message); }
-    };
-
-    window.openErrorModal = async (historyId) => {
-      if (!historyId) return alert('Sessão não disponível.');
-      document.getElementById('errorModal').style.display = 'flex';
-      document.getElementById('modalHistoryId').innerText = historyId;
-      const tbody = document.getElementById('errorTableBody');
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Buscando logs no servidor...</td></tr>';
-
-      try {
-        // Aqui o log repository hoje é o mesmo. Os logs do auvo e glpi compartilham a log_history?
-        // Sim. Porem as urls podem ser especificas.
-        const res = await fetch(`/api/${currentTab}/sync/logs/${historyId}`);
-        if (!res.ok) throw new Error("Endpoint indisponível");
-        const data = await res.json();
-        if (data.logs && data.logs.length > 0) {
-          tbody.innerHTML = data.logs.map(log => `
-               <tr style="border-bottom: 1px solid #334155;">
-                  <td style="padding: 10px;">${log.entityName}</td>
-                  <td style="padding: 10px; font-family: monospace; color: #fbbf24;">${log.entityId}</td>
-                  <td style="padding: 10px; color: #fca5a5;">${log.message}</td>
-               </tr>
-            `).join('');
-        } else {
-          tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #4ade80;">Nenhum log gravado.</td></tr>';
-        }
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: #f87171;">Falha na leitura: ${e.message}</td></tr>`;
-      }
-    };
-
-    // 5. Inicializacao Automatica
-    function setInitialDates() {
-      const uiSD = document.getElementById("inputStartDate");
-      const uiED = document.getElementById("inputEndDate");
-      if (!uiSD || !uiED) return;
-
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const toISO = (d) => {
-        const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dy = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dy}`;
-      };
-      uiSD.value = toISO(firstDay); uiED.value = toISO(now);
-    }
-
-    function toggleTasksDropdown() {
-      const dd = document.getElementById("tasksDropdown");
-      if (dd) dd.classList.toggle("active");
-    }
-
-    document.addEventListener("click", () => {
-      const dd = document.getElementById("tasksDropdown");
-      if (dd) dd.classList.remove("active");
-    });
-
-    const friendlyCronNames = {
-      '*/5 * * * *': 'A cada 5 minutos',
-      '*/10 * * * *': 'A cada 10 minutos',
-      '*/30 * * * *': 'A cada 30 minutos',
-      '0 * * * *': 'A cada 1 Hora',
-      '0 */2 * * *': 'A cada 2 Horas',
-      '0 */4 * * *': 'A cada 4 Horas',
-      '0 */6 * * *': 'A cada 6 Horas',
-      '0 */12 * * *': 'A cada 12 Horas',
-      '0 0 * * *': 'Diariamente (00:00)',
-      '0 3 * * *': 'Diariamente (03:00)',
-      '0 0 * * 1': 'Semanalmente',
-      '0 0 1 * *': 'Mensalmente'
-    };
-
-    function toggleCustomCron() {
-      const sel = document.getElementById('formCronFriendly').value;
-      document.getElementById('formCronCustom').style.display = sel === 'custom' ? 'block' : 'none';
-    }
-
-    const auvoEntsArray = [
-      { id: 'users', label: 'Usuários' }, { id: 'segments', label: 'Segmentos' }, { id: 'groups', label: 'Grupos' },
-      { id: 'customers', label: 'Clientes' }, { id: 'questionnaires', label: 'Questionários' },
-      { id: 'taskTypes', label: 'Tipos de Tarefa' }, { id: 'tasks', label: 'Tarefas' }
-    ];
-    const glpiEntsArray = [
-      { id: 'novo', label: 'Novo' }, { id: 'planejado', label: 'Planejado' }, { id: 'atribuido', label: 'Atribuído' },
-      { id: 'solucionado', label: 'Solucionado' }, { id: 'pendente', label: 'Pendente' }, { id: 'atrasado', label: 'Atrasado' },
-      { id: 'fechado', label: 'Fechado' }
-    ];
-
-    function openSchedulesModal() {
-      document.getElementById('schedulesModal').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      fetchSchedules();
-      updateEntityCheckboxes();
-    }
-    function closeSchedulesModal() {
-      document.getElementById('schedulesModal').style.display = 'none';
-      document.body.style.overflow = '';
-    }
-
-    async function fetchSchedules() {
-      const tbody = document.getElementById('schedulesTableBody');
-      try {
-        const res = await fetch('/api/schedules');
-        const data = await res.json();
-        if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum Cron Ativo.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = data.map(s => {
-          let fJson = s.filters;
-          try { if (typeof fJson === 'string') fJson = JSON.parse(fJson); } catch (e) { }
-
-          let entsStr = 'Tudo/Padrão';
-          if (fJson && fJson.entities && fJson.entities.length > 0) entsStr = fJson.entities.join(', ');
-          else if (fJson && fJson.excludeStatus) entsStr = 'Exceto: ' + fJson.excludeStatus.join(',');
-          else if (fJson && fJson.includeStatus) entsStr = 'Apenas: ' + fJson.includeStatus.join(',');
-
-          let friendlyCron = friendlyCronNames[s.cron_expression] || 'Personalizado';
-          const friendlyRangeNames = { 'WEEK': 'Últimos 7 dias', 'MONTH': 'Mês Atual/30d', 'YEAR': 'Últimos 365d', 'FULL': 'Sempre Tudo' };
-          const rangeStr = friendlyRangeNames[s.date_range] || s.date_range || 'Sempre Tudo';
-
-          return `
-              <tr>
-                <td><span style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;">${s.system}</span></td>
-                <td>${rangeStr}</td>
-                <td style="color: #94a3b8; font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${entsStr}">${entsStr}</td>
-                <td>
-                   <strong style="color: #60a5fa">${friendlyCron}</strong>
-                   <div style="font-size: 10px; color: #94a3b8; font-family: monospace; letter-spacing: 1px;">${s.cron_expression}</div>
-                </td>
-                <td>${s.description || ''}</td>
-                <td style="text-align: right;">
-                   <button class="btn-sm btn-sm-del" onclick="deleteSchedule(${s.id})">Deletar</button>
-                </td>
-              </tr>
-            `;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Erro: ${e.message}</td></tr>`;
-      }
-    }
-
-    function updateEntityCheckboxes() {
-      const sys = document.getElementById('formSystem').value;
-      const cBox = document.getElementById('entityCheckboxes');
-      const list = sys === 'AUVO' ? auvoEntsArray : glpiEntsArray;
-
-      cBox.innerHTML = list.map(e => `
-        <label class="check-item">
-           <input type="checkbox" value="${e.id}" class="engine-ent-chk"> 
-           ${e.label}
-        </label>
-      `).join('');
-    }
-
-    async function saveSchedule() {
-      const system = document.getElementById('formSystem').value;
-      const range = document.getElementById('formRange').value;
-      const desc = document.getElementById('formDesc').value;
-
-      let cron = document.getElementById('formCronFriendly').value;
-      if (cron === 'custom') {
-        cron = document.getElementById('formCronCustom').value;
-      }
-
-      if (!cron) return alert("Expressão Cron obrigatória");
-
-      const checks = document.querySelectorAll('.engine-ent-chk:checked');
-      const selectedEnts = Array.from(checks).map(c => c.value);
-
-      const payload = {
-        system: system,
-        cron_expression: cron,
-        date_range: range,
-        description: desc,
-        is_active: 1
-      };
-
-      if (selectedEnts.length > 0) {
-        payload.filters = { entities: selectedEnts };
-      }
-
-      try {
-        const res = await fetch('/api/schedules', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          document.getElementById('formCronFriendly').value = '*/30 * * * *';
-          document.getElementById('formCronCustom').value = '';
-          document.getElementById('formCronCustom').style.display = 'none';
-          document.getElementById('formDesc').value = '';
-          updateEntityCheckboxes();
-          fetchSchedules();
-          fetchGlobalTimer();
-        } else {
-          const data = await res.json();
-          alert("Erro: " + data.error);
-        }
-      } catch (e) { alert("Erro de comunicação."); }
-    }
-
-    async function deleteSchedule(id) {
-      if (!confirm("Certeza que deseja escluir este agendamento?")) return;
-      try {
-        await fetch(`/api/schedules/${id}`, { method: 'DELETE' });
-        fetchSchedules();
-        fetchGlobalTimer();
-      } catch (e) { alert("Falha ao deletar."); }
-    }
-
-    // Boot Up
-    switchTab('auvo');
-    setTimeout(setInitialDates, 500); // Aguarda render async
-  </script>
-
-  <!-- Modal de Erros (Auditoria) -->
-  <div id="errorModal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; font-family: 'Inter', sans-serif;">
-    <div
-      style="background: #1e293b; width: 100%; max-width: 800px; max-height: 80vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-      <div
-        style="padding: 16px 20px; background: #334155; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="color: #f8fafc; margin: 0; font-size: 16px;">🔍 Auditoria de Falhas (Sessão #<span
-            id="modalHistoryId"></span>)</h3>
-        <button onclick="document.getElementById('errorModal').style.display='none'"
-          style="background: none; border: none; color: #cbd5e1; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
-      </div>
-      <div style="padding: 0; overflow-y: auto; flex: 1; background: #0f172a;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; color: #cbd5e1; font-size: 13px;">
-          <thead style="background: #1e293b; position: sticky; top: 0;">
-            <tr style="border-bottom: 1px solid #334155;">
-              <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Repositório</th>
-              <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Item (ID Originário)</th>
-              <th style="padding: 12px 16px; font-weight: 500; color: #e2e8f0;">Mensagem Recebida (MySQL)</th>
-            </tr>
-          </thead>
-          <tbody id="errorTableBody">
-          </tbody>
-        </table>
+    <!-- Filtros -->
+    <div class="filters-box">
+      <div class="filters-row">
+        <div class="filter-field">
+          <label>Status</label>
+          <select id="f_status">
+            <option value="">Todos</option>
+            <option value="novo">Novo</option>
+            <option value="planejado">Planejado</option>
+            <option value="atribuido">Atribuído</option>
+            <option value="pendente">Pendente</option>
+            <option value="solucionado">Solucionado</option>
+            <option value="fechado">Fechado</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>Projeto</label>
+          <select id="f_projeto">
+            <option value="">Todos</option>
+            <option value="PI-NOVO">PI-NOVO</option>
+            <option value="LEGADO">LEGADO</option>
+            <option value="CFTV">CFTV</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>SLA</label>
+          <select id="f_sla">
+            <option value="">Todos</option>
+            <option value="Vencido">Vencido</option>
+            <option value="Atenção">Atenção</option>
+            <option value="No prazo">No prazo</option>
+            <option value="Proativo">Proativo</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>Categoria</label>
+          <select id="f_categoria">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-actions" style="width: 100%; display: flex;">
+          <label class="switch-label" title="Incluir chamados encerrados">
+            <div class="switch">
+              <input type="checkbox" id="f_incluir_fechados" onchange="renderPage()">
+              <span class="slider"></span>
+            </div>
+            Incluir Fechados
+          </label>
+          <button class="btn-clear" onclick="clearFilters()" title="Redefinir filtros">Limpar ✕</button>
+          <button class="btn-search" onclick="loadDashboard()"> Aplicar Filtros</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Modal Auto Sync Config -->
-  <div id="schedulesModal" class="modal-overlay">
-    <div class="modal-body-glass">
-      <div class="modal-header-glass">
-        <h3>Parâmetros de Auto-Sync (Cron Jobs do Banco)</h3>
-        <button class="close-btn" onclick="closeSchedulesModal()">&times;</button>
+    <!-- Tabela -->
+    <div class="table-box">
+      <div class="table-header">
+        <div class="table-title">
+          Lista de Chamados
+          <span class="table-count" id="tableCount">—</span>
+        </div>
+        <span style="font-size:12px;color:var(--text-muted);" id="lastUpdate"></span>
       </div>
-      <div style="flex: 1; overflow-y: auto; background: #0f172a;">
-        <table class="cron-table">
+
+      <div class="table-scroll">
+        <table>
           <thead>
             <tr>
-              <th>Motor</th>
-              <th>Propagação (Range)</th>
-              <th>Entidades Vinculadas</th>
-              <th>Expressão Cron</th>
-              <th>Descrição Extra</th>
-              <th style="text-align: right;">🔧</th>
+              <th>Ticket ID</th>
+              <th>Projeto</th>
+              <th>Título</th>
+              <th class="td-local">Local / Ativo</th>
+              <th>Categoria</th>
+              <th>Tarefa de Campo</th>
+              <th>SLA</th>
+              <th>Status</th>
             </tr>
           </thead>
-          <tbody id="schedulesTableBody">
-            <tr>
-              <td colspan="6" style="text-align: center;">Carregando tabelas do banco...</td>
+          <tbody id="ticketsTbody">
+            <tr class="table-state">
+              <td colspan="8">Clique em <strong>↻ Atualizar</strong> para carregar os chamados.</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div class="schedule-form">
-        <h4
-          style="margin: 0 0 5px 0; color: #fff; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; width: fit-content;">
-          Criar Fila Independente</h4>
-        <div class="form-row">
-          <div class="form-group" style="max-width: 120px;">
-            <label>Sistema</label>
-            <select id="formSystem" class="form-input" onchange="updateEntityCheckboxes()">
-              <option value="AUVO">API AUVO</option>
-              <option value="GLPI">API GLPI</option>
-            </select>
-          </div>
-          <div class="form-group" style="min-width: 200px; flex: 1.5;">
-            <label>Frequência (Cron)</label>
-            <select id="formCronFriendly" class="form-input" onchange="toggleCustomCron()">
-              <option value="*/5 * * * *">A cada 5 minutos</option>
-              <option value="*/10 * * * *">A cada 10 minutos</option>
-              <option value="*/30 * * * *" selected>A cada 30 minutos</option>
-              <option value="0 * * * *">A cada 1 Hora</option>
-              <option value="0 */2 * * *">A cada 2 Horas</option>
-              <option value="0 */4 * * *">A cada 4 Horas</option>
-              <option value="0 */6 * * *">A cada 6 Horas</option>
-              <option value="0 */12 * * *">A cada 12 Horas</option>
-              <option value="0 0 * * *">Diariamente (00:00)</option>
-              <option value="0 3 * * *">Diariamente (03:00)</option>
-              <option value="0 0 * * 1">Semanalmente (Segunda)</option>
-              <option value="0 0 1 * *">Mensalmente (Dia 1)</option>
-              <option value="custom">Avançado (Cron Textual)...</option>
-            </select>
-            <input type="text" id="formCronCustom" class="form-input" style="display:none; margin-top: 6px;"
-              placeholder="ex: 0 */4 * * *">
-          </div>
-          <div class="form-group" style="max-width: 130px;">
-            <label>Intervalo Data</label>
-            <select id="formRange" class="form-input">
-              <option value="FULL">Sempre Tudo</option>
-              <option value="WEEK">Últimos 7 dias</option>
-              <option value="MONTH">Mês Atual/30d</option>
-              <option value="YEAR">Últimos 365d</option>
-            </select>
-          </div>
-          <div class="form-group" style="flex: 2;">
-            <label>Identificador Visual</label>
-            <input type="text" id="formDesc" class="form-input" placeholder="Ex: Update Flash nas Tarefas e Seg...">
-          </div>
-        </div>
 
-        <div class="form-group">
-          <label>Checklist de Independência (Ignora Padrão se Marcado)</label>
-          <div id="entityCheckboxes" class="checkbox-grid">
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
-          <button class="btn-resume" onclick="saveSchedule()" style="padding: 10px 20px; font-size: 13px;">➕ Acoplar
-            Motor no Banco</button>
-        </div>
+      <div class="pagination">
+        <button class="btn-page" id="btnPrev" onclick="changePage(-1)" disabled>← Anterior</button>
+        <span id="pageInfo" style="font-size:12px;">—</span>
+        <button class="btn-page" id="btnNext" onclick="changePage(1)" disabled>Próximo →</button>
       </div>
     </div>
-  </div>
+
+  </main>
+
+  <script>
+    let allData = [], page = 1;
+    const PER_PAGE = 50;
+
+    const SLA_MAP = { 'Vencido': 'sla--vencido', 'Atenção': 'sla--atencao', 'No prazo': 'sla--noprazo', 'Proativo': 'sla--proativo', 'SLA Pausado': 'sla--pausado' };
+    const UPD_MAP = { 'RECENTE': 'upd--recente', 'VERIFICAR': 'upd--verificar', 'ATUALIZAR': 'upd--atualizar' };
+    const PROJ_MAP = { 'PI-NOVO': 'proj--pinovo', 'LEGADO': 'proj--legado', 'CFTV': 'proj--cftv', 'Outros': 'proj--outros' };
+    const ST_MAP = { 'novo': 'st--novo', 'planejado': 'st--planejado', 'atribuído': 'st--atribuido', 'atribuido': 'st--atribuido', 'pendente': 'st--pendente', 'solucionado': 'st--solucionado', 'fechado': 'st--fechado' };
+
+    function badge(val, map) {
+      const cls = map?.[val] || map?.[val?.toLowerCase()];
+      if (!val) return `<span style="color:#64748b;">—</span>`;
+      if (!cls) return `<span class="badge" style="border-color:rgba(148,163,184,0.3);color:#94a3b8;">${val}</span>`;
+      return `<span class="badge ${cls}">${val}</span>`;
+    }
+
+    function dateFmt(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function loadDashboard() {
+      const tbody = document.getElementById('ticketsTbody');
+      tbody.innerHTML = '<tr class="table-state"><td colspan="8">⏳ Carregando chamados...</td></tr>';
+      document.getElementById('tableCount').textContent = 'Buscando...';
+
+      const p = new URLSearchParams();
+      const fs = document.getElementById('f_status').value;
+      const fp = document.getElementById('f_projeto').value;
+      const fl = document.getElementById('f_sla').value;
+      const fc = document.getElementById('f_categoria').value;
+
+      if (fs) p.append('status', fs);
+      if (fp) p.append('projeto', fp);
+      if (fl) p.append('sla', fl);
+      if (fc) p.append('categoria', fc);
+
+      try {
+        const res = await fetch('/api/dashboard/glpi?' + p.toString());
+        const json = await res.json();
+        allData = json.data || [];
+        page = 1;
+
+        populateCategories(allData);
+        updateCards();
+        document.getElementById('lastUpdate').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+        renderPage();
+      } catch (e) {
+        tbody.innerHTML = `<tr class="table-state"><td colspan="8" style="color:#f87171;">Erro ao conectar: ${e.message}</td></tr>`;
+        document.getElementById('tableCount').textContent = 'Erro';
+      }
+    }
+
+    function populateCategories(data) {
+      const sel = document.getElementById('f_categoria');
+      if (sel.options.length > 1) return; // Ja populado
+
+      const activeTickets = data.filter(t => {
+        const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return s !== 'fechado';
+      });
+
+      const uniqueCats = [...new Set(activeTickets.map(t => t.Categoria).filter(Boolean))].sort();
+      uniqueCats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+      });
+    }
+
+    function updateCards() {
+      const c = { novo: 0, planejado: 0, atribuido: 0, solucionado: 0, atrasado: 0, pendente: 0, fechado: 0 };
+      allData.forEach(t => {
+        const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (s === 'novo') c.novo++;
+        else if (s === 'planejado') c.planejado++;
+        else if (s === 'atribuido') c.atribuido++;
+        else if (s === 'solucionado') c.solucionado++;
+        else if (s === 'pendente') c.pendente++;
+        else if (s === 'fechado') c.fechado++;
+        if ((t['Status do SLA'] || '') === 'Vencido') c.atrasado++;
+      });
+      Object.entries(c).forEach(([k, v]) => {
+        const el = document.getElementById('cnt_' + k);
+        if (el) el.textContent = v;
+      });
+    }
+
+    function applyStatusFilter(status) {
+      const sel = document.getElementById('f_status');
+      sel.value = sel.value === status ? '' : status;
+      document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
+      if (sel.value) document.querySelector(`[data-filter="${sel.value}"]`)?.classList.add('active-filter');
+      loadDashboard();
+    }
+
+    function renderPage() {
+      const tbody = document.getElementById('ticketsTbody');
+
+      const incF = document.getElementById('f_incluir_fechados').checked;
+      let viewData = allData;
+
+      if (!incF) {
+        viewData = viewData.filter(t => {
+          const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          return s !== 'fechado';
+        });
+      }
+
+      const from = (page - 1) * PER_PAGE;
+      const slice = viewData.slice(from, from + PER_PAGE);
+      const total = viewData.length;
+      const totalPages = Math.ceil(total / PER_PAGE) || 1;
+
+      document.getElementById('tableCount').textContent = `${total} chamados`;
+      document.getElementById('pageInfo').textContent = `Página ${page} de ${totalPages}`;
+      document.getElementById('btnPrev').disabled = page <= 1;
+      document.getElementById('btnNext').disabled = page >= totalPages;
+
+      if (!slice.length) {
+        tbody.innerHTML = '<tr class="table-state"><td colspan="8">Nenhum chamado encontrado.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = slice.map((t, i) => {
+        const idx = from + i;
+        const rowId = 'row_' + idx;
+        const locParts = (t['Cliente Local'] || '').split('>');
+        const shortLoc = locParts[locParts.length - 1].trim() || '—';
+
+        const hasAuvo = t['Técnico Auvo'] && t['Técnico Auvo'] !== 'null';
+        const auvoTech = t['Técnico Auvo'] || 'Não atribuído';
+        const auvoStatus = t['Status Auvo'] || 'Sem status';
+        const auvoLink = t['Link Auvo'] || '#';
+
+        let auvoStatusColor = 'var(--text-muted)';
+        if (auvoStatus === 'No Local') auvoStatusColor = 'var(--green)';
+        else if (auvoStatus === 'Em deslocamento') auvoStatusColor = 'var(--amber)';
+        else if (auvoStatus === 'Finalizada') auvoStatusColor = '#38bdf8';
+
+        const auvoHtml = hasAuvo
+          ? `<div style="line-height:1.2;">
+                 <a href="${auvoLink}" target="_blank" title="Abrir tarefa no AUVO" style="text-decoration:none; color:var(--text); font-weight:600; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
+                     ${auvoTech.split(' ')[0]}
+                 </a>
+                 <span style="display:block; font-size:10px; color:${auvoStatusColor}; font-weight:700; text-transform:uppercase; margin-top:4px;">
+                    ${auvoStatus}
+                 </span>
+               </div>`
+          : `<span style="color:var(--text-muted); font-size:12px;">—</span>`;
+
+        return `
+          <tr id="${rowId}">
+            <td class="td-id">
+              <a href="${t.taskGLPI || '#'}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;">
+                <code class="ticket-id" style="cursor:pointer;">#${t.Ticket || '—'}</code>
+              </a>
+            </td>
+            <td>${badge(t.Projeto, PROJ_MAP)}</td>
+            <td class="td-titulo">
+              <span title="${t.Chamado || ''}">${t.Chamado || '—'}</span>
+              <div class="ticket-hover-card">
+                <div class="hover-grid">
+                  <div class="hover-section full">
+                    <strong>Descrição</strong>
+                    <p>${t['Descrição'] || '—'}</p>
+                  </div>
+                  <div class="hover-section full">
+                    <strong>Última Tarefa</strong>
+                    <p>${t['Última Tarefa'] || 'Sem tarefas'}</p>
+                    ${t['Início Tarefa'] ? `<p style="font-size:10px;color:var(--text-muted);margin-top:2px;">🕐 ${dateFmt(t['Início Tarefa'])}</p>` : ''}
+                  </div>
+                  <div class="hover-section">
+                    <strong>Criação</strong>
+                    <p>${dateFmt(t['Data de Criação'])}</p>
+                  </div>
+                  <div class="hover-section">
+                    <strong>Última Atualização</strong>
+                    <p>${dateFmt(t['Última Atualização'])}</p>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="td-local"><span style="font-size:11px;font-weight:600;color:var(--text);" title="${t['Cliente Local'] || ''}">${shortLoc}</span></td>
+            <td><span style="font-weight:700; font-size:11.5px; color:#38bdf8; letter-spacing: 0.02em;">${t.Categoria || '—'}</span></td>
+            <td>${auvoHtml}</td>
+            <td>${badge(t['Status do SLA'], SLA_MAP)}</td>
+            <td>${badge(t['Status do Chamado'], ST_MAP)}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function changePage(dir) {
+      const incF = document.getElementById('f_incluir_fechados').checked;
+      const viewData = incF ? allData : allData.filter(t => {
+        const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return s !== 'fechado';
+      });
+
+      page = Math.max(1, Math.min(Math.ceil(viewData.length / PER_PAGE), page + dir));
+      renderPage();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function clearFilters() {
+      ['f_status', 'f_projeto', 'f_sla', 'f_categoria'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('f_incluir_fechados').checked = false;
+      document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
+      loadDashboard();
+    }
+
+    loadDashboard();
+  </script>
+
 </body>
 
 </html>

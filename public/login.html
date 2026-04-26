@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,16 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #38bdf8;
-            --primary-hover: #0ea5e9;
+            --primary: #10b981;
+            --primary-hover: #059669;
             --bg-deep: #020617;
-            --glass: rgba(15, 23, 42, 0.4);
+            --glass: rgba(15, 23, 42, 0.15);
             --glass-border: rgba(255, 255, 255, 0.1);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --error: #ef4444;
             --success: #10b981;
-            
+
             /* Cores Plataformas */
             --color-auvo: #8b5cf6;
             --color-zabbix: #ef4444;
@@ -49,9 +50,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #020617 url('./images/login_vortex_clean_bg.png') no-repeat center center;
+            background: #020617 url('./images/login_Vortex_GPT.png') no-repeat center center;
             background-size: cover;
-            filter: brightness(0.6) contrast(1.1);
+            filter: brightness(1.0) contrast(1.1);
             z-index: 1;
         }
 
@@ -74,12 +75,12 @@
             height: 550px;
             display: flex;
             background: var(--glass);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-radius: 32px;
             overflow: hidden;
-            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.1);
         }
 
         .branding-side {
@@ -89,7 +90,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.02);
+            background: transparent;
             border-right: 1px solid var(--glass-border);
             text-align: center;
         }
@@ -98,7 +99,7 @@
             height: 220px;
             margin-bottom: 20px;
             object-fit: contain;
-            filter: drop-shadow(0 0 40px rgba(56, 189, 248, 0.3));
+            filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.3));
         }
 
         .branding-side h2 {
@@ -128,11 +129,26 @@
             justify-content: center;
         }
 
-        .form-header { margin-bottom: 35px; }
-        .form-header h3 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px; }
-        .form-header p { font-size: 14px; color: var(--text-muted); }
+        .form-header {
+            margin-bottom: 35px;
+        }
 
-        .form-group { margin-bottom: 24px; }
+        .form-header h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .form-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
         .form-group label {
             display: block;
             margin-bottom: 10px;
@@ -159,14 +175,14 @@
             outline: none;
             border-color: var(--primary);
             background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
         }
 
         .btn-submit {
             width: 100%;
             padding: 15px;
             background: var(--primary);
-            color: #030712;
+            color: #ffffff;
             border: none;
             border-radius: 14px;
             font-size: 15px;
@@ -174,13 +190,13 @@
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             margin-top: 10px;
-            box-shadow: 0 10px 20px -5px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
         }
 
         .btn-submit:hover {
             background: var(--primary-hover);
             transform: translateY(-2px);
-            box-shadow: 0 15px 25px -5px rgba(56, 189, 248, 0.5);
+            box-shadow: 0 15px 25px -5px rgba(16, 185, 129, 0.5);
         }
 
         .message {
@@ -193,19 +209,46 @@
             display: none;
         }
 
-        .message.error { background: rgba(239, 68, 68, 0.1); color: #f87171; display: block; }
-        .message.success { background: rgba(16, 185, 129, 0.1); color: #4ade80; display: block; }
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            display: block;
+        }
 
-        #password-change-view { display: none; }
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #4ade80;
+            display: block;
+        }
+
+        #password-change-view {
+            display: none;
+        }
 
         @media (max-width: 850px) {
-            .login-container { flex-direction: column; height: auto; max-width: 400px; }
-            .branding-side { padding: 40px 20px; }
-            .form-side { padding: 40px 30px; }
-            .platform-node { display: none; } /* Esconde nós no mobile para foco no login */
+            .login-container {
+                flex-direction: column;
+                height: auto;
+                max-width: 400px;
+            }
+
+            .branding-side {
+                padding: 40px 20px;
+            }
+
+            .form-side {
+                padding: 40px 30px;
+            }
+
+            .platform-node {
+                display: none;
+            }
+
+            /* Esconde nós no mobile para foco no login */
         }
     </style>
 </head>
+
 <body>
 
     <div class="bg-vortex"></div>
@@ -230,7 +273,7 @@
                         <label for="username">Usuário</label>
                         <input type="text" id="username" required placeholder="Digite seu usuário">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="password">Senha</label>
                         <input type="password" id="password" required placeholder="••••••••">
@@ -252,14 +295,16 @@
                         <label for="new-password">Nova Senha</label>
                         <input type="password" id="new-password" required placeholder="Digite a nova senha">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="confirm-password">Confirmar</label>
                         <input type="password" id="confirm-password" required placeholder="Repita a nova senha">
                     </div>
 
                     <button type="submit" class="btn-submit" id="btn-change">Salvar e Entrar</button>
-                    <button type="button" class="btn-submit" style="background: transparent; color: var(--text-muted); box-shadow: none; margin-top: 0;" onclick="cancelChange()">Voltar</button>
+                    <button type="button" class="btn-submit"
+                        style="background: transparent; color: var(--text-muted); box-shadow: none; margin-top: 0;"
+                        onclick="cancelChange()">Voltar</button>
                     <div id="change-message" class="message"></div>
                 </form>
             </div>
@@ -271,7 +316,7 @@
         const passwordChangeView = document.getElementById('password-change-view');
         const loginForm = document.getElementById('login-form');
         const changeForm = document.getElementById('change-password-form');
-        
+
         let currentUser = '';
         let currentOldPassword = '';
 
@@ -281,7 +326,7 @@
             const msgBox = document.getElementById('login-message');
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
-            
+
             btn.disabled = true;
             btn.innerText = 'Autenticando...';
             msgBox.className = 'message';
@@ -295,6 +340,8 @@
                 });
 
                 const data = await response.json();
+                console.log('Resposta do Login:', { ok: response.ok, data });
+                
                 if (!response.ok) throw new Error(data.error || 'Falha ao autenticar');
 
                 if (data.requirePasswordChange) {
@@ -304,7 +351,7 @@
                     passwordChangeView.style.display = 'block';
                 } else if (data.token) {
                     localStorage.setItem('authToken', data.token);
-                    window.location.href = '/panel/glpi-dashboard.html'; 
+                    window.location.href = '/';
                 }
 
             } catch (error) {
@@ -322,7 +369,7 @@
             const msgBox = document.getElementById('change-message');
             const newPass = document.getElementById('new-password').value;
             const confirmPass = document.getElementById('confirm-password').value;
-            
+
             if (newPass.length < 6) {
                 msgBox.className = 'message error';
                 msgBox.innerText = 'Mínimo 6 caracteres.';
@@ -341,8 +388,8 @@
                 const response = await fetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: currentUser, 
+                    body: JSON.stringify({
+                        username: currentUser,
                         oldPassword: currentOldPassword,
                         newPassword: newPass
                     })
@@ -356,7 +403,7 @@
 
                 if (data.token) {
                     localStorage.setItem('authToken', data.token);
-                    setTimeout(() => window.location.href = '/panel/glpi-dashboard.html', 1500);
+                    setTimeout(() => window.location.href = '/', 1500);
                 }
 
             } catch (error) {
@@ -373,4 +420,5 @@
         }
     </script>
 </body>
+
 </html>

@@ -26,7 +26,8 @@ router.post("/login", async (req, res) => {
       return res.status(200).json({ requirePasswordChange: true, username: user.username });
     }
 
-    const secretToken = process.env.API_AUTH_TOKEN;
+    const secretToken = process.env.API_AUTH_TOKEN || "PerfillDataHubSecureToken2026";
+    console.log('Tentativa de Login - Token Utilizado:', `"${secretToken}"`);
     return res.status(200).json({ token: secretToken });
 
   } catch (error) {
@@ -84,7 +85,7 @@ router.post("/change-password", async (req, res) => {
     const hash = await bcryptjs.hash(newPassword, 10);
     await userRepository.updatePassword(user.id, hash);
 
-    const secretToken = process.env.API_AUTH_TOKEN;
+    const secretToken = process.env.API_AUTH_TOKEN || "PerfillDataHubSecureToken2026";
     return res.status(200).json({ message: "Senha atualizada com sucesso", token: secretToken });
 
   } catch (error) {

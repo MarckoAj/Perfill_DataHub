@@ -30,8 +30,8 @@ const customExpress = () => {
   app.use("/api/schedules", scheduleRoutes);
   app.use("/api", dashboardRoutes);
   app.use("/api", routes);
-  app.use("/", healthRoutes); // Acopla /live, /health, /ready na raiz
-  app.use("/panel", express.static("public")); // Micro-frontend desacoplado (UI)
+  app.use("/health-check", healthRoutes); // Movido da raiz para evitar conflito
+  app.use("/", express.static("public")); // Frontend agora na raiz (/)
 
   app.use(notFoundHandler);
   app.use(errorHandler);
