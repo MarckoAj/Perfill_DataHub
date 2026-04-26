@@ -137,6 +137,24 @@ export async function runMigrations() {
                 console.error("Erro ao adicionar coluna dataSolucao:", error.message);
             }
         }
+
+        try {
+            await pool.query("ALTER TABLE tickets ADD COLUMN tipo VARCHAR(100) AFTER isAtrasado;");
+            console.log("Migration: Coluna 'tipo' adicionada na tabela tickets.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error("Erro ao adicionar coluna 'tipo' em tickets:", error.message);
+            }
+        }
+
+        try {
+            await pool.query("ALTER TABLE tickets ADD COLUMN projeto VARCHAR(100) AFTER tipo;");
+            console.log("Migration: Coluna 'projeto' adicionada na tabela tickets.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error("Erro ao adicionar coluna 'projeto' em tickets:", error.message);
+            }
+        }
         await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
