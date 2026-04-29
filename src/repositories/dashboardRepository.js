@@ -120,6 +120,89 @@ class DashboardRepository {
     const [rows] = await pool.query(query, values);
     return rows;
   }
+
+  async getOperationalMetrics() {
+    const query = `
+      SELECT 
+        -- Chamados em aberto (status diferente de fechado/solucionado)
+        (SELECT COUNT(*) FROM tickets 
+         WHERE status NOT IN ('fechado', 'solucionado')) as chamados_abertos,
+        
+        -- Criados hoje
+        (SELECT COUNT(*) FROM tickets 
+         WHERE DATE(dataCriacao) = CURDATE()) as criados_hoje,
+        
+        -- Encerrados HOJE (finalizados e aguardando aprovação -> status 5 e 6)
+        (SELECT COUNT(*) FROM tickets 
+         WHERE status IN ('solucionado', 'fechado') 
+         AND (DATE(dataSolucao) = CURDATE() OR DATE(dataFechamento) = CURDATE())) as encerrados,
+        
+        -- Proativos (sem SLA correndo -> handlingTimeSla === null mapeia para 'Proativo')
+        (SELECT COUNT(*) FROM tickets 
+         WHERE status NOT IN ('fechado', 'solucionado')
+         AND tempoSla = 'Proativo') as proativos,
+        
+        -- Pendentes (status pausado)
+        (SELECT COUNT(*) FROM tickets 
+         WHERE status = 'pendente') as pendentes,
+        
+        -- Novos
+        (SELECT COUNT(*) FROM tickets 
+         WHERE status = 'novo') as novos
+    `;
+    
+    const [rows] = await pool.query(query);
+    return rows[0];
+  }
+
+  async getActiveAlerts() {
+    const query = `
+      SELECT 
+          a.ticket_id AS Ticket,
+          CASE 
+              WHEN a.severity = 'high' THEN 'critico'
+              WHEN a.severity = 'medium' THEN 'atencao'
+              ELSE 'informativo' 
+          END AS severity,
+          a.alert_type AS ruleId,
+          CONCAT('Chamado #', t.ticketId, ' - ', IFNULL(t.tipo, 'Sem Tipo')) AS Chamado,
+          a.message AS description,
+          IFNULL(t.nomeCliente, 'Não Informado') AS pointId,
+          IFNULL(t.categoriaSla, 'GERAL') AS type,
+          IFNULL(t.statusSla, 'No Prazo') AS slaStatus,
+          IFNULL(t.tempoSla, 'OK') AS slaText,
+          CASE 
+              WHEN t.nomeTecnico = 'Não encontrado' OR t.nomeTecnico IS NULL THEN 'Não Atribuído'
+              ELSE t.nomeTecnico
+          END AS tecnicalAtribuied,
+          CASE 
+              WHEN a.alert_type LIKE '%AUVO%' THEN 'GLPI/AUVO'
+              WHEN a.alert_type = 'SYS_HEALTH_CHECK' THEN 'SISTEMA'
+              ELSE 'GLPI'
+          END AS source,
+          IFNULL(t.projeto, 'Sem Projeto') AS assetCode,
+          'ONLINE' AS statusPing,
+          a.first_detected_at
+      FROM datahub_ticket_alerts a
+      JOIN tickets t ON a.ticket_id = t.ticketId
+      WHERE a.state = 'open' 
+      AND t.status NOT IN ('solucionado', 'fechado', 'aguardando aprovação')
+      ORDER BY 
+          CASE a.severity
+              WHEN 'high' THEN 1
+              WHEN 'medium' THEN 2
+              ELSE 3
+          END,
+          a.first_detected_at DESC
+    `;
+    const [rows] = await pool.query(query);
+    
+    // Adicionando badge sequencial para o layout
+    return rows.map((row, index) => ({
+        ...row,
+        badge: `#${index + 1}`
+    }));
+  }
 }
 
 export default new DashboardRepository();

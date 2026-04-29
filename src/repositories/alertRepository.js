@@ -215,6 +215,51 @@ class AlertRepository {
   async checkDatabaseConnection() {
     await pool.query("SELECT 1");
   }
+
+  // Métodos para suporte à nova lógica de TicketAlertService
+  async selecTicketAlert({ glpi_ticketId, ruleId }) {
+    const query = `
+      SELECT *, 
+      (CASE WHEN state = 'closed' THEN 1 ELSE 0 END) as checked 
+      FROM datahub_ticket_alerts 
+      WHERE ticket_id = ? AND alert_type = ?
+    `;
+    const [rows] = await pool.query(query, [glpi_ticketId, ruleId]);
+    return rows;
+  }
+
+  async insertTicketAlert({ glpi_ticketId, rule }) {
+    // Mapeando a severidade numérica para a string esperada pela tabela, se necessário.
+    // 1: informativos (low), 2: atenção (medium), 3: críticos (high)
+    const severityMap = {
+      1: "low",
+      2: "medium",
+      3: "high"
+    };
+    
+    const mappedSeverity = severityMap[rule.severity] || "low";
+    
+    const query = `
+      INSERT INTO datahub_ticket_alerts (
+        ticket_id, alert_type, severity, message, state, first_detected_at, last_detected_at
+      ) VALUES (?, ?, ?, ?, 'open', NOW(), NOW())
+    `;
+    const [result] = await pool.query(query, [glpi_ticketId, rule.ruleId, mappedSeverity, rule.description]);
+    return result;
+  }
+
+  async updateTicketAlert({ checked, justifiedText, glpi_ticketId, ruleId }) {
+    const state = checked ? 'closed' : 'open';
+    const query = `
+      UPDATE datahub_ticket_alerts 
+      SET state = ?, 
+          closed_at = IF(? = 'closed', NOW(), NULL), 
+          last_detected_at = NOW() 
+      WHERE ticket_id = ? AND alert_type = ?
+    `;
+    const [result] = await pool.query(query, [state, state, glpi_ticketId, ruleId]);
+    return result;
+  }
 }
 
 export default new AlertRepository();

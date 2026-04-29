@@ -8,6 +8,7 @@ import alertEngine from "./alertEngine.js";
 import alertRepository from "../repositories/alertRepository.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
 import systemStatusService from "./systemStatusService.js";
+import TicketAlertService from "./TicketAlertService.js";
 
 class GlpiSyncService {
   constructor() {
@@ -100,6 +101,11 @@ class GlpiSyncService {
       const alertSummary = alertEngine.processTickets(processedTickets);
       await alertRepository.upsertActiveAlerts(alertSummary.active);
       await alertRepository.closeAlerts(alertSummary.closed);
+ 
+      // 3. Processar alertas inteligentes (Nova Lógica Granular)
+      for (const ticket of processedTickets) {
+          await TicketAlertService.processTicketAlerts(ticket);
+      }
  
       totalSynced += processedTickets.length;
       console.log(`Sincronizados ${totalSynced} tickets.`);

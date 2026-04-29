@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Wall - Monitoramento Operacional</title>
+    <meta
+      name="description"
+      content="Painel de alta visibilidade para monitoramento de alertas e SLA em tempo real."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* Ajustes específicos para o Video Wall */
+      body {
+        background-color: #0a0a0c;
+        overflow: hidden;
+      }
+      .app {
+        /* Respira de 20px (telas pequenas) até 48px (monitores grandes) */
+        padding: clamp(20px, 2.4vw, 48px);
+        max-width: 100vw;
+      }
+      /* Gap responsivo entre colunas e linhas do grid principal */
+      .grid {
+        gap: clamp(12px, 1.4vw, 28px);
+      }
+      /* Gap responsivo entre blocos de cada coluna */
+      .stack {
+        gap: clamp(10px, 1.2vw, 24px);
+      }
+      
+      /* Estilos para o Feed de Alertas Selecionáveis (Mini Banners) */
+      .alert-feed-list {
+        display: grid;
+        align-content: start; /* Impede que o grid estique os itens para preencher a tela */
+        gap: 8px;
+        padding: 12px;
+        overflow-y: auto;
+      }
+      
+      .mini-alert-card {
+        min-height: 0; 
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        margin-bottom: 6px; 
+        background: linear-gradient(90deg, rgba(30, 30, 45, 0.8) 0%, rgba(15, 15, 25, 0.9) 100%);
+      }
+      
+      .mini-alert-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+      
+      .mini-alert-card.active {
+        box-shadow: 0 0 0 2px var(--info), 0 8px 16px rgba(0,0,0,0.5);
+      }
+
+      /* Cores por Severidade - Mais vibrantes para contraste */
+      .mini-alert-card.severity-critico {
+        background: linear-gradient(90deg, rgba(160, 10, 30, 0.8) 0%, rgba(60, 5, 15, 0.9) 100%);
+        border: 1px solid rgba(255, 100, 120, 0.5);
+      }
+      .mini-alert-card.severity-atencao {
+        background: linear-gradient(90deg, rgba(140, 80, 10, 0.8) 0%, rgba(70, 40, 5, 0.9) 100%);
+        border: 1px solid rgba(255, 210, 100, 0.5);
+      }
+      .mini-alert-card.severity-informativo {
+        background: linear-gradient(90deg, rgba(20, 80, 180, 0.8) 0%, rgba(10, 50, 120, 0.9) 100%);
+        border: 1px solid rgba(100, 180, 255, 0.5);
+      }
+
+      /* Banners Principais por Severidade */
+      .alert-banner.severity-atencao {
+        background: linear-gradient(90deg, rgba(140, 80, 10, 0.95) 0%, rgba(88, 45, 10, 0.9) 55%, rgba(60, 30, 5, 0.95) 100%);
+        border: 1px solid rgba(255, 210, 100, 0.8);
+        box-shadow: 0 0 0 1px rgba(255, 210, 100, 0.2), 0 24px 40px rgba(50, 30, 5, 0.4);
+      }
+      .alert-banner.severity-atencao .alert-icon { background: linear-gradient(180deg, #ffbe2f 0%, #d97706 100%); }
+      .alert-banner.severity-atencao .alert-text { color: #fff4d8; }
+      .alert-banner.severity-atencao .signal-button { background: rgba(90, 50, 10, 0.5); color: #ffd15d; box-shadow: inset 0 0 0 1px rgba(255, 210, 100, 0.2); }
+
+      .alert-banner.severity-informativo {
+        background: linear-gradient(90deg, rgba(15, 63, 144, 0.95) 0%, rgba(10, 50, 120, 0.9) 55%, rgba(5, 30, 80, 0.95) 100%);
+        border: 1px solid rgba(100, 180, 255, 0.8);
+        box-shadow: 0 0 0 1px rgba(100, 180, 255, 0.2), 0 24px 40px rgba(5, 20, 60, 0.4);
+      }
+      .alert-banner.severity-informativo .alert-icon { background: linear-gradient(180deg, #4f9bff 0%, #2563eb 100%); }
+      .alert-banner.severity-informativo .alert-text { color: #eff6ff; }
+      .alert-banner.severity-informativo .signal-button { background: rgba(10, 40, 100, 0.5); color: #93c5fd; box-shadow: inset 0 0 0 1px rgba(100, 180, 255, 0.2); }
+
+      /* Novos estilos de Focus Stat */
+      .focus-blue { color: #3b82f6; }
+      .focus-blue::after { background: #3b82f6; }
+      .focus-success { color: #22c55e; }
+      .focus-success::after { background: #22c55e; }
+      
+      .mini-alert-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        background: rgba(255,255,255,0.2);
+        color: white;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+      }
+
+      .severity-critico .mini-alert-icon { background: #ff3c4d; }
+      .severity-atencao .mini-alert-icon { background: #ffbe2f; }
+      .severity-informativo .mini-alert-icon { background: #4f9bff; }
+      
+      .mini-alert-copy {
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column; /* Volta para vertical para melhor leitura do titulo longo */
+        gap: 2px;
+      }
+
+      .mini-alert-id {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.9);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      }
+      
+      .mini-alert-title {
+        margin: 0;
+        font-size: 0.85rem;
+        font-weight: 700;
+        line-height: 1.2;
+        color: #ffffff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .pagination-controls {
+        display: flex;
+        gap: 6px;
+      }
+      
+      .pagination-controls .ghost-button {
+        padding: 0 6px;
+        height: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        background: rgba(255,255,255,0.05);
+      }
+      /* Redução Drástica da Classe .event original */
+      .event {
+        min-height: 0 !important;
+        padding: 2px 0 !important;
+        gap: 6px !important;
+      }
+      
+      .event-time {
+        font-size: 0.65rem !important;
+      }
+      
+      .event-text {
+        font-size: 0.7rem !important;
+        line-height: 1.2 !important;
+      }
+      
+      .event-ago {
+        margin: 0 0 0 48px !important;
+        font-size: 0.6rem !important;
+      }
+
+      .signal-icon {
+        width: 16px !important;
+        height: 16px !important;
+      }
+
+      /* Estilo para o Chip de Status TOTAL (Neutro) */
+      .status-neutral {
+        background: linear-gradient(180deg, rgba(94, 47, 208, 0.95), rgba(72, 34, 169, 0.9));
+        color: #f5f3ff;
+      }
+      
+      .status-pill.active-filter {
+        box-shadow: 0 0 0 2px #ffffff, 0 8px 16px rgba(0,0,0,0.4);
+        transform: translateY(-1px);
+      }
+
+      /* Remover o Circulo Vermelho (Pulse) dos Banners */
+      .alert-banner::before {
+        display: none !important;
+      }
+      /* Mini Tabela de Lista Geral */
+      .mini-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.9);
+      }
+      
+      .mini-table th {
+        text-align: left;
+        padding: 8px;
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      
+      .mini-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+      }
+      
+      .type-badge {
+        font-size: 0.6rem;
+        padding: 1px 4px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+        text-transform: uppercase;
+      }
+      
+      .sla-badge {
+        font-size: 0.65rem;
+        font-weight: 800;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      
+      .sla-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+      .sla-warning { background: rgba(234, 179, 8, 0.2); color: #facc15; }
+      .sla-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+      /* RESPONSIVIDADE (Notebook 15", Monitor 27", TV 45") */
+      @media (max-width: 1440px) { /* Notebook 15 polegadas */
+        html { font-size: 85%; }
+        .app { padding: 12px; }
+        .grid { gap: 12px; grid-template-columns: minmax(0, 2.4fr) minmax(260px, 0.8fr); }
+        .stack { gap: 12px; }
+        .alert-feed-list { padding: 8px; }
+      }
+
+      @media (min-width: 2000px) { /* Monitor 27" / TV 45" com zoom/resolução nativa */
+        html { font-size: 130%; }
+        .app { padding: 32px; }
+        .grid { gap: 24px; grid-template-columns: minmax(0, 2.7fr) minmax(400px, 0.6fr); }
+        .stack { gap: 24px; }
+      }
+      
+      @media (min-width: 3000px) { /* TV 45" 4K nativo */
+        html { font-size: 180%; }
+        .app { padding: 48px; }
+        .grid { gap: 36px; grid-template-columns: minmax(0, 2.7fr) minmax(500px, 0.6fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/video_wall_v2.js"></script>
+  </body>
+</html>
