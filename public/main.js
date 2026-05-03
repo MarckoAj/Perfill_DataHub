@@ -21,8 +21,8 @@ const dashboardData = {
     description: "Conexao com a camera de seguranca perdida na loja principal.",
     slaStatus: "Fora do Prazo",
     slaText: "SLA Violado",
-    team: "Equipe de Suporte",
-    source: "Zabbix",
+    tecnicalAtribuied: "Marcos Vinicius",
+    source: "GLPI",
     assetCode: "VDPCI-0000",
     referenceCode: "13A5",
     channel: "ONLINE",
@@ -168,7 +168,7 @@ root.innerHTML = `
                   <div class="focus-stat-icon">${iconSvg("users", 20)}</div>
                   <div>
                     <p class="focus-stat-title">Atribuido</p>
-                    <p class="focus-stat-text">${dashboardData.ticketDetailsCard.team}</p>
+                    <p class="focus-stat-text">${dashboardData.ticketDetailsCard.tecnicalAtribuied}</p>
                   </div>
                 </div>
 

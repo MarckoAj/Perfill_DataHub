@@ -18,10 +18,12 @@ let dashboardData = {
 };
 
 let currentAlertIndex = 0;
-const ALERTS_PER_PAGE = 10;
+const ALERTS_PER_PAGE = 6;
 let alertListPage = 0;
 let criticalListPage = 0;
+let generalListPage = 0;
 const CRITICALS_PER_PAGE = 3;
+const GENERAL_PER_PAGE = 6;
 let currentFilter = 'todos';
 
 const root = document.getElementById("root");
@@ -147,6 +149,7 @@ function renderDashboard() {
             <div class="panel-header panel-header-split">
               <h3 class="panel-title">${iconSvg("clock", 18)} Alertas: ${currentFilter.toUpperCase()}</h3>
               <div class="pagination-controls">
+                <span class="page-counter">${alertListPage + 1}/${Math.ceil(filteredAlerts.length / ALERTS_PER_PAGE) || 1}</span>
                 <button onclick="changePage(-1)" class="ghost-button">${iconSvg("chevronLeft", 12)}</button>
                 <button onclick="changePage(1)" class="ghost-button">${iconSvg("chevronRight", 12)}</button>
               </div>
@@ -160,6 +163,7 @@ function renderDashboard() {
             <div class="panel-header panel-header-split">
               <h3 class="panel-title">Criticos em Aberto</h3>
               <div class="pagination-controls">
+                <span class="page-counter">${criticalListPage + 1}/${Math.ceil(counts.critico / CRITICALS_PER_PAGE) || 1}</span>
                 <button onclick="changeCriticalPage(-1)" class="ghost-button">${iconSvg("chevronLeft", 12)}</button>
                 <button onclick="changeCriticalPage(1)" class="ghost-button">${iconSvg("chevronRight", 12)}</button>
               </div>
@@ -170,26 +174,26 @@ function renderDashboard() {
           </section>
 
           <section class="card table-card">
-            <div class="panel-header"><h3 class="panel-title">${iconSvg("list", 16)} Lista Geral</h3></div>
+            <div class="panel-header panel-header-split">
+              <h3 class="panel-title">${iconSvg("list", 16)} Lista Geral</h3>
+              <div class="pagination-controls">
+                <span class="page-counter">${generalListPage + 1}/${Math.ceil(dashboardData.generalTickets.length / GENERAL_PER_PAGE) || 1}</span>
+                <button onclick="changeGeneralPage(-1)" class="ghost-button">${iconSvg("chevronLeft", 12)}</button>
+                <button onclick="changeGeneralPage(1)" class="ghost-button">${iconSvg("chevronRight", 12)}</button>
+              </div>
+            </div>
             <div class="table-wrap">
               <table class="mini-table">
                 <thead>
                   <tr>
-                    <th>LOCAL</th>
-                    <th>ATIVO</th>
-                    <th>CAT.</th>
-                    <th>SLA</th>
+                    <th style="width: 25%;">LOCAL</th>
+                    <th style="width: 30%;">ATIVO</th>
+                    <th style="width: 25%;">CAT.</th>
+                    <th style="width: 20%;">SLA</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${dashboardData.generalTickets.map(t => `
-                    <tr>
-                      <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.point}">${t.point}</td>
-                      <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.asset}">${t.asset}</td>
-                      <td><span class="type-badge">${t.type}</span></td>
-                      <td><span class="sla-badge sla-${t.slaStatus}">${t.sla}</span></td>
-                    </tr>
-                  `).join("")}
+                  ${renderGeneralTicketsHtml()}
                 </tbody>
               </table>
             </div>
@@ -208,18 +212,20 @@ function renderAlertList(alerts) {
   return pageItems.map((alert, index) => {
     const globalIndex = start + index;
     return `
-      <section class="mini-alert-card alert-banner severity-${alert.severity} ${globalIndex === currentAlertIndex ? 'active' : ''}" 
-               onclick="selectAlert(${globalIndex})" style="min-height: auto; padding: 10px; margin-bottom: 8px;">
+      <section class="alert-banner severity-${alert.severity} ${globalIndex === currentAlertIndex ? 'active-banner' : ''}" 
+               onclick="selectAlert(${globalIndex})" style="min-height: auto; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: transform 0.2s; flex-shrink: 0;">
         <div class="alert-copy" style="gap: 12px;">
-          <div class="alert-icon" style="width: 32px; height: 32px;">${iconSvg("alert", 16)}</div>
-          <div style="min-width: 0;">
-            <h2 class="alert-title" style="font-size: 0.8rem; margin: 0;">#${alert.Ticket} | ${alert.Chamado}</h2>
-            <p class="alert-text" style="font-size: 0.65rem; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9;">
+          <div class="alert-icon" style="width: 28px; height: 28px;">${iconSvg("alert", 14)}</div>
+          <div style="min-width: 0; flex: 1;">
+            <h2 class="alert-title" style="font-size: 0.75rem; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="#${alert.Ticket} | ${alert.Chamado}">#${alert.Ticket} | ${alert.Chamado}</h2>
+            <p class="alert-text" style="font-size: 0.65rem; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="[${alert.source}] ${alert.description}">
               <strong>[${alert.source}]</strong> ${alert.description}
             </p>
           </div>
         </div>
-        <div class="signal-button" style="width: 28px; height: 28px; border-radius: 6px;">${iconSvg("bell", 14)}</div>
+        <div style="font-size: 0.65rem; font-weight: 800; opacity: 0.8; white-space: nowrap; margin-left: 10px; flex-shrink: 0;">
+          ${alert.slaText}
+        </div>
       </section>
     `;
   }).join("");
@@ -244,14 +250,14 @@ function renderCriticalTicket(alert) {
     <section class="alert-banner severity-critico" style="min-height: auto; padding: 10px; margin-bottom: 8px; border-radius: 8px;">
       <div class="alert-copy" style="gap: 12px;">
         <div class="alert-icon" style="width: 28px; height: 28px;">${iconSvg("alert", 14)}</div>
-        <div style="min-width: 0;">
-          <h2 class="alert-title" style="font-size: 0.75rem; margin: 0;">#${alert.Ticket} | CRÍTICO</h2>
-          <p class="alert-text" style="font-size: 0.65rem; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+        <div style="min-width: 0; flex: 1;">
+          <h2 class="alert-title" style="font-size: 0.75rem; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="#${alert.Ticket} | CRÍTICO">#${alert.Ticket} | CRÍTICO</h2>
+          <p class="alert-text" style="font-size: 0.65rem; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${alert.description}">
             ${alert.description}
           </p>
         </div>
       </div>
-      <div style="font-size: 0.65rem; font-weight: 800; opacity: 0.8; white-space: nowrap; margin-left: 10px;">
+      <div style="font-size: 0.65rem; font-weight: 800; opacity: 0.8; white-space: nowrap; margin-left: 10px; flex-shrink: 0;">
         ${alert.slaText}
       </div>
     </section>
@@ -283,6 +289,34 @@ window.changeCriticalPage = (dir) => {
   criticalListPage = Math.max(0, Math.min(criticalListPage + dir, maxPages - 1));
   renderDashboard();
 };
+
+window.changeGeneralPage = (dir) => {
+  const total = dashboardData.generalTickets.length;
+  const maxPages = Math.ceil(total / GENERAL_PER_PAGE);
+  generalListPage = Math.max(0, Math.min(generalListPage + dir, maxPages - 1));
+  renderDashboard();
+};
+
+function renderGeneralTicketsHtml() {
+  if (dashboardData.generalTickets.length === 0) return '<tr><td colspan="4" class="muted">Nenhum chamado...</td></tr>';
+  
+  const start = generalListPage * GENERAL_PER_PAGE;
+  const pageItems = dashboardData.generalTickets.slice(start, start + GENERAL_PER_PAGE);
+
+  if (pageItems.length === 0 && generalListPage > 0) {
+    generalListPage = 0;
+    return renderGeneralTicketsHtml();
+  }
+
+  return pageItems.map(t => `
+    <tr>
+      <td style="max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.point}">${t.point}</td>
+      <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.asset}">${t.asset}</td>
+      <td style="max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.type}"><span class="type-badge" style="display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;">${t.type}</span></td>
+      <td style="white-space: nowrap;" title="${t.sla}"><span class="sla-badge sla-${t.slaStatus}">${t.sla}</span></td>
+    </tr>
+  `).join("");
+}
 
 function iconSvg(name, size = 20, stroke = "currentColor") {
   const icons = {
