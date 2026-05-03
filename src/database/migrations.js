@@ -6,6 +6,7 @@ import { runAuvoSeeds } from "./seeds/auvoSeeds.js";
 import { createSyncLogsTables } from "./migrations/syncLogsTables.js";
 import { createSyncSchedulesTable } from "./migrations/syncSchedulesTables.js";
 import { runScheduleSeeds } from "./seeds/scheduleSeeds.js";
+import { createAlertsHistoryTable } from "./migrations/alertsHistoryTable.js";
 
 dotenv.config();
 
@@ -225,6 +226,9 @@ export async function runMigrations() {
         await createSyncLogsTables();
         await createSyncSchedulesTable();
         // await runScheduleSeeds();
+
+        // Histórico imutável de alertas
+        await createAlertsHistoryTable();
 
     } catch (error) {
         console.error("Migration Erro:", error);

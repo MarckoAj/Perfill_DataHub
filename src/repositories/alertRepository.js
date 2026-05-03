@@ -1,6 +1,52 @@
 import pool from "../database/connection.js";
 
 class AlertRepository {
+  // ─── Helpers internos ───────────────────────────────────────────────────────
+
+  _formatDate(d) {
+    if (!d) return null;
+    return typeof d === 'string' && d.endsWith('Z')
+      ? d.slice(0, 19).replace('T', ' ')
+      : d;
+  }
+
+  /**
+   * Grava um registro imutável no histórico de alertas.
+   * Chamado sempre que um alerta é fechado (pelo sistema ou manualmente).
+   */
+  async _insertHistory({ ticket_id, alert_type, severity, message, source, opened_at, closed_at, closed_by = 'system', closed_reason = null }) {
+    try {
+      const openedDate  = opened_at  ? new Date(opened_at)  : null;
+      const closedDate  = closed_at  ? new Date(closed_at)  : new Date();
+      const durationMin = openedDate
+        ? Math.round((closedDate - openedDate) / 60000)
+        : null;
+
+      await pool.query(
+        `INSERT INTO datahub_alerts_history
+           (ticket_id, alert_type, severity, source, message, opened_at, closed_at, closed_by, closed_reason, duration_minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          ticket_id,
+          alert_type,
+          severity        || 'low',
+          source          || 'GLPI',
+          message         || '',
+          this._formatDate(opened_at),
+          this._formatDate(closed_at || new Date().toISOString()),
+          closed_by,
+          closed_reason,
+          durationMin,
+        ]
+      );
+    } catch (err) {
+      // Não bloqueia o fluxo principal se o histórico falhar
+      console.error('[AlertRepository] Falha ao gravar histórico:', err.message);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   async upsertActiveAlerts(alerts) {
     if (!alerts || alerts.length === 0) return;
 
@@ -51,18 +97,29 @@ class AlertRepository {
       WHERE ticket_id = ? AND alert_type = ?
     `;
 
-    const formatDate = (d) => d && typeof d === 'string' && d.endsWith('Z') ? d.slice(0, 19).replace('T', ' ') : d;
-
     for (const alert of alerts) {
       const closedAt = alert.closedAt || new Date().toISOString();
       const values = [
-        formatDate(closedAt),
-        formatDate(alert.lastDetectedAt || closedAt),
+        this._formatDate(closedAt),
+        this._formatDate(alert.lastDetectedAt || closedAt),
         alert.ticketId,
         alert.type,
       ];
 
       await pool.query(query, values);
+
+      // Grava no histórico
+      await this._insertHistory({
+        ticket_id:    alert.ticketId,
+        alert_type:   alert.type,
+        severity:     alert.severity,
+        message:      alert.message,
+        source:       alert.source || 'GLPI',
+        opened_at:    alert.firstDetectedAt,
+        closed_at:    closedAt,
+        closed_by:    'system',
+        closed_reason: null,
+      });
     }
   }
 
@@ -258,6 +315,33 @@ class AlertRepository {
       WHERE ticket_id = ? AND alert_type = ?
     `;
     const [result] = await pool.query(query, [state, state, glpi_ticketId, ruleId]);
+
+    // Se fechando → grava histórico
+    if (checked) {
+      try {
+        const [rows] = await pool.query(
+          `SELECT severity, message, first_detected_at FROM datahub_ticket_alerts
+           WHERE ticket_id = ? AND alert_type = ? LIMIT 1`,
+          [glpi_ticketId, ruleId]
+        );
+        if (rows && rows.length > 0) {
+          await this._insertHistory({
+            ticket_id:     glpi_ticketId,
+            alert_type:    ruleId,
+            severity:      rows[0].severity,
+            message:       rows[0].message,
+            source:        'GLPI',
+            opened_at:     rows[0].first_detected_at,
+            closed_at:     new Date().toISOString(),
+            closed_by:     justifiedText === 'Status justificado pelo sistema' ? 'system' : 'user',
+            closed_reason: justifiedText || null,
+          });
+        }
+      } catch (histErr) {
+        console.error('[AlertRepository] Histórico no updateTicketAlert falhou:', histErr.message);
+      }
+    }
+
     return result;
   }
 }
