@@ -1,5 +1,6 @@
 import alertEngine from "./alertEngine.js";
 import alertRepository from "../repositories/alertRepository.js";
+import alertBroadcaster from "../websocket/alertBroadcaster.js";
 
 class TicketAlertService {
   async createNewAlert(ticketId, rule) {
@@ -12,10 +13,22 @@ class TicketAlertService {
     const hasActiveAlert = alertList.some((alert) => alert.checked === 0);
 
     if (!hasActiveAlert) {
-      return await alertRepository.insertTicketAlert({
+      const result = await alertRepository.insertTicketAlert({
         glpi_ticketId: ticketId,
         rule: rule,
       });
+
+      // Notifica via WebSocket
+      alertBroadcaster.broadcast('ALERT_OPENED', {
+        ticketId,
+        ruleId: rule.ruleId,
+        severity: rule.severity,
+        message: rule.description,
+        source: rule.source,
+        detectedAt: new Date().toISOString()
+      });
+
+      return result;
     }
   }
 
@@ -38,6 +51,13 @@ class TicketAlertService {
         justifiedText: "Status justificado pelo sistema",
         glpi_ticketId: ticketId,
         ruleId: ruleId,
+      });
+
+      // Notifica via WebSocket
+      alertBroadcaster.broadcast('ALERT_CLOSED', {
+        ticketId,
+        ruleId,
+        closedBy: 'system'
       });
     }
   }
