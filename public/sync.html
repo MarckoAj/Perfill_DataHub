@@ -12,7 +12,7 @@
     })();
   </script>
   <title>PerfillBI - Sincronizador de Entidades</title>
-  <link rel="stylesheet" href="css/sync.css">
+  <link rel="stylesheet" href="/css/sync.css">
 </head>
 
 <body>
@@ -21,22 +21,22 @@
   <nav class="global-nav">
     <div class="nav-left">
       <div class="nav-logo">
-        <img src="images/perfill_logo.png" alt="Perfill Logo">
+        <img src="/images/perfill_logo.png" alt="Perfill Logo">
       </div>
       <div class="nav-menu">
         <div class="nav-item">
-          <a href="/video_wall_v2.html" class="nav-link">NOC</a>
+          <a href="/noc" class="nav-link">NOC</a>
         </div>
         <div class="nav-item">
-          <a href="/alerts.html" class="nav-link">Alertas</a>
+          <a href="/alerts" class="nav-link">Alertas</a>
         </div>
         <div class="nav-item">
-          <a href="/" class="nav-link">Chamados</a>
+          <a href="/tickets" class="nav-link">Chamados</a>
         </div>
         <div class="nav-item">
           <a class="nav-link">Admin ▾</a>
           <div class="nav-dropdown">
-            <a href="/sync.html" class="dropdown-link">Sincronização</a>
+            <a href="/admin/sync" class="dropdown-link">Sincronização</a>
           </div>
         </div>
       </div>
@@ -76,11 +76,11 @@
 
   <div class="tabs-container">
     <button class="tab-btn active" id="tabBtn_auvo" onclick="switchTab('auvo')">
-      <img src="images/auvo_logo.png" alt="AUVO O" onerror="this.style.display='none'">
+      <img src="/images/auvo_logo.png" alt="AUVO O" onerror="this.style.display='none'">
       API AUVO
     </button>
     <button class="tab-btn" id="tabBtn_glpi" onclick="switchTab('glpi')">
-      <img src="images/glpi_logo.png" alt="GLPI" onerror="this.style.display='none'">
+      <img src="/images/glpi_logo.png" alt="GLPI" onerror="this.style.display='none'">
       API GLPI
     </button>
   </div>

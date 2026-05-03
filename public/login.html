@@ -111,7 +111,7 @@
                     passwordChangeView.style.display = 'block';
                 } else if (data.token) {
                     localStorage.setItem('authToken', data.token);
-                    window.location.href = '/';
+                    window.location.href = '/tickets';
                 }
 
             } catch (error) {
@@ -163,7 +163,7 @@
 
                 if (data.token) {
                     localStorage.setItem('authToken', data.token);
-                    setTimeout(() => window.location.href = '/', 1500);
+                    setTimeout(() => window.location.href = '/tickets', 1500);
                 }
 
             } catch (error) {
