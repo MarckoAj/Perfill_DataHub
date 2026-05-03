@@ -1,4 +1,7 @@
 import { WebSocketServer } from 'ws';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 /**
  * AlertBroadcaster
@@ -22,11 +25,13 @@ class AlertBroadcaster {
       const url = new URL(req.url, `http://${req.headers.host}`);
       const token = url.searchParams.get('token');
       
-      // Validação contra as chaves de ambiente do projeto
-      const isValid = token && (token === process.env.API_AUTH_TOKEN || token === process.env.DASHBOARD_PASS);
+      const secret = process.env.API_AUTH_TOKEN || "PerfillDataHubSecureToken2026";
+      const dashboardPass = process.env.DASHBOARD_PASS;
+
+      const isValid = token && (token === secret || token === dashboardPass);
 
       if (!isValid) {
-        console.warn('[WebSocket] Conexão recusada: Token inválido.');
+        console.warn(`[WebSocket] Conexão recusada: Token inválido.`);
         ws.send(JSON.stringify({ event: 'ERROR', message: 'Unauthorized' }));
         ws.close();
         return;

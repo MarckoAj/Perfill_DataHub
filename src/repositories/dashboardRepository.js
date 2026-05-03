@@ -60,7 +60,11 @@ class DashboardRepository {
         t.categoriaSla AS "Categoria",
         t.statusSla AS "Status do SLA",
         t.status AS "Status do Chamado",
-        t.tipo AS "TIPO",
+        CASE 
+          WHEN t.tipo = '1' THEN 'INC' 
+          WHEN t.tipo = '2' THEN 'REQ' 
+          ELSE IFNULL(t.tipo, 'S/T') 
+        END AS "TIPO",
 
         ua.name AS "Técnico Auvo",
         ta.taskUrl AS "Link Auvo",
@@ -164,8 +168,21 @@ class DashboardRepository {
               WHEN a.severity = 'medium' THEN 'atencao'
               ELSE 'informativo' 
           END AS severity,
-          a.alert_type AS ruleId,
-          CONCAT('Chamado #', t.ticketId, ' - ', IFNULL(t.tipo, 'Sem Tipo')) AS Chamado,
+          CASE a.alert_type
+              WHEN '1' THEN 'GLPI_NEW_UNHANDLED'
+              WHEN '2' THEN 'GLPI_PROACTIVE_STALE'
+              WHEN '3' THEN 'GLPI_PAUSED_STALE'
+              WHEN '4' THEN 'GLPI_SLA_BREACHED'
+              WHEN '5' THEN 'GLPI_SLA_WARNING'
+              ELSE a.alert_type
+          END AS ruleId,
+          CONCAT('Chamado #', t.ticketId, ' - ', 
+            CASE t.tipo 
+              WHEN '1' THEN 'INC' 
+              WHEN '2' THEN 'REQ' 
+              ELSE IFNULL(t.tipo, 'S/T') 
+            END
+          ) AS Chamado,
           a.message AS description,
           IFNULL(t.nomeCliente, 'Não Informado') AS pointId,
           IFNULL(t.categoriaSla, 'GERAL') AS type,

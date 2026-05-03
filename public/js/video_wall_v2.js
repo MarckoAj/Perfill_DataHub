@@ -33,7 +33,7 @@ class NOCWebSocketClient {
   constructor() {
     this.socket = null;
     this.reconnectAttempts = 0;
-    this.token = localStorage.getItem('token') || ''; 
+    this.token = localStorage.getItem('authToken') || ''; 
   }
 
   connect() {
