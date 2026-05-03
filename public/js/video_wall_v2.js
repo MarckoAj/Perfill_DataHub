@@ -26,6 +26,99 @@ const CRITICALS_PER_PAGE = 3;
 const GENERAL_PER_PAGE = 6;
 let currentFilter = 'todos';
 
+/**
+ * WebSocket Client para o NOC
+ */
+class NOCWebSocketClient {
+  constructor() {
+    this.socket = null;
+    this.reconnectAttempts = 0;
+    this.token = localStorage.getItem('token') || ''; 
+  }
+
+  connect() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}?token=${this.token}`;
+
+    console.log('[WS] Conectando ao servidor de alertas...');
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log('%c[WS] CONECTADO!', 'color: #10b981; font-weight: bold; font-size: 14px;');
+      this.reconnectAttempts = 0;
+    };
+
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        this.handleEvent(data);
+      } catch (err) {
+        console.error('[WS] Erro ao processar mensagem:', err);
+      }
+    };
+
+    this.socket.onclose = (e) => {
+      console.warn(`[WS] Conexão encerrada (Código: ${e.code}). Tentando reconectar...`);
+      this.reconnect();
+    };
+
+    this.socket.onerror = (err) => {
+      console.error('[WS] Erro fatal no socket:', err);
+      const subtitle = document.querySelector('.brand-subtitle');
+      if (subtitle) subtitle.innerHTML = '<span style="color: #ef4444;">WS ERROR: Falha na conexão</span>';
+    };
+  }
+
+  reconnect() {
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * this.reconnectAttempts, 30000); // Max 30s
+    setTimeout(() => this.connect(), delay);
+  }
+
+  handleEvent(data) {
+    const { event, payload } = data;
+
+    if (event === 'ALERT_OPENED') {
+      console.log('[WS] Novo alerta recebido:', payload);
+      this.playAlertSound(payload.severity);
+      // Recarrega apenas os alertas para manter consistência total com o banco
+      loadAlerts().then(() => renderDashboard());
+    } 
+    
+    if (event === 'ALERT_CLOSED') {
+      console.log('[WS] Alerta resolvido:', payload);
+      loadAlerts().then(() => renderDashboard());
+    }
+  }
+
+  playAlertSound(severity) {
+    // Web Audio API para bipe sintético
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      // Frequência baseada na severidade
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(severity === 'high' || severity === 'critico' ? 880 : 440, audioCtx.currentTime);
+      
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    } catch (e) {
+      console.warn('AudioContext bloqueado pelo navegador. Interaja com a página primeiro.');
+    }
+  }
+}
+
+const wsClient = new NOCWebSocketClient();
+
 const root = document.getElementById("root");
 
 function renderDashboard() {
@@ -436,14 +529,18 @@ async function loadTickets() {
 
 // Inicialização
 async function initDashboard() {
+  // Carga inicial (Snapshot)
   await Promise.all([loadMetrics(), loadAlerts(), loadTickets()]);
   renderDashboard();
 
-  // Atualizar métricas, alertas e tickets a cada 30 segundos
+  // Inicia tempo real
+  wsClient.connect();
+
+  // Polling apenas para métricas e lista geral (menos frequente)
   setInterval(async () => {
-    await Promise.all([loadMetrics(), loadAlerts(), loadTickets()]);
+    await Promise.all([loadMetrics(), loadTickets()]);
     renderDashboard();
-  }, 30000);
+  }, 60000); // 1 minuto
 }
 
 // Iniciar o dashboard

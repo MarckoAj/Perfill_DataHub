@@ -18,12 +18,25 @@ class AlertBroadcaster {
   init(server) {
     this.wss = new WebSocketServer({ server });
 
-    this.wss.on('connection', (ws) => {
-      console.log('[WebSocket] Novo cliente conectado.');
+    this.wss.on('connection', (ws, req) => {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const token = url.searchParams.get('token');
+      
+      // Validação contra as chaves de ambiente do projeto
+      const isValid = token && (token === process.env.API_AUTH_TOKEN || token === process.env.DASHBOARD_PASS);
+
+      if (!isValid) {
+        console.warn('[WebSocket] Conexão recusada: Token inválido.');
+        ws.send(JSON.stringify({ event: 'ERROR', message: 'Unauthorized' }));
+        ws.close();
+        return;
+      }
+
+      console.log('[WebSocket] Cliente autenticado e conectado.');
 
       ws.send(JSON.stringify({
         event: 'CONNECTED',
-        message: 'Conectado ao AlertBroadcaster do Perfill DataHub',
+        message: 'Conectado e Autenticado no AlertBroadcaster',
         ts: new Date().toISOString()
       }));
 
