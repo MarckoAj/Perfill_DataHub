@@ -4,8 +4,6 @@ import glpiRawRepository from "../repositories/glpi/glpiRawRepository.js";
 import glpiTicketTaskService from "./glpiTicketTaskService.js";
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpiClient from "../integrations/glpi/glpiClient.js";
-import alertEngine from "./alertEngine.js";
-import alertRepository from "../repositories/alertRepository.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
 import systemStatusService from "./systemStatusService.js";
 import TicketAlertService from "./TicketAlertService.js";
@@ -98,11 +96,7 @@ class GlpiSyncService {
           await syncLogRepository.insertLogs(this.syncState.historyId, batchMetrics.errorLogs);
       }
 
-      const alertSummary = alertEngine.processTickets(processedTickets);
-      await alertRepository.upsertActiveAlerts(alertSummary.active);
-      await alertRepository.closeAlerts(alertSummary.closed);
- 
-      // 3. Processar alertas inteligentes (Nova Lógica Granular)
+      // 3. Processar alertas via AlertEngine (stateless) + TicketAlertService (banco)
       for (const ticket of processedTickets) {
           await TicketAlertService.processTicketAlerts(ticket);
       }
