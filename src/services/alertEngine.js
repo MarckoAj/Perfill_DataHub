@@ -1,3 +1,14 @@
+/**
+ * AlertEngine — Avaliador de Regras Stateless
+ *
+ * Responsabilidade ÚNICA: receber um ticket e retornar quais
+ * condições de alerta estão ativas naquele momento.
+ *
+ * NÃO controla estado. NÃO persiste dados. NÃO usa memória entre ciclos.
+ * O controle de estado (abrir/fechar alertas) é feito exclusivamente
+ * pelo TicketAlertService via banco de dados.
+ */
+
 const ALERT_TYPES = Object.freeze({
   NEW_UNHANDLED: "new_unhandled",
   PAUSED_STALE: "paused_stale",
@@ -12,7 +23,6 @@ const ALERT_SEVERITY = Object.freeze({
 
 class AlertEngine {
   constructor() {
-    this.openAlerts = new Map();
     this.thresholds = {
       newUnHandledMinutes: 5,
       pausedStaleDays: 7,
@@ -30,13 +40,23 @@ class AlertEngine {
   }
 
   elapsedTimeFromLastUpdate(ticket, now = new Date()) {
-    const reference = this.parseDate(ticket.dataAtualizacao) || this.parseDate(ticket.dataCriacao);
+    const reference =
+      this.parseDate(ticket.dataAtualizacao) ||
+      this.parseDate(ticket.dataCriacao);
 
     if (!reference) return null;
 
     return Math.max(0, now.getTime() - reference.getTime());
   }
 
+  /**
+   * Avalia um ticket e retorna a lista de alertas cujas condições
+   * estão ativas no momento da chamada.
+   *
+   * @param {object} ticket - Objeto normalizado do ticket
+   * @param {Date}   now    - Referência de tempo (injetável para testes)
+   * @returns {Array<{type, severity, message}>}
+   */
   evaluateTicket(ticket, now = new Date()) {
     const alerts = [];
 
@@ -82,72 +102,8 @@ class AlertEngine {
 
     return alerts;
   }
-
-  buildAlertKey(ticketId, type) {
-    return `${ticketId}:${type}`;
-  }
-
-  processTickets(tickets, now = new Date()) {
-    const nextOpenKeys = new Set();
-    const opened = [];
-    const active = [];
-
-    for (const ticket of tickets || []) {
-      const ticketAlerts = this.evaluateTicket(ticket, now);
-
-      for (const alert of ticketAlerts) {
-        const key = this.buildAlertKey(ticket.ticketId, alert.type);
-        nextOpenKeys.add(key);
-
-        const existing = this.openAlerts.get(key);
-
-        if (!existing) {
-          const created = {
-            ...alert,
-            ticketId: ticket.ticketId,
-            firstDetectedAt: now.toISOString(),
-            lastDetectedAt: now.toISOString(),
-            state: "open",
-          };
-
-          this.openAlerts.set(key, created);
-          opened.push(created);
-          active.push(created);
-          continue;
-        }
-
-        existing.lastDetectedAt = now.toISOString();
-        existing.state = "open";
-        active.push(existing);
-      }
-    }
-
-    const closed = [];
-
-    for (const [key, value] of this.openAlerts.entries()) {
-      if (!nextOpenKeys.has(key) && value.state === "open") {
-        value.state = "closed";
-        value.closedAt = now.toISOString();
-        closed.push(value);
-      }
-    }
-
-    return {
-      opened,
-      closed,
-      active,
-      counters: {
-        opened: opened.length,
-        closed: closed.length,
-        active: active.length,
-      },
-    };
-  }
-
-  resetState() {
-    this.openAlerts.clear();
-  }
 }
 
 export { ALERT_TYPES, ALERT_SEVERITY };
 export default new AlertEngine();
+
