@@ -41,16 +41,21 @@
       left: 0;
       width: 100%;
       height: 50px;
-      background: #2b3d5b;
-      /* Azul levemente mais claro que o fundo padrão */
+      background: #1e293b; /* Azul mais profundo */
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
-      padding: 0 40px;
+      justify-content: space-between;
+      padding: 0 25px;
       box-sizing: border-box;
       z-index: 2000;
-      /* Acima de tudo */
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-left, .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
     }
 
     .nav-logo {
@@ -64,8 +69,8 @@
 
     .nav-menu {
       display: flex;
-      gap: 25px;
-      margin-left: auto;
+      align-items: center;
+      gap: 20px;
     }
 
     .nav-item {
@@ -124,6 +129,46 @@
       height: 1px;
       background: rgba(255, 255, 255, 0.05);
       margin: 5px 15px;
+    }
+
+    /* Novos elementos da navbar */
+    .live-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .live-status span {
+      color: #10b981;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .btn-refresh-nav {
+      background: rgba(25, 197, 255, 0.1);
+      border: 1px solid rgba(25, 197, 255, 0.3);
+      color: var(--primary);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-refresh-nav:hover {
+      background: rgba(25, 197, 255, 0.2);
+      border-color: var(--primary);
+    }
+
+    .logout-link {
+      color: #f87171 !important;
+      font-size: 13px !important;
     }
 
     /* ===== TOPBAR COM ABAS ===== */
