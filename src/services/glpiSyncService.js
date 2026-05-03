@@ -7,6 +7,7 @@ import glpiClient from "../integrations/glpi/glpiClient.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
 import systemStatusService from "./systemStatusService.js";
 import TicketAlertService from "./TicketAlertService.js";
+import alertRunnerService from "./alertRunnerService.js";
 
 class GlpiSyncService {
   constructor() {
@@ -228,7 +229,17 @@ class GlpiSyncService {
              const hStatus = this.syncState.status === 'PARTIAL' ? 'PARTIAL' : (this.syncState.status === 'ERROR' ? 'ERROR' : (this.syncState.status === 'CANCELED' ? 'CANCELED' : 'SUCCESS'));
              await syncLogRepository.updateHistory(this.syncState.historyId, hStatus, totalProcessed, totalErrors);
           }
-          
+
+          // Avalia alertas para TODOS os tickets ativos após o ciclo de sync completo.
+          // Garante cobertura de tickets que não estavam no batch desta sincronização.
+          if (this.syncState.status !== 'CANCELED' && this.syncState.status !== 'ERROR') {
+            try {
+              await alertRunnerService.runForAllActiveTickets();
+            } catch (runnerErr) {
+              console.error('[GlpiSync] AlertRunner falhou (não bloqueia o fluxo):', runnerErr.message);
+            }
+          }
+
           systemStatusService.setSyncing(false);
       }
   }

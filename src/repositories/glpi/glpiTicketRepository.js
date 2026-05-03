@@ -155,6 +155,20 @@ class GlpiTicketRepository {
       throw error;
     }
   }
+  /**
+   * Retorna todos os tickets em estado ativo (não-terminal).
+   * Critério espelhado do alertEngine.evaluateTicketRules → isTicketActive.
+   */
+  async getActiveTickets() {
+    const query = `
+      SELECT * FROM tickets
+      WHERE LOWER(status) NOT IN ('solucionado', 'fechado', 'aguardando aprovação')
+      ORDER BY dataCriacao DESC
+    `;
+    const [rows] = await pool.query(query);
+    return rows;
+  }
+
   async updateLastSyncDate(entityId) {
       try {
           const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
