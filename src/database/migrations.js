@@ -69,7 +69,7 @@ export async function runMigrations() {
             alert_type VARCHAR(100) NOT NULL,
             severity VARCHAR(30) NOT NULL,
             message TEXT NOT NULL,
-            state ENUM('open', 'closed') NOT NULL DEFAULT 'open',
+            state ENUM('open', 'closed', 'justified') NOT NULL DEFAULT 'open',
             first_detected_at DATETIME NOT NULL,
             last_detected_at DATETIME NOT NULL,
             closed_at DATETIME NULL,
@@ -178,6 +178,35 @@ export async function runMigrations() {
         console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
+
+        // Atualização para suporte a justificativa (Etapa 1)
+        try {
+            await pool.query("ALTER TABLE datahub_ticket_alerts MODIFY COLUMN state ENUM('open', 'closed', 'justified') NOT NULL DEFAULT 'open';");
+            console.log("Migration: Estado 'justified' adicionado ao ENUM da tabela datahub_ticket_alerts.");
+        } catch (error) {
+            console.error("Erro ao modificar ENUM de state:", error.message);
+        }
+
+        try {
+            await pool.query("ALTER TABLE datahub_ticket_alerts ADD COLUMN justified_by VARCHAR(100) NULL AFTER closed_at;");
+            console.log("Migration: Coluna 'justified_by' adicionada em datahub_ticket_alerts.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') console.error("Erro ao adicionar 'justified_by':", error.message);
+        }
+
+        try {
+            await pool.query("ALTER TABLE datahub_ticket_alerts ADD COLUMN justified_text TEXT NULL AFTER justified_by;");
+            console.log("Migration: Coluna 'justified_text' adicionada em datahub_ticket_alerts.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') console.error("Erro ao adicionar 'justified_text':", error.message);
+        }
+
+        try {
+            await pool.query("ALTER TABLE datahub_ticket_alerts ADD COLUMN justified_at DATETIME NULL AFTER justified_text;");
+            console.log("Migration: Coluna 'justified_at' adicionada em datahub_ticket_alerts.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') console.error("Erro ao adicionar 'justified_at':", error.message);
+        }
         await pool.query(rawTicketsTableQuery);
         console.log("Migration: Tabela 'raw_glpi_tickets' verificada/criada com sucesso.");
         await pool.query(rawAuvoTasksQuery);

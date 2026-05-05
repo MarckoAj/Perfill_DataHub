@@ -42,6 +42,134 @@
       background: rgba(255, 255, 255, 0.05) !important;
       transform: translateY(-5px);
     }
+
+    /* MODAL STYLES */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 450px;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+      margin-bottom: 20px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .modal-body label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .modal-body textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      color: #f8fafc;
+      font-family: inherit;
+      resize: none;
+      min-height: 100px;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn-justify-confirm {
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-justify-confirm:hover { background: #0284c7; }
+    .btn-justify-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-cancel {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,0.05); }
+
+    .btn-action-justify {
+      background: rgba(14, 165, 233, 0.1);
+      color: #0ea5e9;
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action-justify:hover {
+      background: #0ea5e9;
+      color: white;
+    }
+
+    /* TASKS MODAL SPECIFIC */
+    .task-status-pill {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-FINALIZADA { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
+    .status-EM_ANDAMENTO { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
+    .status-PENDENTE { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #94a3b8; }
+    
+    .tasks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .tasks-table th {
+      text-align: left;
+      font-size: 11px;
+      color: #94a3b8;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .tasks-table td {
+      padding: 10px 8px;
+      font-size: 12px;
+      color: #e2e8f0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+      color: #0ea5e9;
+    }
   </style>
 </head>
 
@@ -145,11 +273,12 @@
               <th>Cliente / Local</th>
               <th>Descrição do Alerta</th>
               <th>Data Detecção</th>
+              <th style="text-align:center;">Ação</th>
             </tr>
           </thead>
           <tbody id="alertsTbody">
             <tr class="table-state">
-              <td colspan="6">⏳ Carregando alertas...</td>
+              <td colspan="7">⏳ Carregando alertas...</td>
             </tr>
           </tbody>
         </table>
@@ -225,7 +354,7 @@
         countEl.textContent = `${filtered.length} alertas`;
 
         if (filtered.length === 0) {
-          tbody.innerHTML = '<tr class="table-state"><td colspan="6">✅ Nenhum alerta correspondente.</td></tr>';
+          tbody.innerHTML = '<tr class="table-state"><td colspan="7">✅ Nenhum alerta correspondente.</td></tr>';
           return;
         }
 
@@ -247,6 +376,9 @@
                 <div style="font-size:12px; color:#e2e8f0; margin-top:2px;">${alert.description}</div>
               </td>
               <td style="color:var(--text-muted); font-size:12px;">${date}</td>
+              <td style="text-align:center;">
+                <button class="btn-action-justify" onclick="openTasksModal(${alert.id}, '${alert.Ticket}')">Justificar</button>
+              </td>
             </tr>
           `;
         }).join('');
@@ -262,7 +394,7 @@
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (['ALERT_OPENED', 'ALERT_CLOSED', 'ALERT_UPDATED'].includes(data.event)) {
+          if (['ALERT_OPENED', 'ALERT_CLOSED', 'ALERT_UPDATED', 'ALERT_JUSTIFIED'].includes(data.event)) {
              console.log('Evento de alerta recebido:', data.event);
              loadAlerts(); // Atualiza a lista e os cards
           }
@@ -285,7 +417,210 @@
     loadAlerts();
     connectWebSocket();
     document.getElementById('card_total').classList.add('active-filter');
+
+    // TASKS MODAL LOGIC
+    let currentAlertId = null;
+    let currentExternalId = null;
+
+    async function openTasksModal(alertId, externalId) {
+      currentAlertId = alertId;
+      currentExternalId = externalId;
+      
+      document.getElementById('tasksModal').style.display = 'flex';
+      document.getElementById('modalExternalId').textContent = `#${externalId}`;
+      
+      await loadInternalTasks(externalId);
+    }
+
+    function closeTasksModal() {
+      document.getElementById('tasksModal').style.display = 'none';
+    }
+
+    async function loadInternalTasks(externalId) {
+      const container = document.getElementById('tasksContainer');
+      const token = localStorage.getItem('authToken');
+      
+      console.log(`[Tasks] Iniciando busca para externalId: ${externalId}. Token presente: ${!!token}`);
+
+      container.innerHTML = `
+        <div class="loading-spinner">
+          <div style="font-size: 24px; animation: spin 1s linear infinite;">↻</div>
+          <p style="margin-top: 10px; font-size: 13px;">Buscando tarefas relacionadas...</p>
+        </div>
+      `;
+
+      if (!token) {
+        container.innerHTML = `
+          <div style="padding: 40px; text-align: center; color: #ef4444;">
+            <p>Erro: Token de sessão não encontrado. Por favor, faça login novamente.</p>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/internal/tasks?externalId=${externalId}`, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.status === 401) {
+          throw new Error("Sessão expirada ou não autorizada. Faça login novamente.");
+        }
+
+        const result = await response.json();
+
+        if (!result.success) throw new Error(result.error);
+
+        const tasks = result.data || [];
+        
+        if (tasks.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 40px; text-align: center; color: #94a3b8;">
+              <p>Nenhuma tarefa encontrada para este alerta.</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = `
+          <table class="tasks-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Responsável</th>
+                <th>Status</th>
+                <th>Agendada</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        tasks.forEach(task => {
+          const date = task.scheduledDate ? new Date(task.scheduledDate).toLocaleDateString('pt-BR') : '—';
+          html += `
+            <tr>
+              <td style="color: #0ea5e9; font-weight: 600;">#${task.taskId}</td>
+              <td>${task.title || 'Sem título'}</td>
+              <td>${task.assignedTo || 'Não atribuído'}</td>
+              <td><span class="task-status-pill status-${task.status}">${task.status}</span></td>
+              <td style="color: #94a3b8;">${date}</td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+      } catch (err) {
+        container.innerHTML = `
+          <div style="padding: 40px; text-align: center; color: #ef4444;">
+            <p>Erro ao carregar tarefas: ${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function proceedToJustification() {
+      closeTasksModal();
+      openJustificationForm(currentAlertId);
+    }
+
+    // JUSTIFY LOGIC (RENAMED)
+    let selectedAlertId = null;
+
+    function openJustificationForm(id) {
+      selectedAlertId = id;
+      document.getElementById('justifyModal').style.display = 'flex';
+      document.getElementById('justifiedText').value = '';
+      document.getElementById('justifiedText').focus();
+    }
+
+    function closeJustifyModal() {
+      document.getElementById('justifyModal').style.display = 'none';
+      selectedAlertId = null;
+    }
+
+    async function submitJustify() {
+      const text = document.getElementById('justifiedText').value.trim();
+      const btn = document.querySelector('.btn-justify-confirm');
+      
+      if (!text) return;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        const response = await fetch(`/api/alerts/${selectedAlertId}/justify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({
+            justifiedText: text,
+            justifiedBy: localStorage.getItem('username') || 'Operador'
+          })
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        closeJustifyModal();
+        // A lista será atualizada via WebSocket (ALERT_JUSTIFIED)
+        
+      } catch (err) {
+        alert('Erro ao justificar: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirmar';
+      }
+    }
   </script>
+
+  <!-- MODAL DE JUSTIFICATIVA -->
+  <div class="modal-overlay" id="justifyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Justificar Alerta</h3>
+      </div>
+      <div class="modal-body">
+        <label for="justifiedText">Motivo da Justificativa</label>
+        <textarea id="justifiedText" placeholder="Descreva o motivo para ignorar este alerta..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeJustifyModal()">Cancelar</button>
+        <button class="btn-justify-confirm" onclick="submitJustify()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE TAREFAS (NOVO) -->
+  <div class="modal-overlay" id="tasksModal">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="modal-title">Tarefas Relacionadas</h3>
+          <span style="font-size: 12px; color: #0ea5e9;" id="modalExternalId"></span>
+        </div>
+        <button onclick="closeTasksModal()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 20px;">&times;</button>
+      </div>
+      <div class="modal-body" id="tasksContainer" style="min-height: 200px;">
+        <!-- Injetado via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeTasksModal()">Fechar</button>
+        <button class="btn-justify-confirm" onclick="proceedToJustification()">Continuar para Justificativa</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  </style>
 
 </body>
 

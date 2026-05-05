@@ -285,6 +285,12 @@ class AlertRepository {
     return rows;
   }
 
+  async selecTicketAlertById(id) {
+    const query = `SELECT * FROM datahub_ticket_alerts WHERE id = ?`;
+    const [rows] = await pool.query(query, [id]);
+    return rows;
+  }
+
   async insertTicketAlert({ glpi_ticketId, rule }) {
     // Mapeando a severidade numérica para a string esperada pela tabela, se necessário.
     // 1: informativos (low), 2: atenção (medium), 3: críticos (high)
@@ -342,6 +348,45 @@ class AlertRepository {
       }
     }
 
+    return result;
+  }
+
+  async justifyAlert({ alertId, justifiedBy, justifiedText }) {
+    const query = `
+      UPDATE datahub_ticket_alerts
+      SET state = 'justified',
+          justified_by = ?,
+          justified_text = ?,
+          justified_at = NOW()
+      WHERE id = ?
+    `;
+    const [result] = await pool.query(query, [justifiedBy, justifiedText, alertId]);
+    
+    if (result.affectedRows > 0) {
+       try {
+         const [rows] = await pool.query(
+            `SELECT ticket_id, alert_type, severity, message, first_detected_at FROM datahub_ticket_alerts
+             WHERE id = ? LIMIT 1`,
+            [alertId]
+          );
+          if (rows && rows.length > 0) {
+            await this._insertHistory({
+              ticket_id:     rows[0].ticket_id,
+              alert_type:    rows[0].alert_type,
+              severity:      rows[0].severity,
+              message:       rows[0].message,
+              source:        'GLPI',
+              opened_at:     rows[0].first_detected_at,
+              closed_at:     new Date().toISOString(),
+              closed_by:     justifiedBy,
+              closed_reason: `[JUSTIFICADO] ${justifiedText}`,
+            });
+          }
+       } catch (histErr) {
+         console.error('[AlertRepository] Histórico no justifyAlert falhou:', histErr.message);
+       }
+    }
+    
     return result;
   }
 }

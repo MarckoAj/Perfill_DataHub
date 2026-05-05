@@ -112,3 +112,43 @@ export const getAlertsByTicketId = asyncHandler(async (req, res) => {
     total: alerts.length,
   });
 });
+
+export const justifyAlert = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { justifiedText, justifiedBy } = req.body;
+
+  if (!justifiedText || justifiedText.trim() === '') {
+    return res.status(400).json({ success: false, error: 'O texto da justificativa é obrigatório.' });
+  }
+
+  // Como o sistema usa token estático, o frontend enviará o nome do usuário logado no body
+  const operator = justifiedBy || 'Operador Desconhecido';
+
+  const result = await alertRepository.justifyAlert({
+    alertId: id,
+    justifiedBy: operator,
+    justifiedText: justifiedText.trim()
+  });
+
+  if (result.affectedRows === 0) {
+    return res.status(404).json({ success: false, error: 'Alerta não encontrado ou já processado.' });
+  }
+
+  // Notifica via WebSocket para remoção em tempo real no frontend (Etapa 5)
+  try {
+    const [alertRow] = await alertRepository.selecTicketAlertById(id);
+    if (alertRow) {
+      import("../websocket/alertBroadcaster.js").then(m => {
+        m.default.broadcast('ALERT_JUSTIFIED', {
+          ticketId: alertRow.ticket_id,
+          ruleId: alertRow.alert_type,
+          justifiedBy: operator
+        });
+      });
+    }
+  } catch (wsErr) {
+    console.error('[Controller] Erro ao disparar WebSocket de justificativa:', wsErr.message);
+  }
+
+  res.status(200).json({ success: true, message: 'Alerta justificado com sucesso.' });
+});

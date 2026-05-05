@@ -17,6 +17,7 @@ const authMiddleware = (req, res, next) => {
   }
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.warn(`[Auth] Falha: Cabeçalho ausente ou malformado para ${req.method} ${req.url}`);
     return res.status(401).json({ error: "Token de autenticação não fornecido." });
   }
 

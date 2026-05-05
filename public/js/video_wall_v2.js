@@ -90,6 +90,11 @@ class NOCWebSocketClient {
       console.log('[WS] Alerta resolvido:', payload);
       loadAlerts().then(() => renderDashboard());
     }
+
+    if (event === 'ALERT_JUSTIFIED') {
+      console.log('[WS] Alerta justificado por operador:', payload);
+      loadAlerts().then(() => renderDashboard());
+    }
   }
 
   playAlertSound(severity) {
@@ -160,6 +165,17 @@ function renderDashboard() {
               <span class="status-pill-label">${chip.label}: ${chip.count}</span>
             </div>
           `).join("")}
+        </div>
+        
+        <div class="nav-actions" style="display: flex; gap: 10px; margin-left: 20px;">
+          <button class="status-pill status-neutral" onclick="minimizeNoc()" title="Voltar ao Dashboard Operacional" style="cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+            <span class="status-pill-icon">${iconSvg("externalLink", 18)}</span>
+            <span class="status-pill-label" style="font-weight: 600;">Dashboard</span>
+          </button>
+          <button class="status-pill status-neutral" onclick="toggleFullscreen()" title="Alternar Tela Cheia" style="cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+            <span class="status-pill-icon">${iconSvg("fullscreen", 18)}</span>
+            <span class="status-pill-label" style="font-weight: 600;">Alterar</span>
+          </button>
         </div>
       </header>
 
@@ -430,6 +446,8 @@ function iconSvg(name, size = 20, stroke = "currentColor") {
     chevronRight: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
     warning: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v2"/><path d="M12 15h.01"/></svg>`,
     wifi: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>`,
+    fullscreen: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`,
+    externalLink: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
   };
   return icons[name] ?? icons.info;
 }
@@ -545,3 +563,21 @@ async function initDashboard() {
 
 // Iniciar o dashboard
 initDashboard();
+
+// Funções Globais de Controle
+window.toggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.error(`Erro ao ativar tela cheia: ${err.message}`);
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+};
+
+window.minimizeNoc = () => {
+  // Redireciona para o painel principal de tickets ou alertas
+  window.location.href = '/tickets';
+};

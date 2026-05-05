@@ -111,6 +111,7 @@
                     passwordChangeView.style.display = 'block';
                 } else if (data.token) {
                     localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('username', user);
                     window.location.href = '/tickets';
                 }
 
