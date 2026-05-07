@@ -277,7 +277,7 @@ class AlertRepository {
   async selecTicketAlert({ glpi_ticketId, ruleId }) {
     const query = `
       SELECT *, 
-      (CASE WHEN state = 'closed' THEN 1 ELSE 0 END) as checked 
+      (CASE WHEN state IN ('closed', 'justified') THEN 1 ELSE 0 END) as checked 
       FROM datahub_ticket_alerts 
       WHERE ticket_id = ? AND alert_type = ?
     `;
@@ -388,6 +388,85 @@ class AlertRepository {
     }
     
     return result;
+  }
+
+  async getAlertFullDetails(alertId) {
+    // 1. Dados do Alerta e Ticket
+    const queryBase = `
+      SELECT 
+        a.id AS alertId,
+        t.ticketId AS externalId,
+        t.ticketId AS id,
+        t.titulo AS title,
+        t.descricao AS description,
+        t.status,
+        t.dataCriacao AS createdAt,
+        t.tempoSla AS sla,
+        t.nomeCliente AS address,
+        t.projeto AS project,
+        t.nomeTecnico AS noc_technician,
+        'Não atribuído' AS field_technician 
+      FROM datahub_ticket_alerts a
+      JOIN tickets t ON a.ticket_id = t.ticketId
+      WHERE a.id = ?
+    `;
+    const [baseRows] = await pool.query(queryBase, [alertId]);
+    if (baseRows.length === 0) return null;
+
+    const ticketData = baseRows[0];
+
+    // 2. Interações (GLPI TicketTasks)
+    const queryInteractions = `
+      SELECT 
+        content AS description,
+        DATE_ADD(begin, INTERVAL -3 HOUR) AS date,
+        nomeAutor AS author
+      FROM glpi_tickettasks
+      WHERE tickets_id = ?
+      ORDER BY begin DESC
+    `;
+    const [interactions] = await pool.query(queryInteractions, [ticketData.id]);
+
+    // 3. Tarefas AUVO
+    const queryTasks = `
+      SELECT 
+        t.taskId,
+        t.orientation AS title,
+        CASE 
+          WHEN t.taskStatusID = 5 THEN 'FINALIZADA'
+          WHEN t.taskStatusID IN (2, 3) THEN 'EM_ANDAMENTO'
+          ELSE 'PENDENTE'
+        END AS status,
+        u.name AS assignedTo
+      FROM tasks_auvo t
+      LEFT JOIN users_auvo u ON t.userToId = u.userId
+      WHERE t.externalId = ?
+      ORDER BY t.taskDate DESC
+    `;
+    const [tasks] = await pool.query(queryTasks, [ticketData.externalId]);
+
+    return {
+      alert: {
+        alertId: ticketData.alertId,
+        externalId: String(ticketData.externalId)
+      },
+      ticket: {
+        id: ticketData.id,
+        title: ticketData.title,
+        description: ticketData.description,
+        status: ticketData.status,
+        createdAt: ticketData.createdAt,
+        sla: ticketData.sla,
+        address: ticketData.address,
+        project: ticketData.project
+      },
+      technicians: {
+        noc: ticketData.noc_technician,
+        field: tasks.length > 0 ? tasks[0].assignedTo : 'Nenhum técnico em campo'
+      },
+      interactions: interactions,
+      tasks: tasks
+    };
   }
 }
 

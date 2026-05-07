@@ -493,7 +493,8 @@ async function loadAlerts() {
     const result = await response.json();
 
     if (result.success) {
-      dashboardData.activeAlerts = result.data || [];
+      // Filtrar apenas alertas abertos (ignorando os justificados na tela do Video Wall)
+      dashboardData.activeAlerts = (result.data || []).filter(a => a.state === 'open');
       
       // Ajusta o índice selecionado se o array diminuir
       if (currentAlertIndex >= dashboardData.activeAlerts.length) {

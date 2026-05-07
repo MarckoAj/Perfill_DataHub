@@ -4,6 +4,7 @@ import {
   getAlertsForApi,
   getAlertsByTicketId,
   justifyAlert,
+  getAlertDetails,
 } from "../controllers/glpiController.js";
 
 import { getInternalTasks } from "../controllers/taskController.js";
@@ -19,6 +20,7 @@ router.get("/tickets/:status", getTicketsByStatus);
 router.get("/alerts", getAlertsForApi);
 router.get("/alerts/:ticketId", getAlertsByTicketId);
 router.post("/alerts/:id/justify", justifyAlert);
+router.get("/alerts/:id/details", getAlertDetails);
 router.get("/internal/tasks", getInternalTasks);
 
 export default router;

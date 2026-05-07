@@ -152,3 +152,26 @@ export const justifyAlert = asyncHandler(async (req, res) => {
 
   res.status(200).json({ success: true, message: 'Alerta justificado com sucesso.' });
 });
+
+/**
+ * Retorna detalhes consolidados do alerta para o modal de detalhes
+ */
+export const getAlertDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const details = await alertRepository.getAlertFullDetails(id);
+    
+    if (!details) {
+      return res.status(404).json({ success: false, error: 'Alerta não encontrado.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: details
+    });
+  } catch (error) {
+    console.error('[GetAlertDetails] Erro:', error.message);
+    res.status(500).json({ success: false, error: 'Erro ao buscar detalhes do alerta.' });
+  }
+});

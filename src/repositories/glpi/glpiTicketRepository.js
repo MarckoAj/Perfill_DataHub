@@ -161,9 +161,19 @@ class GlpiTicketRepository {
    */
   async getActiveTickets() {
     const query = `
-      SELECT * FROM tickets
-      WHERE LOWER(status) NOT IN ('solucionado', 'fechado', 'aguardando aprovação')
-      ORDER BY dataCriacao DESC
+      SELECT 
+        t.*,
+        tt.content AS ultimaTarefa
+      FROM tickets t
+      LEFT JOIN glpi_tickettasks tt ON tt.id = (
+          SELECT tt2.id
+          FROM glpi_tickettasks tt2
+          WHERE tt2.tickets_id = t.ticketId
+          ORDER BY tt2.date_mod DESC
+          LIMIT 1
+      )
+      WHERE LOWER(t.status) NOT IN ('solucionado', 'fechado', 'aguardando aprovação')
+      ORDER BY t.dataCriacao DESC
     `;
     const [rows] = await pool.query(query);
     return rows;

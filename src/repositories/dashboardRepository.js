@@ -58,7 +58,10 @@ class DashboardRepository {
 
         t.projeto AS "Projeto",
         t.categoriaSla AS "Categoria",
-        t.statusSla AS "Status do SLA",
+        CASE 
+          WHEN t.statusSla = 'Vencido' AND al.state = 'justified' THEN 'Justificado'
+          ELSE t.statusSla 
+        END AS "Status do SLA",
         t.status AS "Status do Chamado",
         CASE 
           WHEN t.tipo = '1' THEN 'INC' 
@@ -98,6 +101,11 @@ class DashboardRepository {
             AND t1.tasksTypesId NOT IN (144733, 210031, 210030)
       ) ta ON ta.externalId = t.ticketId AND ta.rn = 1
       LEFT JOIN users_auvo ua ON ta.userToId = ua.userId
+
+      /* Relacionamento com alertas de SLA Justificados */
+      LEFT JOIN datahub_ticket_alerts al ON al.ticket_id = t.ticketId 
+        AND al.alert_type = 'GLPI_SLA_BREACHED' 
+        AND al.state = 'justified'
 
       WHERE  
           ( ? = '' OR FIND_IN_SET(t.status, ?) > 0 )
@@ -152,7 +160,14 @@ class DashboardRepository {
         
         -- Novos
         (SELECT COUNT(*) FROM tickets 
-         WHERE status = 'novo') as novos
+         WHERE status = 'novo') as novos,
+
+        -- Justificados em Aberto
+        (SELECT COUNT(DISTINCT t.ticketId) 
+         FROM tickets t
+         JOIN datahub_ticket_alerts a ON t.ticketId = a.ticket_id
+         WHERE a.state = 'justified' 
+         AND t.status NOT IN ('fechado', 'solucionado', 'aguardando aprovação')) as justificados_abertos
     `;
     
     const [rows] = await pool.query(query);
@@ -162,7 +177,11 @@ class DashboardRepository {
   async getActiveAlerts() {
     const query = `
       SELECT 
+          a.id AS id,
           a.ticket_id AS Ticket,
+          a.state AS state,
+          a.justified_text AS justified_text,
+          a.justified_by AS justified_by,
           CASE 
               WHEN a.severity = 'high' THEN 'critico'
               WHEN a.severity = 'medium' THEN 'atencao'
@@ -202,7 +221,7 @@ class DashboardRepository {
           a.first_detected_at
       FROM datahub_ticket_alerts a
       JOIN tickets t ON a.ticket_id = t.ticketId
-      WHERE a.state = 'open' 
+      WHERE a.state IN ('open', 'justified') 
       AND t.status NOT IN ('solucionado', 'fechado', 'aguardando aprovação')
       ORDER BY 
           CASE a.severity

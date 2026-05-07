@@ -38,6 +38,7 @@ class DashboardController {
         { label: "Criados hoje", count: String(metrics.criados_hoje || 0), variant: "blue", icon: "calendar" },
         { label: "Encerrados hoje", count: String(metrics.encerrados || 0), variant: "purple", icon: "checkCircle" },
         { label: "Aberto SLA", count: String(metrics.chamados_abertos || 0), variant: "gray", icon: "clock" },
+        { label: "Justificados", count: String(metrics.justificados_abertos || 0), variant: "justificado", icon: "shield" },
         { label: "Proativos", count: String(metrics.proativos || 0), variant: "danger", icon: "spark" },
         { label: "Pendentes", count: String(metrics.pendentes || 0), variant: "neutral", icon: "pause" }
       ];

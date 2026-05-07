@@ -1,7 +1,30 @@
 import BaseRepository from "../baseRepository.js";
+import pool from "../../database/connection.js";
 
 class AuvoUserRepository extends BaseRepository {
   async upsertUsers(users, isAlternative = false) {
+    if (!users || users.length === 0) return { inserts: 0, updates: 0, skips: 0, errors: 0, errorLogs: [] };
+
+    // Dynamically insert userTypes to prevent foreign key constraint failures
+    const userTypesToInsert = users
+      .filter(u => u.userType && u.userType.userTypeId !== null && u.userType.userTypeId !== undefined)
+      .map(u => ({ id: parseInt(u.userType.userTypeId, 10), desc: u.userType.description || 'Desconhecido' }));
+
+    if (userTypesToInsert.length > 0) {
+      const uniqueUserTypes = [...new Map(userTypesToInsert.map(item => [item.id, item])).values()];
+      const typeQuery = `
+        INSERT IGNORE INTO userstypes_auvo (userTypeId, description)
+        VALUES (?, ?)
+      `;
+      for (const t of uniqueUserTypes) {
+        try {
+          await pool.query(typeQuery, [t.id, t.desc]);
+        } catch (err) {
+          console.warn(`Erro ao inserir userType dinâmico ${t.id}:`, err.message);
+        }
+      }
+    }
+
     const query = `
       INSERT INTO users_auvo (
         userId, externalId, name, login, email, jobPosition,

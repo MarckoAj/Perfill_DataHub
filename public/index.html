@@ -14,6 +14,7 @@
   </script>
   <title>PerfillBI – Dashboard de Chamados GLPI</title>
   <link rel="stylesheet" href="/css/index.css">
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
@@ -104,6 +105,11 @@
         <div class="card-count" id="cnt_atrasado">—</div>
         <div class="card-label">Atrasados</div>
       </div>
+      <div class="summary-card card--justificado" data-filter="justificado" onclick="applyStatusFilter('justificado')">
+        <div class="card-icon">🛡️</div>
+        <div class="card-count" id="cnt_justificado">—</div>
+        <div class="card-label">Justificados</div>
+      </div>
       <div class="summary-card card--pendente" data-filter="pendente" onclick="applyStatusFilter('pendente')">
         <div class="card-icon">⏳</div>
         <div class="card-count" id="cnt_pendente">—</div>
@@ -148,6 +154,7 @@
             <option value="Vencido">Vencido</option>
             <option value="Atenção">Atenção</option>
             <option value="No prazo">No prazo</option>
+            <option value="Justificado">Justificado</option>
             <option value="Proativo">Proativo</option>
           </select>
         </div>
@@ -216,7 +223,7 @@
     let allData = [], page = 1;
     const PER_PAGE = 50;
 
-    const SLA_MAP = { 'Vencido': 'sla--vencido', 'Atenção': 'sla--atencao', 'No prazo': 'sla--noprazo', 'Proativo': 'sla--proativo', 'SLA Pausado': 'sla--pausado' };
+    const SLA_MAP = { 'Vencido': 'sla--vencido', 'Atenção': 'sla--atencao', 'No prazo': 'sla--noprazo', 'Proativo': 'sla--proativo', 'SLA Pausado': 'sla--pausado', 'Justificado': 'sla--justificado' };
     const UPD_MAP = { 'RECENTE': 'upd--recente', 'VERIFICAR': 'upd--verificar', 'ATUALIZAR': 'upd--atualizar' };
     const PROJ_MAP = { 'PI-NOVO': 'proj--pinovo', 'LEGADO': 'proj--legado', 'CFTV': 'proj--cftv', 'Outros': 'proj--outros' };
     const ST_MAP = { 'novo': 'st--novo', 'planejado': 'st--planejado', 'atribuído': 'st--atribuido', 'atribuido': 'st--atribuido', 'pendente': 'st--pendente', 'solucionado': 'st--solucionado', 'fechado': 'st--fechado' };
@@ -284,7 +291,7 @@
     }
 
     function updateCards() {
-      const c = { novo: 0, planejado: 0, atribuido: 0, solucionado: 0, atrasado: 0, pendente: 0, fechado: 0 };
+      const c = { novo: 0, planejado: 0, atribuido: 0, solucionado: 0, atrasado: 0, justificado: 0, pendente: 0, fechado: 0 };
       allData.forEach(t => {
         const s = (t['Status do Chamado'] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         if (s === 'novo') c.novo++;
@@ -293,7 +300,10 @@
         else if (s === 'solucionado') c.solucionado++;
         else if (s === 'pendente') c.pendente++;
         else if (s === 'fechado') c.fechado++;
-        if ((t['Status do SLA'] || '') === 'Vencido') c.atrasado++;
+
+        const sla = t['Status do SLA'] || '';
+        if (sla === 'Vencido') c.atrasado++;
+        else if (sla === 'Justificado') c.justificado++;
       });
       Object.entries(c).forEach(([k, v]) => {
         const el = document.getElementById('cnt_' + k);
@@ -301,11 +311,32 @@
       });
     }
 
-    function applyStatusFilter(status) {
-      const sel = document.getElementById('f_status');
-      sel.value = sel.value === status ? '' : status;
+    function applyStatusFilter(val) {
+      const isSla = (val === 'atrasado' || val === 'justificado');
+      const selStatus = document.getElementById('f_status');
+      const selSla = document.getElementById('f_sla');
+
+      // Limpa os cards ativos
       document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
-      if (sel.value) document.querySelector(`[data-filter="${sel.value}"]`)?.classList.add('active-filter');
+
+      if (isSla) {
+        // Mapeamento: atrasado -> Vencido, justificado -> Justificado
+        const slaVal = val === 'atrasado' ? 'Vencido' : 'Justificado';
+        selSla.value = (selSla.value === slaVal) ? '' : slaVal;
+        selStatus.value = ''; // Limpa o status se filtrar por SLA
+      } else {
+        selStatus.value = (selStatus.value === val) ? '' : val;
+        selSla.value = ''; // Limpa o SLA se filtrar por status
+      }
+
+      // Re-aplica a classe visual se houver filtro ativo
+      if (val) {
+        const activeCard = document.querySelector(`[data-filter="${val}"]`);
+        // Só marca se o valor final do select bater com o esperado
+        const currentVal = isSla ? selSla.value : selStatus.value;
+        if (currentVal) activeCard?.classList.add('active-filter');
+      }
+
       loadDashboard();
     }
 
@@ -428,6 +459,26 @@
     }
 
     loadDashboard();
+
+    // WebSocket Integration
+    const socket = io();
+    socket.on('connect', () => console.log('[WS] Conectado ao servidor de tempo real'));
+    
+    // Recarregar dashboard em qualquer mudança de alerta
+    socket.on('ALERT_OPENED', (data) => {
+        console.log('[WS] Novo alerta detectado, atualizando dashboard...');
+        loadDashboard();
+    });
+
+    socket.on('ALERT_CLOSED', (data) => {
+        console.log('[WS] Alerta resolvido/fechado, atualizando dashboard...');
+        loadDashboard();
+    });
+
+    socket.on('ALERT_JUSTIFIED', (data) => {
+        console.log('[WS] Alerta justificado, atualizando dashboard...');
+        loadDashboard();
+    });
   </script>
 
 </body>

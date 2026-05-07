@@ -1,6 +1,7 @@
 import alertEngine from "./alertEngine.js";
 import alertRepository from "../repositories/alertRepository.js";
 import alertBroadcaster from "../websocket/alertBroadcaster.js";
+import glpiTicketTaskRepository from "../repositories/glpi/glpiTicketTaskRepository.js";
 
 class TicketAlertService {
   async createNewAlert(ticketId, rule) {
@@ -32,7 +33,8 @@ class TicketAlertService {
     }
   }
 
-  async checkAlert(rule, ticketId) {
+  async checkAlert(rule, ticket) {
+    const ticketId = ticket.ticketId;
     const { ruleId, condition } = rule;
     const alertList = await alertRepository.selecTicketAlert({
       glpi_ticketId: ticketId,
@@ -45,19 +47,30 @@ class TicketAlertService {
       // Condição ativa e sem alerta aberto → abre
       await this.createNewAlert(ticketId, rule);
     } else if (!condition && activeAlert) {
-      // Condição resolvida e havia alerta aberto → fecha
-      await alertRepository.updateTicketAlert({
-        checked: true,
-        justifiedText: "Status justificado pelo sistema",
-        glpi_ticketId: ticketId,
-        ruleId: ruleId,
-      });
+      // Condição resolvida e havia alerta aberto → fecha ou justifica
+      
+      // Lógica de auto-justificativa específica para R4
+      if (ruleId === 'GLPI_SLA_BREACHED' && ticket.ultimaTarefa && ticket.ultimaTarefa !== 'Sem tarefas') {
+        await alertRepository.justifyAlert({
+          alertId: activeAlert.id,
+          justifiedBy: 'system',
+          justifiedText: "Alerta justificado via GLPI"
+        });
+      } else {
+        await alertRepository.updateTicketAlert({
+          checked: true,
+          justifiedText: "Status justificado pelo sistema",
+          glpi_ticketId: ticketId,
+          ruleId: ruleId,
+        });
+      }
 
       // Notifica via WebSocket
-      alertBroadcaster.broadcast('ALERT_CLOSED', {
+      alertBroadcaster.broadcast('ALERT_JUSTIFIED', {
         ticketId,
         ruleId,
-        closedBy: 'system'
+        author: 'system',
+        reason: justifiedText
       });
     }
   }
@@ -75,10 +88,18 @@ class TicketAlertService {
     const ticketId = ticket.ticketId;
 
     try {
+      // Se não tem ultimaTarefa (vinda do mapper/sync inicial), tenta buscar no banco
+      if (!ticket.ultimaTarefa || ticket.ultimaTarefa === 'Sem tarefas') {
+        const lastTask = await glpiTicketTaskRepository.getLastTaskContentByTicketId(ticketId);
+        if (lastTask) {
+          ticket.ultimaTarefa = lastTask;
+        }
+      }
+
       const alertRules = alertEngine.evaluateTicketRules(ticket);
 
       for (const rule of alertRules) {
-        await this.checkAlert(rule, ticketId);
+        await this.checkAlert(rule, ticket);
       }
     } catch (error) {
       console.error(`[TicketAlertService] Erro no ticket ${ticketId}: ${error.message}`);

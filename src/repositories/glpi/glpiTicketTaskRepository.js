@@ -57,6 +57,18 @@ class GlpiTicketTaskRepository {
 
     return { inserts, updates, skips: 0, errors, errorLogs };
   }
+
+  async getLastTaskContentByTicketId(ticketId) {
+    const query = `
+      SELECT content 
+      FROM glpi_tickettasks 
+      WHERE tickets_id = ? 
+      ORDER BY date_mod DESC 
+      LIMIT 1
+    `;
+    const [rows] = await pool.query(query, [ticketId]);
+    return rows.length > 0 ? rows[0].content : null;
+  }
 }
 
 export default new GlpiTicketTaskRepository();
