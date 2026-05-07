@@ -41,7 +41,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #020617 url('./images/login_vortex_primary.png') no-repeat center center;
+            background: #020617 url('../images/login_vortex_primary.png') no-repeat center center;
             background-size: cover;
             filter: brightness(1.0) contrast(1.1);
             z-index: 1;

@@ -4,6 +4,7 @@ import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 import glpiSyncService from "../services/glpiSyncService.js";
 import alertRepository from "../repositories/alertRepository.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
+import ruleEngine from "../engine/RuleEngine.js";
 
 export const getTicketsByStatus = asyncHandler(async (req, res) => {
   const { status } = req.params;
@@ -172,6 +173,27 @@ export const getAlertDetails = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error('[GetAlertDetails] Erro:', error.message);
-    res.status(500).json({ success: false, error: 'Erro ao buscar detalhes do alerta.' });
+    res.status(500).json({ success: false, error: "Erro ao buscar detalhes do alerta" });
   }
+});
+
+export const getAlertRules = asyncHandler(async (req, res) => {
+  // Garante que as regras estão carregadas em memória se ainda não estiverem
+  if (ruleEngine.rules.length === 0) {
+    await ruleEngine.loadRules();
+  }
+
+  const rulesData = ruleEngine.rules.map(rule => ({
+    code: rule.code,
+    name: rule.name,
+    severity: rule.severity,
+    description: rule.description,
+    source: rule.source
+  }));
+
+  res.status(200).json({
+    success: true,
+    total: rulesData.length,
+    rules: rulesData
+  });
 });
