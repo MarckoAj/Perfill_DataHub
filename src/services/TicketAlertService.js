@@ -1,4 +1,4 @@
-import alertEngine from "./alertEngine.js";
+import ruleEngine from "../engine/RuleEngine.js";
 import alertRepository from "../repositories/alertRepository.js";
 import alertBroadcaster from "../websocket/alertBroadcaster.js";
 import glpiTicketTaskRepository from "../repositories/glpi/glpiTicketTaskRepository.js";
@@ -96,7 +96,31 @@ class TicketAlertService {
         }
       }
 
-      const alertRules = alertEngine.evaluateTicketRules(ticket);
+      // Garante que as regras estão carregadas em memória (Lazy Load Inicial)
+      if (ruleEngine.rules.length === 0) {
+        await ruleEngine.loadRules();
+      }
+
+      // Função auxiliar para calcular tempo
+      const parseDate = (val) => {
+        if (!val) return null;
+        const parsed = new Date(val);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      };
+      
+      const reference = parseDate(ticket.dataAtualizacao) || parseDate(ticket.dataCriacao);
+      const elapsed = reference ? Math.max(0, new Date().getTime() - reference.getTime()) : null;
+
+      // Montagem do Contexto Unificado (ETAPA 3 do Plano)
+      const context = {
+        ticket: ticket,
+        tasksAuvo: ticket.tasksAuvo || [],
+        timestamps: {
+          elapsed: elapsed
+        }
+      };
+
+      const alertRules = ruleEngine.evaluateAll(context);
 
       for (const rule of alertRules) {
         await this.checkAlert(rule, ticket);

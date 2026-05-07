@@ -12,7 +12,7 @@ async function forceSyncTicketTasks(ticketId) {
     console.log(`Buscando em: ${url}`);
     const result = await glpi_client.glpiRequestData(url, "GET");
 
-    if (!result?.data || !Array.isArray(result.data)) {
+    if (!result?.data || !Array.isArray(result.data) || result.data.length === 0) {
         console.log("Nenhuma tarefa encontrada na API para este ticket.");
         process.exit(0);
     }
