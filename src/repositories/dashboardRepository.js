@@ -224,11 +224,6 @@ class DashboardRepository {
       WHERE a.state IN ('open', 'justified') 
       AND t.status NOT IN ('solucionado', 'fechado', 'aguardando aprovação')
       ORDER BY 
-          CASE a.severity
-              WHEN 'high' THEN 1
-              WHEN 'medium' THEN 2
-              ELSE 3
-          END,
           a.first_detected_at DESC
     `;
     const [rows] = await pool.query(query);

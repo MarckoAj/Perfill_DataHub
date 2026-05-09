@@ -156,45 +156,57 @@
 
       if (!span || !dot) return;
 
-      if (globalTimerState.isSyncing) {
-        const desc = globalTimerState.currentDesc || globalTimerState.entity || 'Fila';
-        span.innerHTML = `Sincronizando: ${desc}...`;
-        if (container) container.title = `Execução Ativa: Sincronizando ${desc} no Backend.`;
+      let htmlOutput = "";
+      let statusColor = "#10b981";
+      let dotColor = "#10b981";
+      let boxShadow = "0 0 10px rgba(16, 185, 129, 0.6)";
 
-        span.style.color = '#f59e0b';
-        dot.style.background = '#f59e0b';
-        dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
-      } else if (globalTimerState.targetDate) {
+      // 1. Informação de Próxima Execução (Sempre visível se houver)
+      let timeStr = "";
+      if (globalTimerState.targetDate) {
         const now = new Date();
         const target = new Date(globalTimerState.targetDate);
         const diffMs = target - now;
 
-        if (diffMs <= 0) {
-          span.innerHTML = 'Disparando Cron...';
-          return;
+        if (diffMs > 0) {
+          const hours = Math.floor(diffMs / (1000 * 60 * 60));
+          const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+          timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else {
+          timeStr = "Disparando...";
         }
-
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
-
-        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        const nextDesc = globalTimerState.nextDesc || 'Motor Padrão';
-
-        span.innerHTML = `Auto-Sync (${globalTimerState.activeMotorsCount} Motores) | Próximo: ${nextDesc} em ${timeStr}`;
-        if (container) container.title = `Agendamento Automático: O próximo disparo (${nextDesc}) iniciará a carga silenciosa.`;
-
-        span.style.color = '#10b981';
-        dot.style.background = '#10b981';
-        dot.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
-      } else {
-        span.innerHTML = `Auto-Sync (0 Ativos) | Motores Desativados`;
-        if (container) container.title = `Nenhuma rotina cadastrada de auto-sync no painel.`;
-
-        span.style.color = '#94a3b8';
-        dot.style.background = '#475569';
-        dot.style.boxShadow = 'none';
       }
+
+      // 2. Informação de Execução Ativa
+      if (globalTimerState.isSyncing) {
+        const desc = globalTimerState.currentDesc || globalTimerState.entity || 'Fila';
+        htmlOutput = `<span style="animation: pulse-sync 2s infinite;">⚡ Sincronizando: ${desc}</span>`;
+        if (timeStr) {
+          htmlOutput += ` <span style="margin: 0 10px; opacity: 0.3;">|</span> <span style="opacity: 0.8;">Próximo Ciclo: ${timeStr}</span>`;
+        }
+        
+        statusColor = '#f59e0b';
+        dotColor = '#f59e0b';
+        boxShadow = '0 0 15px rgba(245, 158, 11, 0.8)';
+        if (container) container.title = `Execução Ativa: Sincronizando ${desc}. Próximo agendamento em ${timeStr}`;
+      } else if (globalTimerState.targetDate) {
+        const nextDesc = globalTimerState.nextDesc || 'Motor Padrão';
+        htmlOutput = `Auto-Sync (${globalTimerState.activeMotorsCount} Motores) | Próximo: <strong>${nextDesc}</strong> em <strong style="font-family: monospace; font-size: 14px;">${timeStr}</strong>`;
+        
+        if (container) container.title = `Agendamento Automático: O próximo disparo (${nextDesc}) iniciará a carga silenciosa.`;
+      } else {
+        htmlOutput = `Auto-Sync (0 Ativos) | Motores Desativados`;
+        statusColor = '#94a3b8';
+        dotColor = '#475569';
+        boxShadow = 'none';
+        if (container) container.title = `Nenhuma rotina cadastrada de auto-sync no painel.`;
+      }
+
+      span.innerHTML = htmlOutput;
+      span.style.color = statusColor;
+      dot.style.background = dotColor;
+      dot.style.boxShadow = boxShadow;
     }, 1000);
 
     // Bater no servidor a cada 30 segundos

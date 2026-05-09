@@ -5,7 +5,7 @@ function toMilliseconds({ minutes = 0, hours = 0, days = 0 }) {
 export default {
   code: 'GLPI_PAUSED_STALE',
   name: 'Ticket Pausado Stale',
-  severity: 2, // atencao
+  severity: 1, //informativo
   description: 'Ticket PENDENTE (Pausado) sem atualização há mais de 7 dias',
   source: 'GLPI',
 
@@ -15,7 +15,7 @@ export default {
 
     const status = String(ticket.status || '').toLowerCase();
     const isTicketActive = status !== 'solucionado' && status !== 'fechado' && status !== 'aguardando aprovação';
-    
+
     const thresholdMs = toMilliseconds({ days: 7 });
 
     return (

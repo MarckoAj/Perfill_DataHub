@@ -5,7 +5,7 @@ function toMilliseconds({ minutes = 0, hours = 0, days = 0 }) {
 export default {
   code: 'GLPI_NEW_UNHANDLED',
   name: 'Ticket Novo Sem Interação',
-  severity: 3, // critico
+  severity: 1, //informativo
   description: 'Ticket NOVO sem interação há mais de 5 minutos',
   source: 'GLPI',
 
@@ -15,7 +15,7 @@ export default {
 
     const status = String(ticket.status || '').toLowerCase();
     const isTicketActive = status !== 'solucionado' && status !== 'fechado' && status !== 'aguardando aprovação';
-    
+
     // Config do limiar: 5 minutos
     const thresholdMs = toMilliseconds({ minutes: 5 });
 

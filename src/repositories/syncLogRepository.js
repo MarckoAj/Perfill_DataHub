@@ -29,6 +29,19 @@ class SyncLogRepository {
     const [rows] = await pool.query(`SELECT * FROM sync_logs WHERE historyId = ? ORDER BY createdAt DESC`, [historyId]);
     return rows;
   }
+  async cleanupStuckSyncs() {
+    const query = `
+      UPDATE sync_history 
+      SET status = 'ERROR', 
+          finishedAt = NOW() 
+      WHERE status = 'RUNNING'
+    `;
+    const [result] = await pool.query(query);
+    if (result.affectedRows > 0) {
+      console.log(`[SyncLogRepository] Limpeza automática: ${result.affectedRows} sessões travadas foram encerradas.`);
+    }
+    return result.affectedRows;
+  }
 }
 
 export default new SyncLogRepository();

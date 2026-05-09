@@ -5,7 +5,7 @@ function toMilliseconds({ minutes = 0, hours = 0, days = 0 }) {
 export default {
   code: 'GLPI_PROACTIVE_STALE',
   name: 'Ticket Proativo Sem Interação e Tarefa',
-  severity: 2, // atencao
+  severity: 1, //informativo
   description: 'Ticket PROATIVO sem interação há mais de 48h e sem tarefas Auvo',
   source: 'GLPI/AUVO',
 
@@ -15,7 +15,7 @@ export default {
 
     const status = String(ticket.status || '').toLowerCase();
     const isTicketActive = status !== 'solucionado' && status !== 'fechado' && status !== 'aguardando aprovação';
-    
+
     const tempoSla = String(ticket.tempoSla || '');
     const thresholdMs = toMilliseconds({ hours: 48 });
 

@@ -82,8 +82,12 @@ class NOCWebSocketClient {
     if (event === 'ALERT_OPENED') {
       console.log('[WS] Novo alerta recebido:', payload);
       this.playAlertSound(payload.severity);
-      // Recarrega apenas os alertas para manter consistência total com o banco
-      loadAlerts().then(() => renderDashboard());
+      // Recarrega os alertas e volta para o topo (mais recente)
+      loadAlerts().then(() => {
+        currentAlertIndex = 0;
+        alertListPage = 0;
+        renderDashboard();
+      });
     } 
     
     if (event === 'ALERT_CLOSED') {
@@ -129,9 +133,9 @@ const root = document.getElementById("root");
 function renderDashboard() {
   const counts = {
     total: dashboardData.activeAlerts.length,
-    critico: dashboardData.activeAlerts.filter(a => a.severity === 'critico').length,
-    atencao: dashboardData.activeAlerts.filter(a => a.severity === 'atencao').length,
-    informativo: dashboardData.activeAlerts.filter(a => a.severity === 'informativo').length
+    critico: dashboardData.activeAlerts.filter(a => a.severity === 'critico' || a.severity === 'high').length,
+    atencao: dashboardData.activeAlerts.filter(a => a.severity === 'atencao' || a.severity === 'medium').length,
+    informativo: dashboardData.activeAlerts.filter(a => a.severity === 'informativo' || a.severity === 'low').length
   };
 
   const statusChips = [
@@ -143,7 +147,12 @@ function renderDashboard() {
 
   const filteredAlerts = currentFilter === 'todos'
     ? dashboardData.activeAlerts
-    : dashboardData.activeAlerts.filter(a => a.severity === currentFilter);
+    : dashboardData.activeAlerts.filter(a => {
+        if (currentFilter === 'critico') return a.severity === 'critico' || a.severity === 'high';
+        if (currentFilter === 'atencao') return a.severity === 'atencao' || a.severity === 'medium';
+        if (currentFilter === 'informativo') return a.severity === 'informativo' || a.severity === 'low';
+        return a.severity === currentFilter;
+      });
 
   const currentAlert = filteredAlerts[currentAlertIndex] || null;
 
@@ -182,7 +191,7 @@ function renderDashboard() {
       <section class="grid">
         <div class="stack stack-primary">
           ${currentAlert ? `
-            <section class="alert-banner severity-${currentAlert.severity}">
+            <section class="alert-banner severity-${currentAlert.severity === 'low' ? 'informativo' : (currentAlert.severity === 'medium' ? 'atencao' : (currentAlert.severity === 'high' ? 'critico' : currentAlert.severity))}">
               <div class="alert-copy">
                 <div class="alert-icon">${iconSvg("alert", 30)}</div>
                 <div><h2 class="alert-title">${currentAlert.Chamado}</h2><p class="alert-text">${currentAlert.description}</p></div>
@@ -321,7 +330,7 @@ function renderAlertList(alerts) {
   return pageItems.map((alert, index) => {
     const globalIndex = start + index;
     return `
-      <section class="alert-banner severity-${alert.severity} ${globalIndex === currentAlertIndex ? 'active-banner' : ''}" 
+      <section class="alert-banner severity-${alert.severity === 'low' ? 'informativo' : (alert.severity === 'medium' ? 'atencao' : (alert.severity === 'high' ? 'critico' : alert.severity))} ${globalIndex === currentAlertIndex ? 'active-banner' : ''}" 
                onclick="selectAlert(${globalIndex})" style="min-height: auto; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: transform 0.2s; flex-shrink: 0;">
         <div class="alert-copy" style="gap: 12px;">
           <div class="alert-icon" style="width: 28px; height: 28px;">${iconSvg("alert", 14)}</div>

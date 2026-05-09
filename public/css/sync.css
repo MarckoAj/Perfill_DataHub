@@ -852,3 +852,18 @@
       cursor: pointer;
       accent-color: #10b981;
     }
+    
+    @keyframes pulse-sync {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.98); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    
+    #globalAutoSyncContainer strong {
+      color: #fff;
+      text-shadow: 0 0 5px rgba(255,255,255,0.2);
+    }
+    
+    #globalAutoSyncContainer {
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
