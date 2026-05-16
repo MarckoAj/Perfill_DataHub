@@ -405,6 +405,7 @@ class AlertRepository {
         t.nomeCliente AS address,
         t.projeto AS project,
         t.nomeTecnico AS noc_technician,
+        CONCAT('https://glpi.perfilltecnologia.com.br/front/ticket.form.php?id=', t.ticketId) AS glpiUrl,
         'Não atribuído' AS field_technician 
       FROM datahub_ticket_alerts a
       JOIN tickets t ON a.ticket_id = t.ticketId
@@ -458,7 +459,8 @@ class AlertRepository {
         createdAt: ticketData.createdAt,
         sla: ticketData.sla,
         address: ticketData.address,
-        project: ticketData.project
+        project: ticketData.project,
+        glpiUrl: ticketData.glpiUrl
       },
       technicians: {
         noc: ticketData.noc_technician,

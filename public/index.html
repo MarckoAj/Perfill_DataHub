@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     // Auth Guard — redireciona para login se não houver token
-    (function() {
+    (function () {
       if (!localStorage.getItem('authToken')) {
         window.location.replace('/login.html');
       }
@@ -466,21 +466,21 @@
     // WebSocket Integration
     const socket = io();
     socket.on('connect', () => console.log('[WS] Conectado ao servidor de tempo real'));
-    
+
     // Recarregar dashboard em qualquer mudança de alerta
     socket.on('ALERT_OPENED', (data) => {
-        console.log('[WS] Novo alerta detectado, atualizando dashboard...');
-        loadDashboard();
+      console.log('[WS] Novo alerta detectado, atualizando dashboard...');
+      loadDashboard();
     });
 
     socket.on('ALERT_CLOSED', (data) => {
-        console.log('[WS] Alerta resolvido/fechado, atualizando dashboard...');
-        loadDashboard();
+      console.log('[WS] Alerta resolvido/fechado, atualizando dashboard...');
+      loadDashboard();
     });
 
     socket.on('ALERT_JUSTIFIED', (data) => {
-        console.log('[WS] Alerta justificado, atualizando dashboard...');
-        loadDashboard();
+      console.log('[WS] Alerta justificado, atualizando dashboard...');
+      loadDashboard();
     });
   </script>
 

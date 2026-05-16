@@ -119,22 +119,21 @@ Para garantir que não quebraremos nada no sistema que já funciona e manter o c
 - Refatoração sutil da tela de Login (aumento do blur, foco no form, limpeza do background competitivo).
 - **Validação:** Checar se as cores base estão premium e o login atende ao critério corporativo.
 
-### 🔲 Etapa 2: A Grande Mudança de Navegação (Sidebar)
-- Destruição da Topbar (Navbar).
-- Criação e integração da nova **Sidebar Operacional Esquerda**.
-- Adaptação do container principal para usar `margin-left` dinâmico.
-- **Validação:** Checar fluxo de navegação e sensação de "Software SaaS".
+### ✅ Etapa 2: A Grande Mudança de Navegação (Topbar Global Unificada)
+- *Ajuste Estratégico:* Em vez de uma Sidebar, optou-se pela consolidação de uma **Topbar Global** limpa e consistente em todas as páginas para maximizar o espaço horizontal.
+- Roteamento via URLs padronizadas (`/noc`, `/alerts`, `/tickets`, `/admin/sync`).
+- **Validação:** Checar fluxo de navegação e sensação de "Software SaaS". (Concluído)
 
-### 🔲 Etapa 3: Refatoração da Tela NOC (Dashboard)
-- Implementação da **Hero Section** para incidentes críticos.
-- Limpeza dos cards superiores.
-- Refatoração dos estilos base para remover o "excesso de neon".
-- **Validação:** Checar clareza hierárquica e densidade da tela mais importante.
+### ✅ Etapa 3: Refatoração da Tela NOC (Dashboard) e Modais
+- Implementação da **Hero Section** para incidentes críticos (Parcial).
+- Refatoração dos estilos base para remover o "excesso de neon" (Concluído).
+- **Refatoração de Modais:** NOC Enterprise Modal e Point Modal migrados para a identidade Deep Dark Glassmorphism, com arquitetura em CSS Grid para eliminar vazamentos de layout.
+- **Validação:** Checar clareza hierárquica e densidade da tela mais importante. (Concluído)
 
 ### 🔲 Etapa 4: Refatoração de Grids, Alertas e Chamados
 - Transformação das tabelas antigas para o modelo de Grids Modernas.
 - Refinamento das *Severity Badges* e *SLA Badges*.
-- Atualização das views `alerts.html` e `tickets.html`.
+- Atualização das views `alerts.html` e `tickets.html` (com auditoria de dependências CSS já finalizada).
 - **Validação:** Checar legibilidade, escaneabilidade e requinte das tabelas.
 
 ### 🔲 Etapa 5: Polimento, Micro-Animações e Responsividade

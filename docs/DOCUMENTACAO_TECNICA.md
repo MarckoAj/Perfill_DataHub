@@ -248,6 +248,14 @@ TicketAlertService
 
 ## 16 — APIs e Rotas
 
+### Frontend (Rotas de Interface)
+- `GET /noc`: Dashboard principal do NOC.
+- `GET /alerts`: Central de Alertas.
+- `GET /tickets`: Tabela de todos os chamados ativos e fechados.
+- `GET /admin/sync`: Painel de controle de sincronização.
+- `GET /rules.html`: Visão estática do Motor de Regras.
+
+### Backend (Endpoints JSON)
 - `GET /api/tickets/:status`: Mapeado para `glpiController.getTicketsByStatus`. Retorna a lista.
 - `GET /api/alerts`: Mapeado. Suporta paginação e filtros pesados (`state`, `severity`, `ruleId`).
 - `POST /api/alerts/:id/justify`: Body `{ justifiedText }`. Auth exigida. Finaliza o alerta manualmente.
@@ -258,6 +266,8 @@ TicketAlertService
 ## 17 — Observabilidade Operacional
 
 ### Existente
+- **Navegação Global:** Topbar unificada em todas as páginas para garantir experiência contínua.
+- **Interfaces e Modais:** *Enterprise NOC Modal* (Detalhes do Chamado) e *Point Modal* reformulados para consistência corporativa (CSS Grid, Glassmorphism).
 - Painel Frontend de Alertas (`alerts.html`) com filtros e cards operacionais.
 - Catálogo de Regras exposto para gerentes (`rules.html`).
 - Tela de Sincronização (`admin/sync`) para ver o status do Worker.

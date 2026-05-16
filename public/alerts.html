@@ -14,6 +14,8 @@
   </script>
   <title>Perfill DataHub - Alertas Ativos</title>
   <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/noc-modal.css">
+  <script src="/js/noc-modal.js" defer></script>
   <style>
     .severity-badge {
       padding: 4px 10px;
@@ -121,16 +123,56 @@
       background: rgba(14, 165, 233, 0.1);
       color: #0ea5e9;
       border: 1px solid rgba(14, 165, 233, 0.2);
-      padding: 4px 12px;
+      padding: 6px 12px;
       border-radius: 6px;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .btn-action-justify:hover {
       background: #0ea5e9;
       color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .btn-action-details {
+      background: rgba(255, 255, 255, 0.05);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action-details:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .quick-just-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .tag-just {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tag-just:hover {
+      background: rgba(14, 165, 233, 0.1);
+      border-color: #0ea5e9;
+      color: #0ea5e9;
     }
 
     /* TASKS MODAL SPECIFIC */
@@ -481,8 +523,8 @@
           const date = new Date(alert.first_detected_at).toLocaleString('pt-BR');
           const severityClass = `sev-${alert.severity}`;
           
-          const actionButton = activeTab === 'open' 
-            ? `<button class="btn-action-justify" onclick="openTasksModal(${alert.id}, '${alert.Ticket}')">Justificar</button>`
+          const actionButton = activeTab === 'open'
+            ? `<button class="btn-action-justify" onclick="openDetailsModal(${alert.id})">Ver Detalhes</button>`
             : `<span style="font-size:10px; color:#10b981; font-weight:700;">JUSTIFICADO</span>`;
 
           return `
@@ -505,8 +547,7 @@
                 ` : ''}
               </td>
               <td style="color:var(--text-muted); font-size:12px;">${date}</td>
-              <td style="text-align:center; display: flex; gap: 8px; justify-content: center; align-items: center;">
-                <button class="btn-action-justify" onclick="openDetailsModal(${alert.id})" title="Ver Detalhes" style="padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">👁️</button>
+              <td style="text-align:center;">
                 ${actionButton}
               </td>
             </tr>
@@ -669,113 +710,61 @@
       document.getElementById('justifiedText').focus();
     }
 
+    function fillJustify(text) {
+      document.getElementById('justifiedText').value = text;
+    }
+
     // DETAILS MODAL LOGIC
     async function openDetailsModal(alertId) {
-      const modal = document.getElementById('detailsModal');
-      const container = document.getElementById('detailsContainer');
       const token = localStorage.getItem('authToken');
-
-      console.log(`[Details] Abrindo detalhes para alertId: ${alertId}. Token presente: ${!!token}`);
-      modal.style.display = 'flex';
-      
-      container.innerHTML = `
-        <div class="loading-spinner">
-          <div style="font-size: 24px; animation: spin 1s linear infinite;">↻</div>
-          <p style="margin-top: 10px;">Carregando detalhes completos...</p>
-        </div>
-      `;
-
       if (!token) {
-        container.innerHTML = `
-          <div style="padding: 40px; text-align: center; color: #ef4444;">
-            <p>Erro: Token de sessão não encontrado. Por favor, faça login novamente.</p>
-          </div>
-        `;
+        alert('Erro: Token de sessão não encontrado. Faça login novamente.');
         return;
       }
 
+      // Abre o modal imediatamente com skeleton (melhor UX)
+      NOCModal.openLoading();
+
       try {
         const response = await fetch(`/api/alerts/${alertId}/details`, {
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
           }
         });
         const result = await response.json();
-
         if (!result.success) throw new Error(result.error);
 
-        const data = result.data;
-        renderDetailsContent(data);
+        // Busca os metadados do alerta no array local (já carregado na tabela)
+        const alertRow = allAlerts.find(a => a.id === alertId) || {};
+
+        // Monta o payload completo para o modal NOC v2
+        const payload = {
+          ...result.data,
+          alert: {
+            alertId:          alertRow.id         || alertId,
+            severity:         alertRow.severity   || 'informativo',
+            ruleId:           alertRow.ruleId     || '—',
+            description:      alertRow.description|| '—',
+            source:           alertRow.source     || '—',
+            first_detected_at: alertRow.first_detected_at || null,
+            state:            alertRow.state      || 'open',
+          },
+        };
+
+        NOCModal.open(payload);
 
       } catch (err) {
-        container.innerHTML = `
-          <div style="padding: 40px; text-align: center; color: #ef4444;">
-            <p>Erro ao carregar detalhes: ${err.message}</p>
-          </div>
-        `;
+        NOCModal.close();
+        alert('Erro ao carregar detalhes: ' + err.message);
       }
     }
 
     function closeDetailsModal() {
-      document.getElementById('detailsModal').style.display = 'none';
+      NOCModal.close();
     }
 
-    function renderDetailsContent(data) {
-      const container = document.getElementById('detailsContainer');
-      const t = data.ticket;
-      const tech = data.technicians;
 
-      container.innerHTML = `
-        <div class="details-grid-top">
-          <div class="detail-item"><span class="detail-label">Chamado</span><span class="detail-value">#${t.id}</span></div>
-          <div class="detail-item"><span class="detail-label">Título</span><span class="detail-value">${t.title}</span></div>
-          <div class="detail-item"><span class="detail-label">Data de Abertura</span><span class="detail-value">${new Date(t.createdAt).toLocaleString('pt-BR')}</span></div>
-          
-          <div class="detail-item"><span class="detail-label">SLA / Status</span><span class="detail-value">${t.sla} | ${t.status}</span></div>
-          <div class="detail-item"><span class="detail-label">Localização</span><span class="detail-value">${t.address}</span></div>
-          <div class="detail-item"><span class="detail-label">Projeto</span><span class="detail-value">${t.project}</span></div>
-
-          <div class="detail-item" style="grid-column: span 2;"><span class="detail-label">Descrição</span><span class="detail-value" style="font-size: 12px; line-height: 1.4;">${t.description}</span></div>
-          <div class="detail-item">
-            <span class="detail-label">Técnicos</span>
-            <span class="detail-value" style="font-size: 12px;">NOC: ${tech.noc}<br>Campo: ${tech.field}</span>
-          </div>
-        </div>
-
-        <div class="details-grid-bottom">
-          <div class="details-column">
-            <h4 class="details-section-title">💬 Interações (GLPI)</h4>
-            <div id="interactionsList" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
-              ${data.interactions.length > 0 ? data.interactions.map(i => `
-                <div class="interaction-card">
-                  <div style="font-size: 13px; line-height: 1.4;">${i.description}</div>
-                  <div class="interaction-meta">
-                    <span>${i.author}</span>
-                    <span>${new Date(i.date).toLocaleString('pt-BR')}</span>
-                  </div>
-                </div>
-              `).join('') : '<p class="muted" style="font-size: 12px;">Nenhuma interação registrada.</p>'}
-            </div>
-          </div>
-          
-          <div class="details-column">
-            <h4 class="details-section-title">📋 Tarefas (AUVO)</h4>
-            <div id="tasksList" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
-              ${data.tasks.length > 0 ? data.tasks.map(task => `
-                <div class="interaction-card" style="border-left-color: ${task.status === 'FINALIZADA' ? '#10b981' : '#f59e0b'}">
-                  <div style="font-size: 13px; font-weight: 600;">#${task.taskId} - ${task.title}</div>
-                  <div class="interaction-meta">
-                    <span class="task-status-pill status-${task.status}">${task.status}</span>
-                    <span>${task.assignedTo || 'Não atribuído'}</span>
-                  </div>
-                </div>
-              `).join('') : '<p class="muted" style="font-size: 12px;">Nenhuma tarefa vinculada.</p>'}
-            </div>
-          </div>
-        </div>
-      `;
-    }
 
     function closeJustifyModal() {
       document.getElementById('justifyModal').style.display = 'none';
@@ -828,6 +817,15 @@
       <div class="modal-body">
         <label for="justifiedText">Motivo da Justificativa</label>
         <textarea id="justifiedText" placeholder="Descreva o motivo para ignorar este alerta..."></textarea>
+        
+        <div style="margin-top: 15px; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Sugestões Rápidas:</div>
+        <div class="quick-just-tags">
+          <span class="tag-just" onclick="fillJustify('Técnico ciente do problema.')">Técnico ciente</span>
+          <span class="tag-just" onclick="fillJustify('Aguardando retorno do cliente.')">Aguardando Cliente</span>
+          <span class="tag-just" onclick="fillJustify('Problema de conectividade externa/operadora.')">Operadora/Link</span>
+          <span class="tag-just" onclick="fillJustify('Tarefa já em andamento em campo.')">Em campo</span>
+          <span class="tag-just" onclick="fillJustify('Chamado em acompanhamento pelo NOC.')">Acompanhamento NOC</span>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeJustifyModal()">Cancelar</button>
@@ -856,21 +854,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE DETALHES COMPLETOS (NOVO) -->
-  <div class="modal-overlay" id="detailsModal">
-    <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
-      <div class="modal-header" style="flex-shrink: 0;">
-        <h3 class="modal-title">Detalhes do Alerta & Chamado</h3>
-        <button onclick="closeDetailsModal()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 24px;">&times;</button>
-      </div>
-      <div class="modal-body" id="detailsContainer" style="overflow-y: auto; flex: 1; padding: 25px;">
-        <!-- Injetado via JS -->
-      </div>
-      <div class="modal-footer" style="flex-shrink: 0;">
-        <button class="btn-cancel" onclick="closeDetailsModal()">Fechar Painel</button>
-      </div>
-    </div>
-  </div>
+
 
   <style>
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

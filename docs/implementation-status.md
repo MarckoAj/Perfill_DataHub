@@ -88,4 +88,9 @@
 [x] Endpoint de Telemetria Contínua (Polling 1.5s)
 [x] Métricas de sync (Progresso Delta: Novas Inserções, Hits de Base)
 [x] Modal de Auditoria de Erros Específicos e Log em Tabela
-[x] Proteção Anti-Congelamento (Escudo Try/Catch nas requisições HTTPs)
+[x] Proteção Anti-Congelamento (Escudo Try/Catch nas requisições HTTPs)
+[x] Navegação unificada via Topbar Global em todas as páginas
+[x] Roteamento dinâmico no frontend e backend (URLs amigáveis `/noc`, `/alerts`, `/tickets`, `/admin/sync`)
+[x] Refatoração do Enterprise NOC Modal e Point Modal (CSS Grid, Glassmorphism, Zero Layout Overlap)
+[x] Mapeamento e auditoria de dependências CSS e arquivos estáticos (Pasta `public`)
+[x] Correção de bugs de carregamento de alertas e estabilização de conexão de Banco de Dados
