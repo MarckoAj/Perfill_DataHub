@@ -15,6 +15,7 @@
   <title>PerfillBI – Dashboard de Chamados GLPI</title>
   <link rel="stylesheet" href="/css/index.css">
   <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/css/point-modal.css">
 </head>
 
 <body>
@@ -23,7 +24,7 @@
   <nav class="global-nav">
     <div class="nav-left">
       <div class="nav-logo">
-        <img src="/images/perfill_logo.png" alt="Perfill Logo">
+        <div style="font-size: 18px; font-weight: bold; color: #0ea5e9;">🔧 Perfill</div>
       </div>
       <div class="nav-menu">
         <div class="nav-item">
@@ -430,7 +431,7 @@
                 </div>
               </div>
             </td>
-            <td class="td-local"><span style="font-size:11px;font-weight:600;color:var(--text);" title="${t['Cliente Local'] || ''}">${shortLoc}</span></td>
+            <td class="td-local td-local-click" onclick="event.stopPropagation(); openPointModal(1)" style="cursor:pointer;"><span style="font-size:11px;font-weight:600;color:var(--text);" title="${t['Cliente Local'] || ''}">${shortLoc}</span></td>
             <td><span style="font-weight:700; font-size:11.5px; color:#38bdf8; letter-spacing: 0.02em;">${t.Categoria || '—'}</span></td>
             <td>${auvoHtml}</td>
             <td>${badge(t['Status do SLA'], SLA_MAP)}</td>
@@ -484,6 +485,1168 @@
     });
   </script>
 
+<!-- MODAL DE JUSTIFICATIVA -->
+  <div class="modal-overlay" id="justifyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Justificar Alerta</h3>
+      </div>
+      <div class="modal-body">
+        <label for="justifiedText">Motivo da Justificativa</label>
+        <textarea id="justifiedText" placeholder="Descreva o motivo para ignorar este alerta..."></textarea>
+
+        <div style="margin-top: 15px; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">
+          Sugestões Rápidas:</div>
+        <div class="quick-just-tags">
+          <span class="tag-just" onclick="fillJustify('Técnico ciente do problema.')">Técnico ciente</span>
+          <span class="tag-just" onclick="fillJustify('Aguardando retorno do cliente.')">Aguardando Cliente</span>
+          <span class="tag-just"
+            onclick="fillJustify('Problema de conectividade externa/operadora.')">Operadora/Link</span>
+          <span class="tag-just" onclick="fillJustify('Tarefa já em andamento em campo.')">Em campo</span>
+          <span class="tag-just" onclick="fillJustify('Chamado em acompanhamento pelo NOC.')">Acompanhamento NOC</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeJustifyModal()">Cancelar</button>
+        <button class="btn-justify-confirm" onclick="submitJustify()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE TAREFAS (NOVO) -->
+  <div class="modal-overlay" id="tasksModal">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="modal-title">Tarefas Relacionadas</h3>
+          <span style="font-size: 12px; color: #0ea5e9;" id="modalExternalId"></span>
+        </div>
+        <button onclick="closeTasksModal()"
+          style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 20px;">&times;</button>
+      </div>
+      <div class="modal-body" id="tasksContainer" style="min-height: 200px;">
+        <!-- Injetado via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeTasksModal()">Fechar</button>
+        <button class="btn-justify-confirm" onclick="proceedToJustification()">Continuar para Justificativa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CHAMADO -->
+  <div class="ticket-modal-overlay" id="ticketDetailsModal">
+    <div class="ticket-modal-container">
+
+      <!-- HEADER -->
+      <div class="ticket-modal-header">
+        <div>
+          <h2 class="ticket-modal-title">Detalhes do Chamado</h2>
+          <span class="ticket-modal-subtitle">
+            Chamado monitorado pelo NOC
+          </span>
+        </div>
+
+        <button class="ticket-modal-close" onclick="closeTicketModal()">
+          ✕
+        </button>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="ticket-actions-bar">
+
+        <button class="ticket-action-btn">
+          Novo chamado
+        </button>
+
+        <button class="ticket-action-btn">
+          Interagir no chamado
+        </button>
+
+        <button class="ticket-action-btn">
+          Finalizar chamado
+        </button>
+
+        <button class="ticket-action-btn action-primary">
+          Adicionar tarefa Auvo
+        </button>
+
+      </div>
+
+      <!-- CONTENT -->
+      <div class="ticket-modal-content">
+
+        <!-- GRID INFO -->
+        <div class="ticket-info-grid">
+
+          <!-- COLUNA 1 -->
+          <div class="ticket-info-column">
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">ID do chamado</span>
+              <span class="ticket-value">00 000</span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Título</span>
+              <span class="ticket-value">
+                VIDPOL-00000-PONTO INOPERANTE
+              </span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Data de abertura</span>
+              <span class="ticket-value">12/12/2012</span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">SLA / Categoria</span>
+              <span class="ticket-value">
+                PI-Inoperante-8hrs
+              </span>
+            </div>
+
+          </div>
+
+          <!-- COLUNA 2 -->
+          <div class="ticket-info-column">
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">ID / Endereço</span>
+              <span class="ticket-value">
+                00-000 - TP - RUA NOME DA RUA BAIRRO REFERENCIA
+              </span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Descrição</span>
+              <span class="ticket-value">
+                Texto de exemplo mockado para descrição do chamado.
+              </span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Status GLPI</span>
+              <span class="ticket-value">
+                Atribuído
+              </span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Tempo para atendimento</span>
+              <span class="ticket-value">
+                00:00
+              </span>
+            </div>
+
+          </div>
+
+          <!-- COLUNA 3 -->
+          <div class="ticket-info-column">
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Projeto</span>
+              <span class="ticket-value">
+                PI - Projeto
+              </span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">Técnico NOC atribuído</span>
+              <span class="ticket-value">
+                Nome do técnico
+              </span>
+            </div>
+
+            <div class="ticket-info-block">
+              <span class="ticket-label">
+                Técnico de campo atribuído
+              </span>
+              <span class="ticket-value">
+                Nome do técnico
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- DIVISOR -->
+        <div class="ticket-divider"></div>
+
+        <!-- FOOTER GRID -->
+        <div class="ticket-bottom-grid">
+
+          <!-- INTERAÇÕES -->
+          <div class="ticket-history-box">
+
+            <div class="ticket-section-title">
+              Interações
+            </div>
+
+            <div class="ticket-history-scroll">
+
+              <div class="ticket-history-row">
+                <span>Chamado interagido GLPI</span>
+                <span>12/12/2012</span>
+                <span>Nome do técnico</span>
+              </div>
+
+              <div class="ticket-history-row">
+                <span>Tarefa criada no Auvo</span>
+                <span>12/12/2012</span>
+                <span>Nome do técnico</span>
+              </div>
+
+              <div class="ticket-history-row">
+                <span>Atribuído técnico NOC</span>
+                <span>12/12/2012</span>
+                <span>Nome do técnico</span>
+              </div>
+
+              <div class="ticket-history-row">
+                <span>Chamado aberto</span>
+                <span>12/12/2012</span>
+                <span>Sistema</span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- TAREFAS -->
+          <div class="ticket-auvo-box">
+
+            <div class="ticket-section-title">
+              Tarefas no Auvo
+            </div>
+
+            <div class="ticket-task-scroll">
+
+              <div class="ticket-task-item">
+                <span>⚠️</span>
+                <span>
+                  00-00 TIPO Nome do ponto - tipo da tarefa
+                </span>
+              </div>
+
+              <div class="ticket-task-item">
+                <span>🛠️</span>
+                <span>
+                  00-00 TIPO Nome do ponto - tipo da tarefa
+                </span>
+              </div>
+
+              <div class="ticket-task-item">
+                <span>✅</span>
+                <span>
+                  00-00 TIPO Nome do ponto - tipo da tarefa
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* =========================================================
+       MODAL AUVO TASK
+    ========================================================= */
+
+    .auvo-task-overlay {
+      position: fixed;
+      inset: 0;
+
+      background: rgba(0,0,0,0.82);
+
+      backdrop-filter: blur(8px);
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      z-index: 99999;
+    }
+
+    .auvo-task-overlay.active {
+      display: flex;
+    }
+
+    .auvo-task-container {
+      width: 94%;
+      height: 92vh;
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(7,20,55,0.98),
+          rgba(12,28,70,0.96)
+        );
+
+      border-radius: 22px;
+
+      border: 1px solid rgba(20,231,197,0.12);
+
+      overflow: hidden;
+
+      display: flex;
+      flex-direction: column;
+
+      box-shadow:
+        0 20px 80px rgba(0,0,0,0.7);
+    }
+
+    /* HEADER */
+
+    .auvo-task-header {
+      min-height: 88px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      padding: 0 32px;
+
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .auvo-task-header-left,
+    .auvo-task-header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .auvo-header-btn {
+      height: 46px;
+
+      padding: 0 22px;
+
+      border-radius: 12px;
+
+      border: 1px solid rgba(255,255,255,0.08);
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255,255,255,0.08),
+          rgba(255,255,255,0.03)
+        );
+
+      color: var(--text-secondary);
+
+      font-size: 14px;
+      font-weight: 600;
+
+      cursor: pointer;
+
+      transition: 0.2s;
+    }
+
+    .auvo-header-btn:hover {
+      transform: translateY(-2px);
+
+      border-color: var(--accent);
+
+      color: white;
+    }
+
+    .auvo-header-btn.primary {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(20,231,197,0.20),
+          rgba(20,231,197,0.08)
+        );
+
+      color: var(--accent);
+    }
+
+    .auvo-header-btn.danger:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .auvo-close-btn {
+      width: 44px;
+      height: 44px;
+
+      border-radius: 10px;
+
+      border: 1px solid rgba(255,255,255,0.08);
+
+      background: transparent;
+
+      color: var(--text-secondary);
+
+      cursor: pointer;
+    }
+
+    /* TABS */
+
+    .auvo-tabs-wrapper {
+      display: flex;
+      justify-content: center;
+
+      padding-top: 18px;
+    }
+
+    .auvo-tabs {
+      display: flex;
+      gap: 10px;
+    }
+
+    .auvo-tab {
+      height: 42px;
+
+      padding: 0 26px;
+
+      border: none;
+
+      border-radius: 12px 12px 0 0;
+
+      background: transparent;
+
+      color: var(--text-muted);
+
+      font-weight: 600;
+
+      cursor: pointer;
+
+      transition: 0.2s;
+    }
+
+    .auvo-tab.active {
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255,255,255,0.10),
+          rgba(255,255,255,0.03)
+        );
+
+      color: white;
+
+      box-shadow:
+        inset 0 -2px 0 var(--accent);
+    }
+
+    /* BODY */
+
+    .auvo-task-body {
+      flex: 1;
+
+      overflow-y: auto;
+
+      padding: 32px;
+    }
+
+    /* TABS */
+
+    .auvo-tab-content {
+      display: none;
+    }
+
+    .auvo-tab-content.active {
+      display: block;
+    }
+
+    /* DETAILS */
+
+    .auvo-details-grid {
+      display: grid;
+
+      grid-template-columns: repeat(3, 1fr);
+
+      gap: 42px;
+
+      border: 1px solid rgba(255,255,255,0.08);
+
+      border-radius: 18px;
+
+      padding: 32px;
+    }
+
+    .auvo-column {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .auvo-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .auvo-label {
+      color: var(--text-primary);
+
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .auvo-value {
+      color: var(--text-secondary);
+
+      border-bottom: 1px solid rgba(255,255,255,0.18);
+
+      padding-bottom: 10px;
+
+      line-height: 1.6;
+    }
+
+    .auvo-value.multiline {
+      min-height: 120px;
+    }
+
+    .priority-high {
+      color: var(--warning);
+    }
+
+    /* ANEXOS */
+
+    .attachments-carousel-wrapper {
+      position: relative;
+
+      display: flex;
+      align-items: center;
+
+      gap: 20px;
+
+      border: 1px solid rgba(255,255,255,0.08);
+
+      border-radius: 18px;
+
+      padding: 30px;
+    }
+
+    .attachments-carousel {
+      display: flex;
+      gap: 18px;
+
+      overflow-x: auto;
+
+      scroll-behavior: smooth;
+
+      width: 100%;
+    }
+
+    .attachments-carousel::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .attachments-carousel::-webkit-scrollbar-thumb {
+      background: rgba(20,231,197,0.2);
+
+      border-radius: 999px;
+    }
+
+    .attachment-card {
+      min-width: 360px;
+      height: 260px;
+
+      border-radius: 16px;
+
+      overflow: hidden;
+
+      cursor: pointer;
+
+      border: 1px solid rgba(255,255,255,0.08);
+
+      transition: 0.2s;
+    }
+
+    .attachment-card:hover {
+      transform: scale(1.02);
+
+      border-color: var(--accent);
+    }
+
+    .attachment-card img {
+      width: 100%;
+      height: 100%;
+
+      object-fit: cover;
+    }
+
+    .carousel-nav {
+      width: 54px;
+      height: 54px;
+
+      border-radius: 50%;
+
+      border: none;
+
+      background: rgba(255,255,255,0.08);
+
+      color: var(--text-primary);
+
+      font-size: 32px;
+
+      cursor: pointer;
+    }
+
+    /* QUESTIONARIOS */
+
+    .questionnaire-title {
+      font-size: 24px;
+      font-weight: 700;
+
+      margin-bottom: 28px;
+
+      color: var(--text-primary);
+    }
+
+    .questionnaire-grid {
+      display: grid;
+
+      grid-template-columns: repeat(2, 1fr);
+
+      gap: 20px;
+
+      margin-bottom: 32px;
+    }
+
+    .question-card {
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255,255,255,0.05),
+          rgba(255,255,255,0.02)
+        );
+
+      border: 1px solid rgba(255,255,255,0.06);
+
+      border-radius: 16px;
+
+      padding: 20px;
+    }
+
+    .question-type {
+      font-size: 11px;
+      font-weight: 700;
+
+      text-transform: uppercase;
+
+      color: var(--accent);
+
+      margin-bottom: 12px;
+    }
+
+    .question-label {
+      color: var(--text-primary);
+
+      font-weight: 600;
+
+      margin-bottom: 10px;
+    }
+
+    .question-answer {
+      color: var(--text-secondary);
+
+      line-height: 1.6;
+    }
+
+    /* TEXT BLOCK */
+
+    .questionnaire-text-block {
+      margin-top: 24px;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255,255,255,0.04),
+          rgba(255,255,255,0.02)
+        );
+
+      border: 1px solid rgba(255,255,255,0.06);
+
+      border-radius: 18px;
+
+      padding: 22px;
+    }
+
+    .text-block-title {
+      font-size: 16px;
+      font-weight: 700;
+
+      color: var(--text-primary);
+
+      margin-bottom: 16px;
+    }
+
+    .text-block-content {
+      color: var(--text-secondary);
+
+      line-height: 1.8;
+
+      white-space: pre-line;
+    }
+
+    /* FULLSCREEN */
+
+    .fullscreen-image-overlay {
+      position: fixed;
+      inset: 0;
+
+      background: rgba(0,0,0,0.94);
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      z-index: 999999;
+    }
+
+    .fullscreen-image-overlay.active {
+      display: flex;
+    }
+
+    .fullscreen-image-overlay img {
+      max-width: 92%;
+      max-height: 92vh;
+
+      border-radius: 18px;
+    }
+
+    </style>
+
+<!-- MODAL TAREFA AUVO -->
+  <div class="auvo-task-overlay" id="auvoTaskModal">
+
+    <div class="auvo-task-container">
+
+      <!-- HEADER -->
+      <div class="auvo-task-header">
+
+        <div class="auvo-task-header-left">
+
+          <button class="auvo-header-btn danger">
+            Finalizar
+          </button>
+
+          <button class="auvo-header-btn">
+            Editar
+          </button>
+
+          <button class="auvo-header-btn">
+            Excluir
+          </button>
+
+          <button class="auvo-header-btn">
+            Transferir
+          </button>
+
+        </div>
+        <div class="auvo-task-header-right">
+
+          <button class="auvo-header-btn primary">
+            Adicionar nova tarefa Auvo
+          </button>
+
+          <button
+            class="auvo-close-btn"
+            onclick="closeAuvoTaskModal()"
+          >
+            ✕
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- TABS -->
+      <div class="auvo-tabs-wrapper">
+
+        <div class="auvo-tabs">
+
+          <button
+            class="auvo-tab active"
+            onclick="switchAuvoTab('details')"
+          >
+            Detalhes
+          </button>
+
+          <button
+            class="auvo-tab"
+            onclick="switchAuvoTab('attachments')"
+          >
+            Anexos
+          </button>
+
+          <button
+            class="auvo-tab"
+            onclick="switchAuvoTab('questionnaires')"
+          >
+            Questionários
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- BODY -->
+      <div class="auvo-task-body">
+
+        <!-- =====================================================
+             TAB DETALHES
+        ====================================================== -->
+
+        <div
+          class="auvo-tab-content active"
+          id="tab-details"
+        >
+
+          <div class="auvo-details-grid">
+
+            <!-- COLUNA -->
+            <div class="auvo-column">
+
+              <div class="auvo-field">
+                <span class="auvo-label">De:</span>
+                <span class="auvo-value">
+                  Técnico que abriu o chamado
+                </span>
+              </div>
+
+              <div class="auvo-field">
+                <span class="auvo-label">ID / Endereço</span>
+                <span class="auvo-value">
+                  00-000 - TP - RUA NOME DA RUA
+                </span>
+              </div>
+
+              <div class="auvo-field">
+                <span class="auvo-label">Orientação</span>
+                <span class="auvo-value multiline">
+                  Texto de exemplo referente
+                  a orientação da tarefa.
+                </span>
+              </div>
+
+            </div>
+
+            <!-- COLUNA -->
+            <div class="auvo-column">
+
+              <div class="auvo-field">
+                <span class="auvo-label">Para:</span>
+                <span class="auvo-value">
+                  Técnico responsável
+                </span>
+              </div>
+
+              <div class="auvo-field">
+                <span class="auvo-label">Tipo da tarefa</span>
+                <span class="auvo-value">
+                  Manutenção Corretiva
+                </span>
+              </div>
+
+              <div class="auvo-field">
+                <span class="auvo-label">Prioridade</span>
+                <span class="auvo-value priority-high">
+                  Alta
+                </span>
+              </div>
+
+            </div>
+
+            <!-- COLUNA -->
+            <div class="auvo-column">
+
+              <div class="auvo-field">
+                <span class="auvo-label">Data da tarefa</span>
+                <span class="auvo-value">
+                  12/12/2012
+                </span>
+              </div>
+
+              <div class="auvo-field">
+                <span class="auvo-label">ID do chamado</span>
+                <span class="auvo-value">
+                  00 000
+                </span>
+              </div>
+
+              <div class="auvo-field">
+                <span class="auvo-label">Questionário</span>
+                <span class="auvo-value">
+                  Checklist Técnico
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- =====================================================
+             TAB ANEXOS
+        ====================================================== -->
+
+        <div
+          class="auvo-tab-content"
+          id="tab-attachments"
+        >
+
+          <div class="attachments-carousel-wrapper">
+
+            <button
+              class="carousel-nav left"
+              onclick="scrollAttachments(-1)"
+            >
+              ‹
+            </button>
+
+            <div
+              class="attachments-carousel"
+              id="attachmentsCarousel"
+            >
+
+            <div
+              class="attachment-card"
+              onclick="openFullscreenImage(this)"
+            >
+              <img
+                src="https://picsum.photos/600/400?1"
+                alt=""
+              />
+            </div>
+
+            <div
+              class="attachment-card"
+              onclick="openFullscreenImage(this)"
+            >
+              <img
+                src="https://picsum.photos/600/400?2"
+                alt=""
+              />
+            </div>
+
+            <div
+              class="attachment-card"
+              onclick="openFullscreenImage(this)"
+            >
+              <img
+                src="https://picsum.photos/600/400?3"
+                alt=""
+              />
+            </div>
+
+            <div
+              class="attachment-card"
+              onclick="openFullscreenImage(this)"
+            >
+              <img
+                src="https://picsum.photos/600/400?4"
+                alt=""
+              />
+            </div>
+
+          </div>
+
+          <button
+            class="carousel-nav right"
+            onclick="scrollAttachments(1)"
+          >
+            ›
+          </button>
+
+        </div>
+
+      </div>
+
+        <!-- =====================================================
+             TAB QUESTIONARIOS
+        ====================================================== -->
+
+        <div
+          class="auvo-tab-content"
+          id="tab-questionnaires"
+        >
+
+          <div class="questionnaire-title">
+            Checklist Técnico Operacional
+          </div>
+
+          <!-- QUESTÕES -->
+          <div class="questionnaire-grid">
+
+            <div class="question-card">
+              <div class="question-type">
+                Texto
+              </div>
+
+              <div class="question-label">
+                Equipamento ligado?
+              </div>
+
+              <div class="question-answer">
+                Sim
+              </div>
+            </div>
+
+            <div class="question-card">
+              <div class="question-type">
+                Foto
+              </div>
+
+              <div class="question-label">
+                Evidência do rack
+              </div>
+
+              <div class="question-answer">
+                2 imagens anexadas
+              </div>
+            </div>
+
+            <div class="question-card">
+              <div class="question-type">
+                Checklist
+              </div>
+
+              <div class="question-label">
+                Nobreak operacional?
+              </div>
+
+              <div class="question-answer">
+                Validado
+              </div>
+            </div>
+
+            <div class="question-card">
+              <div class="question-type">
+                Seleção
+              </div>
+
+              <div class="question-label">
+                Prioridade da falha
+              </div>
+
+              <div class="question-answer">
+                Alta
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RELATO -->
+          <div class="questionnaire-text-block">
+
+            <div class="text-block-title">
+              Relato do usuário
+            </div>
+
+            <div class="text-block-content">
+              Usuário relatou instabilidade no acesso
+              ao sistema durante o período da manhã.
+            </div>
+
+          </div>
+
+          <!-- OBSERVAÇÕES -->
+          <div class="questionnaire-text-block">
+
+            <div class="text-block-title">
+              Observações
+            </div>
+
+            <div class="text-block-content">
+              Técnico realizou testes elétricos,
+              validação de conectividade e reinício
+              do equipamento.
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- FULLSCREEN IMAGE PREVIEW -->
+  <div
+    class="fullscreen-image-overlay"
+    id="fullscreenImageModal"
+    onclick="closeFullscreenImage()"
+  >
+
+    <img
+      src=""
+      id="fullscreenImage"
+      alt=""
+    />
+
+  </div>
+
+<!-- MODAL PONTO/CLIENTE -->
+  <div
+    class="point-modal-overlay"
+    id="pointModalOverlay"
+  >
+
+    <div class="point-modal">
+
+      <div class="point-modal-header">
+
+        <div class="point-modal-title">
+          <h2>ID do ponto</h2>
+          <div class="point-search-container">
+            <input
+              class="point-search"
+              value="00-000"
+              readonly
+            />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:16px; align-items:center;">
+          <button class="point-btn-auvo">
+             Adicionar nova tarefa Auvo
+          </button>
+          <button
+            onclick="closePointModal()"
+            class="ticket-modal-close"
+          >
+            ✕
+          </button>
+        </div>
+
+      </div>
+
+
+
+      <div class="point-modal-content">
+        <div id="pointTabContent"></div>
+      </div>
+
+    </div>
+
+  </div>
+  <script src="/js/client-mock.js"></script>
+  <script src="/js/point-modal.js"></script>
+  <script src="/js/ticket-modal.js"></script>
 </body>
 
 </html>
