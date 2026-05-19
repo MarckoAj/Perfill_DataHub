@@ -184,6 +184,12 @@ AUVO
 - [x] Frontend: Badge luminosa indicatória de Cron-Sync Automático ativa no cabeçalho.
 - [x] Resiliência: Prevenção de valor NaN nas chaves de tabelas individualizadas (Fallback de Primary Keys).
 
+## Fase 5: Expansão Clientes e Gestão de Rotas (v1.2)
+- [x] Frontend: Painel de Clientes Operacionais com barra de filtros dinâmicos combinados (`/clientes`).
+- [x] Frontend: Comportamento SPA em tela cheia nas abas de visualização (Ativos, Mapa) com cores Obsidian Neon integradas.
+- [x] Frontend: Redução de ruído e desativação completa da tela antiga estática de regras (`rules.html`).
+- [x] Documentação: Atualização de endpoints e remoção de arquivos e rotas redundantes.
+
 For now, the focus is exposing BI endpoints for Power BI.
 
 ---

@@ -37,7 +37,7 @@
           <a href="/tickets" class="nav-link active">Chamados</a>
         </div>
         <div class="nav-item">
-          <a href="/rules.html" class="nav-link">Motor de Regras</a>
+          <a href="/clientes" class="nav-link">Clientes</a>
         </div>
         <div class="nav-item">
           <a class="nav-link">Admin ▾</a>
@@ -86,42 +86,42 @@
     <div class="summary-grid">
       <div class="summary-card card--novo" data-filter="novo" onclick="applyStatusFilter('novo')">
         <div class="card-icon">🔵</div>
-        <div class="card-count" id="cnt_novo">—</div>
+        <div class="card-count" id="cnt_novo">0</div>
         <div class="card-label">Novos</div>
       </div>
       <div class="summary-card card--planejado" data-filter="planejado" onclick="applyStatusFilter('planejado')">
         <div class="card-icon">📘</div>
-        <div class="card-count" id="cnt_planejado">—</div>
+        <div class="card-count" id="cnt_planejado">0</div>
         <div class="card-label">Planejados</div>
       </div>
       <div class="summary-card card--atribuido" data-filter="atribuido" onclick="applyStatusFilter('atribuido')">
         <div class="card-icon">👤</div>
-        <div class="card-count" id="cnt_atribuido">—</div>
+        <div class="card-count" id="cnt_atribuido">0</div>
         <div class="card-label">Atribuídos</div>
       </div>
       <div class="summary-card card--solucionado" data-filter="solucionado" onclick="applyStatusFilter('solucionado')">
         <div class="card-icon">✅</div>
-        <div class="card-count" id="cnt_solucionado">—</div>
+        <div class="card-count" id="cnt_solucionado">0</div>
         <div class="card-label">Solucionados</div>
       </div>
       <div class="summary-card card--atrasado" data-filter="atrasado" onclick="applyStatusFilter('atrasado')">
         <div class="card-icon">🔴</div>
-        <div class="card-count" id="cnt_atrasado">—</div>
+        <div class="card-count" id="cnt_atrasado">0</div>
         <div class="card-label">Atrasados</div>
       </div>
       <div class="summary-card card--justificado" data-filter="justificado" onclick="applyStatusFilter('justificado')">
         <div class="card-icon">🛡️</div>
-        <div class="card-count" id="cnt_justificado">—</div>
+        <div class="card-count" id="cnt_justificado">0</div>
         <div class="card-label">Justificados</div>
       </div>
       <div class="summary-card card--pendente" data-filter="pendente" onclick="applyStatusFilter('pendente')">
         <div class="card-icon">⏳</div>
-        <div class="card-count" id="cnt_pendente">—</div>
+        <div class="card-count" id="cnt_pendente">0</div>
         <div class="card-label">Pendentes</div>
       </div>
       <div class="summary-card card--fechado" data-filter="fechado" onclick="applyStatusFilter('fechado')">
         <div class="card-icon">🔒</div>
-        <div class="card-count" id="cnt_fechado">—</div>
+        <div class="card-count" id="cnt_fechado">0</div>
         <div class="card-label">Fechados</div>
       </div>
     </div>
@@ -187,7 +187,7 @@
       <div class="table-header">
         <div class="table-title">
           Lista de Chamados
-          <span class="table-count" id="tableCount">—</span>
+          <span class="table-count" id="tableCount">0</span>
         </div>
         <span style="font-size:12px;color:var(--text-muted);" id="lastUpdate"></span>
       </div>
@@ -216,7 +216,7 @@
 
       <div class="pagination">
         <button class="btn-page" id="btnPrev" onclick="changePage(-1)" disabled>← Anterior</button>
-        <span id="pageInfo" style="font-size:12px;">—</span>
+        <span id="pageInfo" style="font-size:12px;">0</span>
         <button class="btn-page" id="btnNext" onclick="changePage(1)" disabled>Próximo →</button>
       </div>
     </div>
@@ -234,7 +234,7 @@
 
     function badge(val, map) {
       const cls = map?.[val] || map?.[val?.toLowerCase()];
-      if (!val) return `<span style="color:#64748b;">—</span>`;
+      if (!val) return `<span style="color:#64748b;">0</span>`;
       if (!cls) return `<span class="badge" style="border-color:rgba(148,163,184,0.3);color:#94a3b8;">${val}</span>`;
       return `<span class="badge ${cls}">${val}</span>`;
     }
@@ -306,8 +306,11 @@
         else if (s === 'fechado') c.fechado++;
 
         const sla = t['Status do SLA'] || '';
-        if (sla === 'Vencido') c.atrasado++;
-        else if (sla === 'Justificado') c.justificado++;
+        const estaAtivo = (s !== 'solucionado' && s !== 'fechado');
+        if (estaAtivo) {
+          if (sla === 'Vencido') c.atrasado++;
+          else if (sla === 'Justificado') c.justificado++;
+        }
       });
       Object.entries(c).forEach(([k, v]) => {
         const el = document.getElementById('cnt_' + k);
@@ -397,7 +400,7 @@
                     ${auvoStatus}
                  </span>
                </div>`
-          : `<span style="color:var(--text-muted); font-size:12px;">—</span>`;
+          : `<span style="color:var(--text-muted); font-size:12px;">0</span>`;
 
         return `
           <tr id="${rowId}">

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clientes Operacionais - Perfill</title>
+
+    <!-- Auth Guard imediato -->
+    <script>
+        (function () {
+            if (!localStorage.getItem('authToken')) {
+                window.location.replace('/login.html');
+            }
+        })();
+    </script>
+
+    <!-- CSS Global e CSS da Página -->
+    <link rel="stylesheet" href="/css/index.css" />
+    <link rel="stylesheet" href="/css/clientes.css" />
+
+    <script defer src="/js/clientes.js"></script>
+</head>
+
+<body>
+
+    <!-- NAVBAR GLOBAL -->
+    <nav class="global-nav">
+        <div class="nav-left">
+            <div class="nav-logo">
+                <div style="font-size: 18px; font-weight: bold; color: var(--accent);">🔧 Perfill</div>
+            </div>
+            <div class="nav-menu">
+                <div class="nav-item">
+                    <a href="/noc" class="nav-link">NOC</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/alerts" class="nav-link">Alertas</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/tickets" class="nav-link">Chamados</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/clientes" class="nav-link active">Clientes</a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link">Admin ▾</a>
+                    <div class="nav-dropdown">
+                        <a href="/admin/sync" class="dropdown-link">Sincronização</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-right">
+            <div class="live-status">
+                <div class="dot-cron"></div>
+                <span>Ao Vivo</span>
+            </div>
+            <button class="btn-refresh-nav" onclick="location.reload()">↻ Atualizar</button>
+            <div class="nav-item">
+                <a class="nav-link logout-link" onclick="doLogout()" title="Sair do sistema">⏻ Sair</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- PAGE -->
+    <main class="page-wrapper">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="sidebar-header">
+                <h2>Projetos</h2>
+            </div>
+
+            <input class="project-search" id="projectSearch" type="text" placeholder="Buscar projeto..." />
+
+            <div class="projects-list" id="projectsList">
+                <!-- Injetado via JS -->
+            </div>
+
+            <button class="all-projects-btn" id="btnAllProjects">
+                Ver todos os projetos
+            </button>
+
+        </aside>
+
+        <!-- CONTENT -->
+        <section class="content-area">
+
+            <!-- HEADER -->
+            <div class="content-header">
+                <div>
+                    <div class="project-title-row">
+                        <div class="project-icon">
+                            🏢
+                        </div>
+                        <div>
+                            <h1 id="projectName">
+                                PI-NOVO
+                            </h1>
+                            <p>
+                                Projeto Integrado de Segurança Pública
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="details-btn" id="btnProjectDetails">
+                    ⓘ Detalhes do Projeto
+                </button>
+            </div>
+
+            <!-- METRICS -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">
+                        Ativos Totais
+                    </span>
+                    <strong class="metric-value" id="metricTotal">
+                        182
+                    </strong>
+                    <small>
+                        100% online no cadastro
+                    </small>
+                </div>
+
+                <div class="metric-card danger">
+                    <span class="metric-label">
+                        Alertas Ativos
+                    </span>
+                    <strong class="metric-value" id="metricAlerts">
+                        12
+                    </strong>
+                    <small>
+                        ↑ 3 nas últimas 24h
+                    </small>
+                </div>
+
+                <div class="metric-card danger">
+                    <span class="metric-label">
+                        Críticos
+                    </span>
+                    <strong class="metric-value" id="metricCritical">
+                        4
+                    </strong>
+                    <small>
+                        ↑ 1 nas últimas 24h
+                    </small>
+                </div>
+
+                <div class="metric-card warning">
+                    <span class="metric-label">
+                        Tickets Abertos
+                    </span>
+                    <strong class="metric-value" id="metricTickets">
+                        9
+                    </strong>
+                    <small>
+                        ↑ 1 nas últimas 24h
+                    </small>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button class="tab active" data-tab="visao-geral">
+                    Visão Geral
+                </button>
+                <button class="tab" data-tab="ativos">
+                    Ativos
+                </button>
+                <button class="tab" data-tab="alertas">
+                    Alertas
+                </button>
+                <button class="tab" data-tab="tickets">
+                    Tickets
+                </button>
+                <button class="tab" data-tab="mapa">
+                    Mapa
+                </button>
+            </div>
+
+            <!-- FILTERS -->
+            <div class="filters-row">
+                <input type="text" placeholder="Buscar ativo..." class="filter-input" id="searchAsset" />
+
+                <select class="filter-select" id="filterCity">
+                    <option value="">Município: Todos</option>
+                </select>
+
+                <select class="filter-select" id="filterUnit">
+                    <option value="">Unidade: Todas</option>
+                </select>
+
+                <select class="filter-select" id="filterCamera">
+                    <option value="">Status Câmera: Todos</option>
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                </select>
+
+                <select class="filter-select" id="filterLink">
+                    <option value="">Status Link: Todos</option>
+                    <option value="Online">Online</option>
+                    <option value="Atenção">Atenção</option>
+                    <option value="Link Down">Link Down</option>
+                </select>
+            </div>
+
+            <!-- MAIN GRID -->
+            <div class="main-grid">
+
+                <!-- TABLE -->
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ponto</th>
+                                <th>Município</th>
+                                <th>Unidade</th>
+                                <th>Responsável</th>
+                                <th>Câmera</th>
+                                <th>Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assetsTableBody">
+                            <!-- Injetado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- MAP -->
+                <div class="map-card">
+                    <div class="map-header">
+                        <h3>
+                            Mapa de Ativos
+                        </h3>
+                        <div class="map-status">
+                            <div class="status-item online">
+                                ● Online 156
+                            </div>
+                            <div class="status-item warning">
+                                ● Atenção 18
+                            </div>
+                            <div class="status-item offline">
+                                ● Offline 8
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fake-map">
+                        <div class="map-bubble green bubble-1">
+                            18
+                        </div>
+                        <div class="map-bubble orange bubble-2">
+                            6
+                        </div>
+                        <div class="map-bubble green bubble-3">
+                            34
+                        </div>
+                        <div class="map-bubble red bubble-4">
+                            4
+                        </div>
+                    </div>
+
+                    <button class="map-btn">
+                        Ver mapa completo
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Logout handler fallback -->
+    <script>
+        function doLogout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
+            window.location.replace('/login.html');
+        }
+    </script>
+</body>
+
+</html>

@@ -43,6 +43,7 @@ const customExpress = () => {
   app.get("/noc", (req, res) => res.sendFile(path.join(publicPath, "video_wall_v2.html")));
   app.get("/alerts", (req, res) => res.sendFile(path.join(publicPath, "alerts.html")));
   app.get("/tickets", (req, res) => res.sendFile(path.join(publicPath, "index.html")));
+  app.get("/clientes", (req, res) => res.sendFile(path.join(publicPath, "clientes.html")));
   app.get("/admin/sync", (req, res) => res.sendFile(path.join(publicPath, "sync.html")));
 
   app.use("/", express.static("public")); // Fallback para arquivos estáticos

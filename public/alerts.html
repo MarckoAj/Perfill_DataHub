@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script>
     // Auth Guard
     (function() {
@@ -12,12 +11,624 @@
       }
     })();
   </script>
-  <title>Perfill DataHub - Alertas Ativos</title>
-  <link rel="stylesheet" href="/css/index.css">
-  <link rel="stylesheet" href="/css/noc-modal.css">
+  <title>Central de Alertas - DataHub</title>
+
+  <link rel="stylesheet" href="/css/index.css" />
+  <link rel="stylesheet" href="/css/noc-modal.css" />
+  <link rel="stylesheet" href="/css/point-modal.css" />
   <script src="/js/noc-modal.js" defer></script>
-  
-  <link rel="stylesheet" href="/css/point-modal.css">
+
+  <style>
+    .page-container {
+      padding: 24px 40px;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+
+    .alerts-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      margin-top: 24px;
+      min-height: calc(100vh - 140px);
+    }
+
+    /* =========================================
+       SIDEBAR (GLASSMORPHISM)
+    ========================================= */
+    .alerts-sidebar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: fit-content;
+      position: sticky;
+      top: 96px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar-title h2 {
+      font-size: 20px;
+      margin: 0;
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .alert-search {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+
+    .alert-search:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-soft);
+    }
+
+    .alert-search::placeholder {
+      color: var(--text-muted);
+    }
+
+    .alert-type-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .alert-type-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .alert-type-item:hover {
+      border-color: var(--accent-soft);
+      background: rgba(255, 255, 255, 0.04);
+      transform: translateY(-2px);
+    }
+
+    .alert-type-item.active {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+      box-shadow: 0 4px 15px rgba(20, 231, 197, 0.08);
+    }
+
+    /* Severity colors in Sidebar items */
+    .alert-type-item.sev-critico {
+      border-left: 4px solid var(--danger) !important;
+    }
+    .alert-type-item.sev-critico.active {
+      background: rgba(255, 77, 109, 0.08) !important;
+      border-color: var(--danger) !important;
+      box-shadow: 0 4px 15px rgba(255, 77, 109, 0.08) !important;
+    }
+    .alert-type-item.sev-critico .alert-count {
+      background: rgba(255, 77, 109, 0.15) !important;
+      color: var(--danger) !important;
+    }
+    .alert-type-item.sev-critico.active .alert-count {
+      background: var(--danger) !important;
+      color: #fff !important;
+    }
+
+    .alert-type-item.sev-atencao {
+      border-left: 4px solid var(--warning) !important;
+    }
+    .alert-type-item.sev-atencao.active {
+      background: rgba(255, 176, 32, 0.08) !important;
+      border-color: var(--warning) !important;
+      box-shadow: 0 4px 15px rgba(255, 176, 32, 0.08) !important;
+    }
+    .alert-type-item.sev-atencao .alert-count {
+      background: rgba(255, 176, 32, 0.15) !important;
+      color: var(--warning) !important;
+    }
+    .alert-type-item.sev-atencao.active .alert-count {
+      background: var(--warning) !important;
+      color: #000 !important;
+    }
+
+    .alert-type-item.sev-informativo {
+      border-left: 4px solid #38bdf8 !important;
+    }
+    .alert-type-item.sev-informativo.active {
+      background: rgba(56, 189, 248, 0.08) !important;
+      border-color: #38bdf8 !important;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.08) !important;
+    }
+    .alert-type-item.sev-informativo .alert-count {
+      background: rgba(56, 189, 248, 0.15) !important;
+      color: #38bdf8 !important;
+    }
+    .alert-type-item.sev-informativo.active .alert-count {
+      background: #38bdf8 !important;
+      color: #000 !important;
+    }
+
+    .alert-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .alert-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .alert-count {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .alert-type-item.active .alert-count {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .alert-meta {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      font-weight: 500;
+    }
+
+    /* =========================================
+       MAIN CONTENT
+    ========================================= */
+    .main-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel-header {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .panel-title h1 {
+      margin: 0;
+      font-size: 28px;
+      color: var(--text-primary);
+      font-weight: 800;
+    }
+
+    .panel-title p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-primary);
+    }
+
+    .metrics-grid {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .metric-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .metric-label {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      color: var(--text-primary);
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    /* =========================================
+       TABS & FILTERS
+    ========================================= */
+    .tabs-container {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+
+    .tab-button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .tab-button:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .tab-button.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .filters-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select,
+    .filter-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-size: 13px;
+      min-width: 180px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .filter-select:focus,
+    .filter-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* =========================================
+       TABLE
+    ========================================= */
+    .table-wrapper {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    th {
+      text-align: left;
+      padding: 16px 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .ticket-id {
+      color: var(--accent);
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-danger {
+      background: rgba(255, 77, 109, 0.12);
+      color: var(--danger);
+      border: 1px solid rgba(255, 77, 109, 0.2);
+    }
+
+    .badge-warning {
+      background: rgba(255, 176, 32, 0.12);
+      color: var(--warning);
+      border: 1px solid rgba(255, 176, 32, 0.2);
+    }
+
+    .badge-success {
+      background: rgba(0, 214, 143, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(0, 214, 143, 0.2);
+    }
+
+    .badge-info {
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Modal overrides to fit glass theme */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(1, 4, 18, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-body label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .modal-body textarea {
+      width: 100%;
+      height: 100px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      padding: 10px;
+      outline: none;
+      font-size: 13px;
+      resize: none;
+    }
+
+    .modal-body textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .btn-cancel {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .btn-cancel:hover {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-primary);
+    }
+
+    .btn-justify-confirm {
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .quick-just-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .tag-just {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tag-just:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Tasks Table inside modal */
+    .tasks-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .tasks-table th {
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .tasks-table td {
+      padding: 10px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .alerts-layout {
+        grid-template-columns: 1fr;
+      }
+      .alerts-sidebar {
+        position: relative;
+        top: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      .filters-bar {
+        flex-direction: column;
+      }
+      .filter-select, .filter-input {
+        width: 100%;
+      }
+      .table-wrapper {
+        overflow-x: auto;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -26,7 +637,7 @@
   <nav class="global-nav">
     <div class="nav-left">
       <div class="nav-logo">
-        <div style="font-size: 18px; font-weight: bold; color: #0ea5e9;">🔧 Perfill</div>
+        <div style="font-size: 18px; font-weight: bold; color: var(--accent);">🔧 Perfill</div>
       </div>
       <div class="nav-menu">
         <div class="nav-item">
@@ -39,7 +650,7 @@
           <a href="/tickets" class="nav-link">Chamados</a>
         </div>
         <div class="nav-item">
-          <a href="/rules.html" class="nav-link">Motor de Regras</a>
+          <a href="/clientes" class="nav-link">Clientes</a>
         </div>
         <div class="nav-item">
           <a class="nav-link">Admin ▾</a>
@@ -69,103 +680,154 @@
     }
   </script>
 
-  <header>
-    <div class="header-sep"></div>
-    <div class="header-right"></div>
-  </header>
+  <!-- PAGE CONTAINER -->
+  <div class="page-container">
+    <div class="alerts-layout">
 
-  <main class="page">
-    <div>
-      <div style="font-size:20px;font-weight:700;color:#e2e8f0;">Alertas Ativos</div>
-      <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">Monitoramento de incidentes e violações em tempo real.</p>
-    </div>
-
-    <!-- CARDS DE RESUMO -->
-    <div class="summary-grid">
-      <div class="summary-card card--critico" id="card_critico" onclick="applySeverityFilter('critico')">
-        <div class="card-icon">🔴</div>
-        <div class="card-count" id="cnt_critico">0</div>
-        <div class="card-label">Críticos</div>
-      </div>
-      <div class="summary-card card--atencao" id="card_atencao" onclick="applySeverityFilter('atencao')">
-        <div class="card-icon">🟠</div>
-        <div class="card-count" id="cnt_atencao">0</div>
-        <div class="card-label">Atenção</div>
-      </div>
-      <div class="summary-card card--informativo" id="card_informativo" onclick="applySeverityFilter('informativo')">
-        <div class="card-icon">🔵</div>
-        <div class="card-count" id="cnt_informativo">0</div>
-        <div class="card-label">Informativos</div>
-      </div>
-      <div class="summary-card card--novo" id="card_total" onclick="applySeverityFilter('')">
-        <div class="card-icon">📊</div>
-        <div class="card-count" id="cnt_total">0</div>
-        <div class="card-label">Total Ativos</div>
-      </div>
-    </div>
-
-    <!-- ABAS -->
-    <div class="tabs-container">
-      <div class="alert-tab active" id="tab_open" onclick="switchTab('open')">Alertas Ativos</div>
-      <div class="alert-tab" id="tab_justified" onclick="switchTab('justified')">Justificados (Em Aberto)</div>
-    </div>
-
-    <div class="table-box">
-      <div class="table-header">
-        <div class="table-title">
-          Lista de Alertas
-          <span class="table-count" id="alertCount">0 alertas</span>
+      <!-- SIDEBAR -->
+      <aside class="alerts-sidebar">
+        <div class="sidebar-title">
+          <h2>Tipos de Alertas</h2>
         </div>
-        <span style="font-size:12px;color:var(--text-muted);" id="lastUpdate"></span>
-      </div>
 
-      <div class="table-scroll">
-        <table id="alertsTable">
-          <thead>
-            <tr>
-              <th>Ticket</th>
-              <th>Severidade</th>
-              <th>Origem</th>
-              <th>Cliente / Local</th>
-              <th>Descrição do Alerta</th>
-              <th>Data Detecção</th>
-              <th style="text-align:center;">Ação</th>
-            </tr>
-          </thead>
-          <tbody id="alertsTbody">
-            <tr class="table-state">
-              <td colspan="7">⏳ Carregando alertas...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <input
+          type="text"
+          id="sidebarSearch"
+          class="alert-search"
+          placeholder="Buscar tipo de alerta..."
+          oninput="filterSidebarTypes()"
+        />
+
+        <div class="alert-type-list" id="sidebarTypeList">
+          <!-- Populado Dinamicamente por Regras de SLA -->
+        </div>
+      </aside>
+
+      <!-- MAIN PANEL -->
+      <main class="main-panel">
+
+        <!-- HEADER & METRICS -->
+        <section class="panel-header">
+          <div class="panel-header-top">
+            <div class="panel-title">
+              <h1 id="panelTitleText">Todos os Alertas</h1>
+              <p id="panelSubtitleText">Visualização integrada de eventos operacionais ativos.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="loadAlerts()">
+                Atualizar Painel
+              </button>
+            </div>
+          </div>
+
+          <!-- METRIC CARDS -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Alertas Ativos</div>
+              <div class="metric-value" id="metricActive">0</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Críticos</div>
+              <div class="metric-value text-danger" id="metricCritical" style="color: var(--danger);">0</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Maior Tempo</div>
+              <div class="metric-value" id="metricMaxTime">—</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Último Disparo</div>
+              <div class="metric-value" id="metricLastDispatch">—</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TABLE SECTION -->
+        <section class="table-wrapper">
+          <div style="padding: 20px 20px 10px 20px;">
+            <!-- TABS -->
+            <div class="tabs-container">
+              <button class="tab-button active" id="tab_open" onclick="switchTab('open')">
+                Não Justificados (<span id="cntTabOpen">0</span>)
+              </button>
+              <button class="tab-button" id="tab_justified" onclick="switchTab('justified')">
+                Justificados (<span id="cntTabJustified">0</span>)
+              </button>
+              <button class="tab-button" id="tab_closed" onclick="switchTab('closed')">
+                Resolvidos (<span id="cntTabClosed">0</span>)
+              </button>
+            </div>
+
+            <!-- FILTERS BAR -->
+            <div class="filters-bar">
+              <select class="filter-select" id="filterSeverity" onchange="renderAlerts()">
+                <option value="">Severidade: Todas</option>
+                <option value="critico">🔴 Crítico</option>
+                <option value="atencao">🟠 Atenção</option>
+                <option value="informativo">🔵 Informativo</option>
+              </select>
+
+              <select class="filter-select" id="filterOrigin" onchange="renderAlerts()">
+                <option value="">Origem: Todas</option>
+                <option value="GLPI">GLPI</option>
+                <option value="AUVO">AUVO</option>
+                <option value="ZABBIX">Zabbix</option>
+              </select>
+
+              <input
+                id="filterSearch"
+                class="filter-input"
+                placeholder="Buscar ticket ou cliente..."
+                oninput="renderAlerts()"
+              />
+            </div>
+          </div>
+
+          <!-- TABLE -->
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket</th>
+                <th>Título / Descrição</th>
+                <th>Cliente / Local</th>
+                <th>SLA / Regra</th>
+                <th>Severidade</th>
+                <th>Origem</th>
+                <th>Tempo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="alertsTbody">
+              <tr class="table-state">
+                <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                  ⏳ Carregando alertas do DataHub...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+      </main>
     </div>
-  </main>
+  </div>
 
   <script>
     let allAlerts = [];
-    let currentFilter = '';
+    let currentRuleFilter = '';
     let activeTab = 'open';
 
     function switchTab(tab) {
-        activeTab = tab;
-        document.querySelectorAll('.alert-tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab_' + tab).classList.add('active');
-        
-        // Quando muda de aba, resetamos o filtro de severidade para não confundir
-        currentFilter = '';
-        document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
-        document.getElementById('card_total').classList.add('active-filter');
-
-        updateCards(allAlerts);
-        renderAlerts();
+      activeTab = tab;
+      document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab_' + tab).classList.add('active');
+      
+      // Reset Rule filter on tab switch
+      currentRuleFilter = '';
+      
+      renderAlerts();
     }
 
     async function loadAlerts() {
       const tbody = document.getElementById('alertsTbody');
-      const countEl = document.getElementById('alertCount');
-      const lastUpdateEl = document.getElementById('lastUpdate');
-
       try {
         const response = await fetch('/api/dashboard/alerts', {
           headers: {
@@ -173,108 +835,273 @@
           }
         });
         const json = await response.json();
-
         if (!json.success) throw new Error(json.error);
 
         allAlerts = json.data || [];
-        updateCards(allAlerts);
+        updateMetrics(allAlerts);
+        buildSidebarTypes(allAlerts);
         renderAlerts();
-        lastUpdateEl.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
 
       } catch (err) {
         console.error('Erro ao carregar alertas:', err);
-        tbody.innerHTML = `<tr class="table-state"><td colspan="6" style="color:#ef4444;">Erro ao carregar alertas: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="color:var(--danger); text-align:center; padding: 40px;">Erro ao carregar alertas: ${err.message}</td></tr>`;
       }
     }
 
-    function updateCards(alerts) {
-       const tabAlerts = alerts.filter(a => a.state === activeTab);
-       const counts = { critico: 0, atencao: 0, informativo: 0, total: tabAlerts.length };
-       
-       tabAlerts.forEach(a => {
-         if (a.severity === 'critico') counts.critico++;
-         else if (a.severity === 'atencao') counts.atencao++;
-         else if (a.severity === 'informativo') counts.informativo++;
-       });
+    function updateMetrics(alerts) {
+      const activeAlerts = alerts.filter(a => a.state === 'open');
+      const criticalCount = activeAlerts.filter(a => a.severity === 'critico').length;
 
-       document.getElementById('cnt_critico').textContent = counts.critico;
-       document.getElementById('cnt_atencao').textContent = counts.atencao;
-       document.getElementById('cnt_informativo').textContent = counts.informativo;
-       document.getElementById('cnt_total').textContent = counts.total;
-       
-       const labelTotal = activeTab === 'open' ? 'Total Ativos' : 'Total Justificados';
-       const labelEl = document.querySelector('#card_total .card-label');
-       if (labelEl) labelEl.textContent = labelTotal;
+      document.getElementById('metricActive').textContent = activeAlerts.length;
+      document.getElementById('metricCritical').textContent = criticalCount;
+
+      // Count for tab badges
+      const countOpen = alerts.filter(a => a.state === 'open').length;
+      const countJustified = alerts.filter(a => a.state === 'justified').length;
+      const countClosed = alerts.filter(a => a.state === 'closed').length;
+
+      document.getElementById('cntTabOpen').textContent = countOpen;
+      document.getElementById('cntTabJustified').textContent = countJustified;
+      document.getElementById('cntTabClosed').textContent = countClosed;
+
+      // Calculate max duration in open alerts
+      if (activeAlerts.length > 0) {
+        const oldest = activeAlerts.reduce((oldest, current) => {
+          return new Date(current.first_detected_at) < new Date(oldest.first_detected_at) ? current : oldest;
+        });
+        const diffMs = new Date() - new Date(oldest.first_detected_at);
+        const diffHrs = Math.floor(diffMs / 3600000);
+        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+        document.getElementById('metricMaxTime').textContent = `${diffHrs}h ${diffMins}m`;
+
+        // Last dispatcher
+        const newest = activeAlerts.reduce((newest, current) => {
+          return new Date(current.first_detected_at) > new Date(newest.first_detected_at) ? current : newest;
+        });
+        document.getElementById('metricLastDispatch').textContent = new Date(newest.first_detected_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+      } else {
+        document.getElementById('metricMaxTime').textContent = '—';
+        document.getElementById('metricLastDispatch').textContent = '—';
+      }
     }
 
-    function applySeverityFilter(sev) {
-       currentFilter = (currentFilter === sev) ? '' : sev;
-       
-       // Update visual state of cards
-       document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
-       if (currentFilter) {
-          const cardEl = document.getElementById('card_' + currentFilter);
-          if (cardEl) cardEl.classList.add('active-filter');
-       } else {
-          const cardTotal = document.getElementById('card_total');
-          if (cardTotal) cardTotal.classList.add('active-filter');
-       }
-       
-       renderAlerts();
+    function buildSidebarTypes(alerts) {
+      const sidebarContainer = document.getElementById('sidebarTypeList');
+      if (!sidebarContainer) return;
+
+      const tabAlerts = alerts.filter(a => a.state === activeTab);
+
+      // Group alerts by ruleId
+      const ruleGroups = {};
+      tabAlerts.forEach(a => {
+        const rule = a.ruleId || 'Outros';
+        if (!ruleGroups[rule]) {
+          ruleGroups[rule] = {
+            count: 0,
+            criticalCount: 0,
+            warningCount: 0,
+            infoCount: 0,
+            lastDetected: null
+          };
+        }
+        ruleGroups[rule].count++;
+        if (a.severity === 'critico') {
+          ruleGroups[rule].criticalCount++;
+        } else if (a.severity === 'atencao') {
+          ruleGroups[rule].warningCount++;
+        } else {
+          ruleGroups[rule].infoCount++;
+        }
+        const detected = new Date(a.first_detected_at);
+        if (!ruleGroups[rule].lastDetected || detected > ruleGroups[rule].lastDetected) {
+          ruleGroups[rule].lastDetected = detected;
+        }
+      });
+
+      // Clear list and render items
+      let html = '';
+      
+      // Default item "Todos os Alertas"
+      const totalCount = tabAlerts.length;
+      const totalCritical = tabAlerts.filter(a => a.severity === 'critico').length;
+      const totalWarning = tabAlerts.filter(a => a.severity === 'atencao').length;
+      const isActiveTotal = currentRuleFilter === '' ? 'active' : '';
+
+      let totalSeverityCls = 'sev-informativo';
+      if (totalCritical > 0) {
+        totalSeverityCls = 'sev-critico';
+      } else if (totalWarning > 0) {
+        totalSeverityCls = 'sev-atencao';
+      }
+
+      html += `
+        <div class="alert-type-item ${totalSeverityCls} ${isActiveTotal}" onclick="selectRuleFilter('')">
+          <div class="alert-top">
+            <div class="alert-name">Todos os Alertas</div>
+            <div class="alert-count">${totalCount}</div>
+          </div>
+          <div class="alert-meta">
+            <span>${totalCritical} críticos</span>
+            <span>Total geral</span>
+          </div>
+        </div>
+      `;
+
+      Object.entries(ruleGroups).forEach(([ruleName, meta]) => {
+        const isActive = currentRuleFilter === ruleName ? 'active' : '';
+        const timeStr = meta.lastDetected ? meta.lastDetected.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '—';
+        
+        let severityCls = 'sev-informativo';
+        if (meta.criticalCount > 0) {
+          severityCls = 'sev-critico';
+        } else if (meta.warningCount > 0) {
+          severityCls = 'sev-atencao';
+        }
+
+        html += `
+          <div class="alert-type-item ${severityCls} ${isActive}" data-rulename="${ruleName}" onclick="selectRuleFilter('${ruleName}')">
+            <div class="alert-top">
+              <div class="alert-name">${ruleName}</div>
+              <div class="alert-count">${meta.count}</div>
+            </div>
+            <div class="alert-meta">
+              <span>${meta.criticalCount} críticos</span>
+              <span>Último: ${timeStr}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      sidebarContainer.innerHTML = html;
+    }
+
+    function selectRuleFilter(ruleName) {
+      currentRuleFilter = ruleName;
+      
+      // Visual update of active class
+      document.querySelectorAll('.alert-type-item').forEach(el => el.classList.remove('active'));
+      
+      // Update header details based on rule
+      if (ruleName) {
+        document.getElementById('panelTitleText').textContent = ruleName;
+        document.getElementById('panelSubtitleText').textContent = `Filtrado pelo motor de regras: ${ruleName}.`;
+      } else {
+        document.getElementById('panelTitleText').textContent = activeTab === 'open' ? 'Todos os Alertas' : (activeTab === 'justified' ? 'Alertas Justificados' : 'Alertas Resolvidos');
+        document.getElementById('panelSubtitleText').textContent = 'Visualização integrada de eventos operacionais.';
+      }
+
+      // Rebuild sidebar and render table
+      buildSidebarTypes(allAlerts);
+      renderAlerts();
+    }
+
+    function filterSidebarTypes() {
+      const searchVal = document.getElementById('sidebarSearch').value.toLowerCase();
+      document.querySelectorAll('#sidebarTypeList .alert-type-item').forEach(item => {
+        const name = item.querySelector('.alert-name').textContent.toLowerCase();
+        if (name.includes(searchVal)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function calculateTimeAgo(dateStr) {
+      const diffMs = new Date() - new Date(dateStr);
+      const diffHrs = Math.floor(diffMs / 3600000);
+      const diffMins = Math.floor((diffMs % 3600000) / 60000);
+      
+      if (diffHrs > 0) {
+        return `${diffHrs}h ${diffMins}m`;
+      } else {
+        return `${diffMins}m`;
+      }
     }
 
     function renderAlerts() {
-        const tbody = document.getElementById('alertsTbody');
-        const countEl = document.getElementById('alertCount');
-        if (!tbody || !countEl) return;
+      const tbody = document.getElementById('alertsTbody');
+      if (!tbody) return;
+
+      const filteredByTab = allAlerts.filter(a => a.state === activeTab);
+      
+      // Rule filter
+      let filtered = currentRuleFilter 
+        ? filteredByTab.filter(a => a.ruleId === currentRuleFilter)
+        : filteredByTab;
+
+      // Severity select filter
+      const sevFilter = document.getElementById('filterSeverity').value;
+      if (sevFilter) {
+        filtered = filtered.filter(a => a.severity === sevFilter);
+      }
+
+      // Origin select filter
+      const originFilter = document.getElementById('filterOrigin').value;
+      if (originFilter) {
+        filtered = filtered.filter(a => (a.source || '').toUpperCase() === originFilter.toUpperCase());
+      }
+
+      // Text search filter (Ticket, pointId, client name, description)
+      const searchFilter = document.getElementById('filterSearch').value.toLowerCase();
+      if (searchFilter) {
+        filtered = filtered.filter(a => 
+          (a.Ticket || '').toString().toLowerCase().includes(searchFilter) ||
+          (a.pointId || '').toLowerCase().includes(searchFilter) ||
+          (a.description || '').toLowerCase().includes(searchFilter) ||
+          (a.ruleId || '').toLowerCase().includes(searchFilter)
+        );
+      }
+
+      if (filtered.length === 0) {
+        const msg = activeTab === 'open' ? '✅ Nenhum alerta operacional ativo.' : 'ℹ️ Nenhum alerta cadastrado nesta aba.';
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--text-muted);">${msg}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(alert => {
+        const date = new Date(alert.first_detected_at).toLocaleString('pt-BR');
+        const duration = calculateTimeAgo(alert.first_detected_at);
         
-        const filteredByTab = allAlerts.filter(a => a.state === activeTab);
-        const filtered = currentFilter 
-            ? filteredByTab.filter(a => a.severity === currentFilter)
-            : filteredByTab;
-            
-        countEl.textContent = `${filtered.length} alertas`;
+        let severityBadge = '';
+        if (alert.severity === 'critico') severityBadge = '<span class="badge badge-danger">Crítico</span>';
+        else if (alert.severity === 'atencao') severityBadge = '<span class="badge badge-warning">Atenção</span>';
+        else severityBadge = '<span class="badge badge-info">Informativo</span>';
 
-        if (filtered.length === 0) {
-          const msg = activeTab === 'open' ? '✅ Nenhum alerta ativo.' : 'ℹ️ Nenhum alerta justificado em aberto.';
-          tbody.innerHTML = `<tr class="table-state"><td colspan="7">${msg}</td></tr>`;
-          return;
-        }
+        const actionButton = activeTab === 'open'
+          ? `<button class="action-btn" onclick="openDetailsModal(${alert.id})">Detalhes</button>`
+          : `<span style="font-size:11px; color:var(--success); font-weight:700;">✓ Acompanhado</span>`;
 
-        tbody.innerHTML = filtered.map(alert => {
-          const date = new Date(alert.first_detected_at).toLocaleString('pt-BR');
-          const severityClass = `sev-${alert.severity}`;
-          
-          const actionButton = activeTab === 'open'
-            ? `<button class="btn-action-justify" onclick="openDetailsModal(${alert.id})">Ver Detalhes</button>`
-            : `<span style="font-size:10px; color:#10b981; font-weight:700;">JUSTIFICADO</span>`;
-
-          return `
-            <tr>
-              <td><code class="ticket-id">#${alert.Ticket || '—'}</code></td>
-              <td><span class="severity-badge ${severityClass}">${alert.severity}</span></td>
-              <td><span class="source-badge">${alert.source}</span></td>
-              <td style="text-align:left; cursor:pointer;" class="td-local-click" onclick="event.stopPropagation(); openPointModal(1)">
-                <div style="font-weight:600;color:#f8fafc;">${alert.pointId || 'N/A'}</div>
-                <div style="font-size:11px;color:var(--text-muted);">${alert.assetCode || ''}</div>
-              </td>
-              <td style="text-align:left; max-width: 400px;">
-                <div style="font-weight:600; color:#38bdf8;">${alert.ruleId}</div>
-                <div style="font-size:12px; color:#e2e8f0; margin-top:2px;">${alert.description}</div>
-                ${alert.state === 'justified' ? `
-                    <div style="margin-top:8px; padding:8px; background:rgba(14,165,233,0.05); border-radius:4px; border-left:2px solid #0ea5e9;">
-                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">Justificativa por ${alert.justified_by || 'sistema'}</div>
-                        <div style="font-size:11px; color:#f8fafc;">${alert.justified_text || 'Sem texto'}</div>
-                    </div>
-                ` : ''}
-              </td>
-              <td style="color:var(--text-muted); font-size:12px;">${date}</td>
-              <td style="text-align:center;">
+        return `
+          <tr>
+            <td class="ticket-id">#${alert.Ticket || '—'}</td>
+            <td>
+              <div style="font-weight: 700; color: #fff;">${alert.description || 'Alerta sem descrição'}</div>
+              ${alert.state === 'justified' ? `
+                <div style="margin-top: 6px; padding: 6px 10px; background: rgba(20, 231, 197, 0.05); border-left: 2px solid var(--accent); border-radius: 4px; font-size: 11px;">
+                  <span style="color: var(--text-muted); font-weight: 600;">JUSTIFICADO POR ${alert.justified_by || 'Operador'}:</span>
+                  <span style="color: var(--text-secondary);">${alert.justified_text || '—'}</span>
+                </div>
+              ` : ''}
+            </td>
+            <td style="cursor: pointer;" onclick="event.stopPropagation(); openPointModal(1)">
+              <div style="font-weight:700; color:var(--text-primary);">${alert.pointId || 'Não Atribuído'}</div>
+              <div style="font-size:11px; color:var(--text-muted);">${alert.assetCode || ''}</div>
+            </td>
+            <td>
+              <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">${alert.ruleId || 'Geral'}</span>
+            </td>
+            <td>${severityBadge}</td>
+            <td><span class="badge badge-info">${alert.source || 'ZABBIX'}</span></td>
+            <td style="font-weight: 700; color: ${alert.severity === 'critico' ? 'var(--danger)' : 'var(--warning)'};">${duration}</td>
+            <td>
+              <div class="actions">
                 ${actionButton}
-              </td>
-            </tr>
-          `;
-        }).join('');
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function connectWebSocket() {
@@ -288,8 +1115,8 @@
         try {
           const data = JSON.parse(event.data);
           if (['ALERT_OPENED', 'ALERT_CLOSED', 'ALERT_UPDATED', 'ALERT_JUSTIFIED'].includes(data.event)) {
-             console.log('Evento de alerta recebido:', data.event);
-             loadAlerts(); // Atualiza a lista e os cards
+             console.log('Evento de alerta recebido no WS:', data.event);
+             loadAlerts();
           }
         } catch (e) {
           console.error('Erro ao processar mensagem WS:', e);
@@ -309,120 +1136,8 @@
     // Inicialização
     loadAlerts();
     connectWebSocket();
-    document.getElementById('card_total').classList.add('active-filter');
 
-    // TASKS MODAL LOGIC
-    let currentAlertId = null;
-    let currentExternalId = null;
-
-    async function openTasksModal(alertId, externalId) {
-      currentAlertId = alertId;
-      currentExternalId = externalId;
-      
-      document.getElementById('tasksModal').style.display = 'flex';
-      document.getElementById('modalExternalId').textContent = `#${externalId}`;
-      
-      await loadInternalTasks(externalId);
-    }
-
-    function closeTasksModal() {
-      document.getElementById('tasksModal').style.display = 'none';
-    }
-
-    async function loadInternalTasks(externalId) {
-      const container = document.getElementById('tasksContainer');
-      const token = localStorage.getItem('authToken');
-      
-      console.log(`[Tasks] Iniciando busca para externalId: ${externalId}. Token presente: ${!!token}`);
-
-      container.innerHTML = `
-        <div class="loading-spinner">
-          <div style="font-size: 24px; animation: spin 1s linear infinite;">↻</div>
-          <p style="margin-top: 10px; font-size: 13px;">Buscando tarefas relacionadas...</p>
-        </div>
-      `;
-
-      if (!token) {
-        container.innerHTML = `
-          <div style="padding: 40px; text-align: center; color: #ef4444;">
-            <p>Erro: Token de sessão não encontrado. Por favor, faça login novamente.</p>
-          </div>
-        `;
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/internal/tasks?externalId=${externalId}`, {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (response.status === 401) {
-          throw new Error("Sessão expirada ou não autorizada. Faça login novamente.");
-        }
-
-        const result = await response.json();
-
-        if (!result.success) throw new Error(result.error);
-
-        const tasks = result.data || [];
-        
-        if (tasks.length === 0) {
-          container.innerHTML = `
-            <div style="padding: 40px; text-align: center; color: #94a3b8;">
-              <p>Nenhuma tarefa encontrada para este alerta.</p>
-            </div>
-          `;
-          return;
-        }
-
-        let html = `
-          <table class="tasks-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>Responsável</th>
-                <th>Status</th>
-                <th>Agendada</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        tasks.forEach(task => {
-          const date = task.scheduledDate ? new Date(task.scheduledDate).toLocaleDateString('pt-BR') : '—';
-          html += `
-            <tr>
-              <td style="color: #0ea5e9; font-weight: 600;">#${task.taskId}</td>
-              <td>${task.title || 'Sem título'}</td>
-              <td>${task.assignedTo || 'Não atribuído'}</td>
-              <td><span class="task-status-pill status-${task.status}">${task.status}</span></td>
-              <td style="color: #94a3b8;">${date}</td>
-            </tr>
-          `;
-        });
-
-        html += `</tbody></table>`;
-        container.innerHTML = html;
-
-      } catch (err) {
-        container.innerHTML = `
-          <div style="padding: 40px; text-align: center; color: #ef4444;">
-            <p>Erro ao carregar tarefas: ${err.message}</p>
-          </div>
-        `;
-      }
-    }
-
-    function proceedToJustification() {
-      closeTasksModal();
-      openJustificationForm(currentAlertId);
-    }
-
-    // JUSTIFY LOGIC (RENAMED)
+    // JUSTIFY LOGIC
     let selectedAlertId = null;
 
     function openJustificationForm(id) {
@@ -435,58 +1150,6 @@
     function fillJustify(text) {
       document.getElementById('justifiedText').value = text;
     }
-
-    // DETAILS MODAL LOGIC
-    async function openDetailsModal(alertId) {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        alert('Erro: Token de sessão não encontrado. Faça login novamente.');
-        return;
-      }
-
-      // Abre o modal imediatamente com skeleton (melhor UX)
-      NOCModal.openLoading();
-
-      try {
-        const response = await fetch(`/api/alerts/${alertId}/details`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error);
-
-        // Busca os metadados do alerta no array local (já carregado na tabela)
-        const alertRow = allAlerts.find(a => a.id === alertId) || {};
-
-        // Monta o payload completo para o modal NOC v2
-        const payload = {
-          ...result.data,
-          alert: {
-            alertId:          alertRow.id         || alertId,
-            severity:         alertRow.severity   || 'informativo',
-            ruleId:           alertRow.ruleId     || '—',
-            description:      alertRow.description|| '—',
-            source:           alertRow.source     || '—',
-            first_detected_at: alertRow.first_detected_at || null,
-            state:            alertRow.state      || 'open',
-          },
-        };
-
-        NOCModal.open(payload);
-
-      } catch (err) {
-        NOCModal.close();
-        alert('Erro ao carregar detalhes: ' + err.message);
-      }
-    }
-
-    function closeDetailsModal() {
-      NOCModal.close();
-    }
-
-
 
     function closeJustifyModal() {
       document.getElementById('justifyModal').style.display = 'none';
@@ -519,7 +1182,7 @@
         if (!data.success) throw new Error(data.error);
 
         closeJustifyModal();
-        // A lista será atualizada via WebSocket (ALERT_JUSTIFIED)
+        loadAlerts();
         
       } catch (err) {
         alert('Erro ao justificar: ' + err.message);
@@ -527,6 +1190,53 @@
         btn.disabled = false;
         btn.textContent = 'Confirmar';
       }
+    }
+
+    // DETAILS MODAL NOC v2 LOGIC
+    async function openDetailsModal(alertId) {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Erro: Token de sessão não encontrado. Faça login novamente.');
+        return;
+      }
+
+      NOCModal.openLoading();
+
+      try {
+        const response = await fetch(`/api/alerts/${alertId}/details`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
+
+        const alertRow = allAlerts.find(a => a.id === alertId) || {};
+
+        const payload = {
+          ...result.data,
+          alert: {
+            alertId:          alertRow.id         || alertId,
+            severity:         alertRow.severity   || 'informativo',
+            ruleId:           alertRow.ruleId     || '—',
+            description:      alertRow.description|| '—',
+            source:           alertRow.source     || '—',
+            first_detected_at: alertRow.first_detected_at || null,
+            state:            alertRow.state      || 'open',
+          },
+        };
+
+        NOCModal.open(payload);
+
+      } catch (err) {
+        NOCModal.close();
+        alert('Erro ao carregar detalhes: ' + err.message);
+      }
+    }
+
+    function closeDetailsModal() {
+      NOCModal.close();
     }
   </script>
 
@@ -540,7 +1250,7 @@
         <label for="justifiedText">Motivo da Justificativa</label>
         <textarea id="justifiedText" placeholder="Descreva o motivo para ignorar este alerta..."></textarea>
         
-        <div style="margin-top: 15px; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Sugestões Rápidas:</div>
+        <div style="margin-top: 4px; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Sugestões Rápidas:</div>
         <div class="quick-just-tags">
           <span class="tag-just" onclick="fillJustify('Técnico ciente do problema.')">Técnico ciente</span>
           <span class="tag-just" onclick="fillJustify('Aguardando retorno do cliente.')">Aguardando Cliente</span>
@@ -556,34 +1266,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE TAREFAS (NOVO) -->
-  <div class="modal-overlay" id="tasksModal">
-    <div class="modal-content" style="max-width: 700px;">
-      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h3 class="modal-title">Tarefas Relacionadas</h3>
-          <span style="font-size: 12px; color: #0ea5e9;" id="modalExternalId"></span>
-        </div>
-        <button onclick="closeTasksModal()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 20px;">&times;</button>
-      </div>
-      <div class="modal-body" id="tasksContainer" style="min-height: 200px;">
-        <!-- Injetado via JS -->
-      </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeTasksModal()">Fechar</button>
-        <button class="btn-justify-confirm" onclick="proceedToJustification()">Continuar para Justificativa</button>
-      </div>
-    </div>
-  </div>
-
-
-
-  <style>
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  </style>
-
-
-<!-- MODAL PONTO/CLIENTE -->
+  <!-- MODAL PONTO/CLIENTE -->
   <div class="point-modal-overlay" id="pointModalOverlay">
     <div class="point-modal">
       <div class="point-modal-header">
@@ -607,5 +1290,4 @@
   <script src="/js/client-mock.js"></script>
   <script src="/js/point-modal.js"></script>
 </body>
-
 </html>

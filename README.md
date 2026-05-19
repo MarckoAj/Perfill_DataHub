@@ -38,15 +38,16 @@ A integração permite:
 
 ---
 
-## AUVO (Planejado)
+## AUVO (Implementado)
 
 Sistema de gestão de tarefas de campo.
 
-A futura integração permitirá:
+A integração permite:
 
-* acompanhamento de tarefas executadas
-* correlação entre tarefas e chamados
-* geração de alertas operacionais
+* Acompanhamento de tarefas executadas em campo em tempo real
+* Correlação avançada entre tarefas AUVO e chamados GLPI
+* Geração automática de alertas operacionais no motor de regras (ex: dispositivo com tarefa concluída, mas ticket órfão)
+* Sincronização incremental e purga de dados obsoletos via tarefas agendadas (CronJob)
 
 Exemplo:
 

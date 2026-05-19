@@ -253,7 +253,7 @@ TicketAlertService
 - `GET /alerts`: Central de Alertas.
 - `GET /tickets`: Tabela de todos os chamados ativos e fechados.
 - `GET /admin/sync`: Painel de controle de sincronização.
-- `GET /rules.html`: Visão estática do Motor de Regras.
+- `GET /clientes`: Gestão de Clientes e Projetos Operacionais.
 
 ### Backend (Endpoints JSON)
 - `GET /api/tickets/:status`: Mapeado para `glpiController.getTicketsByStatus`. Retorna a lista.
@@ -269,7 +269,7 @@ TicketAlertService
 - **Navegação Global:** Topbar unificada em todas as páginas para garantir experiência contínua.
 - **Interfaces e Modais:** *Enterprise NOC Modal* (Detalhes do Chamado) e *Point Modal* reformulados para consistência corporativa (CSS Grid, Glassmorphism).
 - Painel Frontend de Alertas (`alerts.html`) com filtros e cards operacionais.
-- Catálogo de Regras exposto para gerentes (`rules.html`).
+- Painel Frontend de Clientes Operacionais (`clientes.html`) com métricas e filtros interativos.
 - Tela de Sincronização (`admin/sync`) para ver o status do Worker.
 
 ### Faltante (Manual)

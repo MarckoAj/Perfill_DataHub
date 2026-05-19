@@ -93,4 +93,6 @@
 [x] Roteamento dinâmico no frontend e backend (URLs amigáveis `/noc`, `/alerts`, `/tickets`, `/admin/sync`)
 [x] Refatoração do Enterprise NOC Modal e Point Modal (CSS Grid, Glassmorphism, Zero Layout Overlap)
 [x] Mapeamento e auditoria de dependências CSS e arquivos estáticos (Pasta `public`)
-[x] Correção de bugs de carregamento de alertas e estabilização de conexão de Banco de Dados
+[x] Correção de bugs de carregamento de alertas e estabilização de conexão de Banco de Dados
+[x] Painel de Clientes Operacionais reativo em tempo real com filtros por Município e Unidades (`/clientes`)
+[x] Descontinuação e remoção definitiva da interface visual órfã do Motor de Regras (`/rules.html`)
