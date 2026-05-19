@@ -1,0 +1,175 @@
+/* =========================================================
+   PLATFORM TABS
+========================================================= */
+
+.platform-tabs {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.platform-tab {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: 0.2s;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.platform-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.platform-tab.active {
+    background: rgba(20, 231, 197, 0.10);
+    border-color: rgba(20, 231, 197, 0.18);
+    color: var(--accent);
+}
+
+.platform-badge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+}
+
+/* =========================================================
+   SUB TABS
+========================================================= */
+
+.point-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 2;
+}
+
+.point-tab {
+    height: 42px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    transition: 0.2s;
+}
+
+.point-tab:hover {
+    color: var(--text-primary);
+}
+
+.point-tab.active {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid transparent;
+    color: var(--text-primary);
+}
+
+/* =========================================================
+   INFO BLOCKS
+========================================================= */
+
+.info-value-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.divergence-badge {
+    padding: 5px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.divergence-badge.warning {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.18);
+    color: var(--warning);
+}
+
+.divergence-badge.success {
+    background: rgba(0, 214, 143, 0.12);
+    border: 1px solid rgba(0, 214, 143, 0.18);
+    color: var(--success);
+}
+
+/* =========================================================
+   HISTORY TIMELINE
+========================================================= */
+
+.history-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 10px;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+}
+
+.timeline-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    margin-top: 8px;
+    flex-shrink: 0;
+}
+
+.timeline-dot.success {
+    background: var(--success);
+    box-shadow: 0 0 10px rgba(0, 214, 143, 0.5);
+}
+
+.timeline-dot.warning {
+    background: var(--warning);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.timeline-content {
+    flex: 1;
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.timeline-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.timeline-meta {
+    font-size: 13px;
+    color: var(--text-muted);
+}

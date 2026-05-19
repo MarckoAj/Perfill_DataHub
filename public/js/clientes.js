@@ -1,6 +1,3 @@
-// clientes.js - Controlador do Painel de Clientes Operacionais
-
-// Dados mockados enriquecidos para interatividade Enterprise
 const projects = [
     {
         name: 'PI-NOVO',
@@ -34,72 +31,56 @@ const assets = [
         point: 'RP 01 - CAJAZEIRAS',
         city: 'Cajazeiras',
         unit: '22º CIPM',
-        responsible: 'Adriano Santos',
-        camera: 'Online',
-        link: 'Online'
+        responsible: 'Adriano Santos'
     },
     {
         project: 'PI-NOVO',
         point: 'RP 02 - ENTRADA DA CIDADE',
         city: 'Simões Filho',
         unit: '22º CIPM',
-        responsible: 'Tiago Almeida',
-        camera: 'Offline',
-        link: 'Link Down'
+        responsible: 'Tiago Almeida'
     },
     {
         project: 'PI-NOVO',
         point: 'RP 03 - POSTO FISCAL',
         city: 'Feira de Santana',
         unit: '66º CIPM',
-        responsible: 'Marcos Lima',
-        camera: 'Online',
-        link: 'Online'
+        responsible: 'Marcos Lima'
     },
     {
         project: 'PI-NOVO',
         point: 'RP 04 - VIADUTO',
         city: 'Salvador',
         unit: '1º CIPM',
-        responsible: 'José Carlos',
-        camera: 'Online',
-        link: 'Online'
+        responsible: 'José Carlos'
     },
     {
         project: 'LEGADO',
         point: 'RP 05 - ATACADÃO',
         city: 'Lauro de Freitas',
         unit: '52º CIPM',
-        responsible: 'Fernanda Costa',
-        camera: 'Online',
-        link: 'Atenção'
+        responsible: 'Fernanda Costa'
     },
     {
         project: 'LEGADO',
         point: 'RP 06 - ENTRADA NORTE',
         city: 'Alagoinhas',
         unit: '4º CIPM',
-        responsible: 'Carlos Eduardo',
-        camera: 'Offline',
-        link: 'Link Down'
+        responsible: 'Carlos Eduardo'
     },
     {
         project: 'CFTV',
         point: 'RP 07 - CAMPO DO GADO',
         city: 'Serrinha',
         unit: '16º CIPM',
-        responsible: 'Rafael Nunes',
-        camera: 'Online',
-        link: 'Online'
+        responsible: 'Rafael Nunes'
     },
     {
         project: 'CFTV',
         point: 'RP 08 - PRAÇA CENTRAL',
         city: 'Jacaraci',
         unit: '94º CIPM',
-        responsible: 'Luiz Henrique',
-        camera: 'Online',
-        link: 'Atenção'
+        responsible: 'Luiz Henrique'
     }
 ];
 
@@ -224,8 +205,6 @@ function applyFilters() {
     const searchText = document.getElementById('searchAsset')?.value.toLowerCase() || '';
     const cityVal = document.getElementById('filterCity')?.value || '';
     const unitVal = document.getElementById('filterUnit')?.value || '';
-    const cameraVal = document.getElementById('filterCamera')?.value || '';
-    const linkVal = document.getElementById('filterLink')?.value || '';
 
     // Filtrar ativos do projeto selecionado
     let filtered = assets.filter(a => a.project === project.name);
@@ -245,14 +224,6 @@ function applyFilters() {
         filtered = filtered.filter(a => a.unit === unitVal);
     }
 
-    if (cameraVal) {
-        filtered = filtered.filter(a => a.camera === cameraVal);
-    }
-
-    if (linkVal) {
-        filtered = filtered.filter(a => a.link === linkVal);
-    }
-
     // Renderizar tabela
     const tbody = document.getElementById('assetsTableBody');
     if (!tbody) return;
@@ -260,7 +231,7 @@ function applyFilters() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 24px;">
+                <td colspan="4" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 24px;">
                     Nenhum ativo localizado com os filtros selecionados.
                 </td>
             </tr>
@@ -271,12 +242,10 @@ function applyFilters() {
     tbody.innerHTML = filtered
         .map(asset => `
           <tr>
-            <td style="font-weight: 600;">${asset.point}</td>
-            <td>${asset.city}</td>
-            <td>${asset.unit}</td>
-            <td>${asset.responsible}</td>
-            <td class="${getStatusClass(asset.camera)}">● ${asset.camera}</td>
-            <td class="${getStatusClass(asset.link)}">● ${asset.link}</td>
+            <td style="font-weight: 600; text-align: left; padding-left: 24px;">${asset.point}</td>
+            <td style="text-align: center;">${asset.city}</td>
+            <td style="text-align: center;">${asset.unit}</td>
+            <td style="text-align: center; padding-right: 24px;">${asset.responsible}</td>
           </tr>
         `)
         .join('');
@@ -287,21 +256,16 @@ function setupFilters() {
     const searchAsset = document.getElementById('searchAsset');
     const filterCity = document.getElementById('filterCity');
     const filterUnit = document.getElementById('filterUnit');
-    const filterCamera = document.getElementById('filterCamera');
-    const filterLink = document.getElementById('filterLink');
 
     searchAsset?.addEventListener('input', applyFilters);
     filterCity?.addEventListener('change', applyFilters);
     filterUnit?.addEventListener('change', applyFilters);
-    filterCamera?.addEventListener('change', applyFilters);
-    filterLink?.addEventListener('change', applyFilters);
 }
 
 // Configurar navegação entre abas (comportamento de SPA premium)
 function setupTabs() {
     const tabsList = document.querySelectorAll('.tabs .tab');
     const tableCard = document.querySelector('.table-card');
-    const mapCard = document.querySelector('.map-card');
     const mainGrid = document.querySelector('.main-grid');
 
     tabsList.forEach(tab => {
@@ -311,30 +275,19 @@ function setupTabs() {
             
             activeTab = tab.getAttribute('data-tab');
 
-            // Controlar exibição no Grid principal baseado na aba ativa
-            if (activeTab === 'visao-geral') {
-                mainGrid.style.gridTemplateColumns = '1fr 420px';
-                tableCard.style.display = 'block';
-                mapCard.style.display = 'flex';
-            } else if (activeTab === 'ativos') {
+            // Controlar exibição no Grid principal baseado na aba ativa (mapa removido)
+            if (activeTab === 'visao-geral' || activeTab === 'ativos') {
                 mainGrid.style.gridTemplateColumns = '1fr';
                 tableCard.style.display = 'block';
-                mapCard.style.display = 'none';
-            } else if (activeTab === 'mapa') {
-                mainGrid.style.gridTemplateColumns = '1fr';
-                tableCard.style.display = 'none';
-                mapCard.style.display = 'flex';
             } else if (activeTab === 'alertas' || activeTab === 'tickets') {
-                // Para abas vazias ou com outros dados mockados
                 mainGrid.style.gridTemplateColumns = '1fr';
                 tableCard.style.display = 'block';
-                mapCard.style.display = 'none';
                 
                 const tbody = document.getElementById('assetsTableBody');
                 if (tbody) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="6" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 32px;">
+                            <td colspan="4" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 32px;">
                                 Não há registros de ${activeTab} ativos no momento para este projeto.
                             </td>
                         </tr>

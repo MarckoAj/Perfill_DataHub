@@ -422,7 +422,7 @@
 
 .main-grid {
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: 1fr;
     gap: 20px;
 }
 

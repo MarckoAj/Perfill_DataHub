@@ -177,9 +177,6 @@
                 <button class="tab" data-tab="tickets">
                     Tickets
                 </button>
-                <button class="tab" data-tab="mapa">
-                    Mapa
-                </button>
             </div>
 
             <!-- FILTERS -->
@@ -193,19 +190,6 @@
                 <select class="filter-select" id="filterUnit">
                     <option value="">Unidade: Todas</option>
                 </select>
-
-                <select class="filter-select" id="filterCamera">
-                    <option value="">Status Câmera: Todos</option>
-                    <option value="Online">Online</option>
-                    <option value="Offline">Offline</option>
-                </select>
-
-                <select class="filter-select" id="filterLink">
-                    <option value="">Status Link: Todos</option>
-                    <option value="Online">Online</option>
-                    <option value="Atenção">Atenção</option>
-                    <option value="Link Down">Link Down</option>
-                </select>
             </div>
 
             <!-- MAIN GRID -->
@@ -216,57 +200,16 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Ponto</th>
-                                <th>Município</th>
-                                <th>Unidade</th>
-                                <th>Responsável</th>
-                                <th>Câmera</th>
-                                <th>Link</th>
+                                <th style="text-align: left; padding-left: 24px;">Ponto</th>
+                                <th style="text-align: center;">Município</th>
+                                <th style="text-align: center;">Unidade</th>
+                                <th style="text-align: center; padding-right: 24px;">Responsável Campo/NOC</th>
                             </tr>
                         </thead>
                         <tbody id="assetsTableBody">
                             <!-- Injetado via JS -->
                         </tbody>
                     </table>
-                </div>
-
-                <!-- MAP -->
-                <div class="map-card">
-                    <div class="map-header">
-                        <h3>
-                            Mapa de Ativos
-                        </h3>
-                        <div class="map-status">
-                            <div class="status-item online">
-                                ● Online 156
-                            </div>
-                            <div class="status-item warning">
-                                ● Atenção 18
-                            </div>
-                            <div class="status-item offline">
-                                ● Offline 8
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="fake-map">
-                        <div class="map-bubble green bubble-1">
-                            18
-                        </div>
-                        <div class="map-bubble orange bubble-2">
-                            6
-                        </div>
-                        <div class="map-bubble green bubble-3">
-                            34
-                        </div>
-                        <div class="map-bubble red bubble-4">
-                            4
-                        </div>
-                    </div>
-
-                    <button class="map-btn">
-                        Ver mapa completo
-                    </button>
                 </div>
 
             </div>
