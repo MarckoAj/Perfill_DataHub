@@ -189,8 +189,9 @@ AUVO
 - [x] Frontend: Comportamento SPA em tela cheia nas abas de visualização (Ativos, Mapa) com cores Obsidian Neon integradas.
 - [x] Frontend: Redução de ruído e desativação completa da tela antiga estática de regras (`rules.html`).
 - [x] Documentação: Atualização de endpoints e remoção de arquivos e rotas redundantes.
-- [x] Banco de Dados: Setup de 11 índices estratégicos em tabelas-chave (`tickets`, `tasks_auvo`, `glpi_tickettasks`, `datahub_ticket_alerts`).
-- [x] Banco de Dados: Otimização de queries temporais (conversão de busca não indexável em cláusulas Sargable de intervalo).
+- [x] Banco de Dados: Setup de 12 índices estratégicos incluindo o índice composto crucial `idx_tasks_external_date` na tabela de tarefas do AUVO.
+- [x] Banco de Dados: Correção de conflito de collations entre tabelas GLPI/AUVO (`COLLATE utf8mb4_0900_ai_ci`) liberando o uso de índices em subqueries correlacionadas.
+- [x] Performance: Otimização sargable de queries temporais e validação científica via benchmark mostrando redução de latência geral de 1.708 ms para 7.4 ms (ganho de 230x em velocidade!).
 
 For now, the focus is exposing BI endpoints for Power BI.
 

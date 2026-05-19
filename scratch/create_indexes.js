@@ -29,7 +29,8 @@ async function run() {
     // 2. Tabela tasks_auvo (Tarefas do AUVO)
     // Otimiza a junção ta.externalId = t.ticketId e filtros temporais.
     await createIndexSafe('tasks_auvo', 'idx_tasks_external', 'externalId');
-    await createIndexSafe('tasks_auvo', 'idx_tasks_date', 'TaskDate DESC');
+    await createIndexSafe('tasks_auvo', 'idx_tasks_date', 'taskDate DESC');
+    await createIndexSafe('tasks_auvo', 'idx_tasks_external_date', 'externalId, taskDate DESC');
 
     // 3. Tabela tickets (Chamados do GLPI)
     // Otimiza as listagens principais, ordenações, buscas de projetos e as subqueries de métricas.

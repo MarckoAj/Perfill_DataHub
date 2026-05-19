@@ -92,14 +92,15 @@ class DashboardRepository {
           LIMIT 1
       )
 
-      /* Relacionamento com tarefas AUVO */
-      LEFT JOIN (
-          SELECT t1.*, ROW_NUMBER() OVER(PARTITION BY t1.externalId ORDER BY t1.TaskDate DESC) as rn
-          FROM tasks_auvo t1
-          WHERE t1.externalId IS NOT NULL 
-            AND t1.externalId != ''
-            AND t1.tasksTypesId NOT IN (144733, 210031, 210030)
-      ) ta ON ta.externalId = t.ticketId AND ta.rn = 1
+      /* Relacionamento com tarefas AUVO (correlacionado e otimizado via índice idx_tasks_external com cast e collation) */
+      LEFT JOIN tasks_auvo ta ON ta.taskId = (
+          SELECT ta2.taskId
+          FROM tasks_auvo ta2
+          WHERE ta2.externalId = CAST(t.ticketId AS CHAR) COLLATE utf8mb4_0900_ai_ci
+            AND ta2.tasksTypesId NOT IN (144733, 210031, 210030)
+          ORDER BY ta2.taskDate DESC
+          LIMIT 1
+      )
       LEFT JOIN users_auvo ua ON ta.userToId = ua.userId
 
       /* Relacionamento com alertas de SLA Justificados */
