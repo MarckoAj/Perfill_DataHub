@@ -30,6 +30,8 @@
 [x] Versionamento de schema via Migrations
 [x] Seeding de Agendamentos e Auditorias
 [x] Correção de Palavras Reservadas no CRUD (System->`system`)
+[x] Setup de 11 índices estratégicos de performance nas tabelas tickets, tasks_auvo, glpi_tickettasks e alerts
+[x] Refatoração Sargable de consultas temporais de métricas (conversão de DATE(col) = CURDATE() para col >= CURDATE())
 
 ---
 

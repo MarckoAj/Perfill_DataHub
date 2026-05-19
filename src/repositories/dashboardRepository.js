@@ -140,16 +140,16 @@ class DashboardRepository {
         (SELECT COUNT(*) FROM tickets 
          WHERE status NOT IN ('fechado', 'solucionado')) as chamados_abertos,
         
-        -- Criados hoje
+        -- Criados hoje (otimizado para usar o índice idx_tickets_created)
         (SELECT COUNT(*) FROM tickets 
-         WHERE DATE(dataCriacao) = CURDATE()) as criados_hoje,
+         WHERE dataCriacao >= CURDATE()) as criados_hoje,
         
-        -- Encerrados HOJE (finalizados e aguardando aprovação -> status 5 e 6)
+        -- Encerrados HOJE (otimizado para usar os índices idx_tickets_solved e idx_tickets_closed)
         (SELECT COUNT(*) FROM tickets 
          WHERE status IN ('solucionado', 'fechado') 
-         AND (DATE(dataSolucao) = CURDATE() OR DATE(dataFechamento) = CURDATE())) as encerrados,
+         AND (dataSolucao >= CURDATE() OR dataFechamento >= CURDATE())) as encerrados,
         
-        -- Proativos (sem SLA correndo -> handlingTimeSla === null mapeia para 'Proativo')
+        -- Proativos (sem SLA correndo -> tempoSla === 'Proativo')
         (SELECT COUNT(*) FROM tickets 
          WHERE status NOT IN ('fechado', 'solucionado')
          AND tempoSla = 'Proativo') as proativos,

@@ -189,6 +189,8 @@ AUVO
 - [x] Frontend: Comportamento SPA em tela cheia nas abas de visualização (Ativos, Mapa) com cores Obsidian Neon integradas.
 - [x] Frontend: Redução de ruído e desativação completa da tela antiga estática de regras (`rules.html`).
 - [x] Documentação: Atualização de endpoints e remoção de arquivos e rotas redundantes.
+- [x] Banco de Dados: Setup de 11 índices estratégicos em tabelas-chave (`tickets`, `tasks_auvo`, `glpi_tickettasks`, `datahub_ticket_alerts`).
+- [x] Banco de Dados: Otimização de queries temporais (conversão de busca não indexável em cláusulas Sargable de intervalo).
 
 For now, the focus is exposing BI endpoints for Power BI.
 
