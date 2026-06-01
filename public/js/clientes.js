@@ -1,4 +1,4 @@
-const projects = [
+let projects = [
     {
         name: 'PI-NOVO',
         description: 'Projeto Integrado de Segurança Pública - Nova Infraestrutura',
@@ -25,8 +25,9 @@ const projects = [
     }
 ];
 
-const assets = [
+let assets = [
     {
+        clientId: 1,
         project: 'PI-NOVO',
         point: 'RP 01 - CAJAZEIRAS',
         city: 'Cajazeiras',
@@ -34,6 +35,7 @@ const assets = [
         responsible: 'Adriano Santos'
     },
     {
+        clientId: 1,
         project: 'PI-NOVO',
         point: 'RP 02 - ENTRADA DA CIDADE',
         city: 'Simões Filho',
@@ -41,6 +43,7 @@ const assets = [
         responsible: 'Tiago Almeida'
     },
     {
+        clientId: 1,
         project: 'PI-NOVO',
         point: 'RP 03 - POSTO FISCAL',
         city: 'Feira de Santana',
@@ -48,6 +51,7 @@ const assets = [
         responsible: 'Marcos Lima'
     },
     {
+        clientId: 1,
         project: 'PI-NOVO',
         point: 'RP 04 - VIADUTO',
         city: 'Salvador',
@@ -55,6 +59,7 @@ const assets = [
         responsible: 'José Carlos'
     },
     {
+        clientId: 1,
         project: 'LEGADO',
         point: 'RP 05 - ATACADÃO',
         city: 'Lauro de Freitas',
@@ -62,6 +67,7 @@ const assets = [
         responsible: 'Fernanda Costa'
     },
     {
+        clientId: 1,
         project: 'LEGADO',
         point: 'RP 06 - ENTRADA NORTE',
         city: 'Alagoinhas',
@@ -69,6 +75,7 @@ const assets = [
         responsible: 'Carlos Eduardo'
     },
     {
+        clientId: 1,
         project: 'CFTV',
         point: 'RP 07 - CAMPO DO GADO',
         city: 'Serrinha',
@@ -76,6 +83,7 @@ const assets = [
         responsible: 'Rafael Nunes'
     },
     {
+        clientId: 1,
         project: 'CFTV',
         point: 'RP 08 - PRAÇA CENTRAL',
         city: 'Jacaraci',
@@ -84,12 +92,217 @@ const assets = [
     }
 ];
 
+window.hubClients = [];
+const HUB_PAGE_LIMIT = 100;
+let hubPagination = {
+    isHub: false,
+    isLoading: false,
+    currentPage: 1,
+    limit: HUB_PAGE_LIMIT,
+    offset: 0,
+    total: assets.length,
+    totalPages: 1,
+    hasMore: false
+};
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+async function loadHubEntities(page = 1) {
+    try {
+        hubPagination.isLoading = true;
+        renderPaginationControls();
+
+        const token = localStorage.getItem('authToken');
+        const safePage = Math.max(parseInt(page, 10) || 1, 1);
+        const offset = (safePage - 1) * HUB_PAGE_LIMIT;
+        const response = await fetch(`/api/hub/entities?limit=${HUB_PAGE_LIMIT}&offset=${offset}`, {
+            headers: token ? { authorization: `Bearer ${token}` } : {}
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const payload = await response.json();
+        const entities = Array.isArray(payload.data) ? payload.data : [];
+        const pagination = payload.meta?.pagination || {};
+        if (entities.length === 0) {
+            hubPagination.isLoading = false;
+            renderPaginationControls();
+            return;
+        }
+
+        const total = Number(pagination.total) || entities.length;
+        const limit = Number(pagination.limit) || HUB_PAGE_LIMIT;
+        const currentOffset = Number(pagination.offset) || offset;
+
+        projects = [{
+            name: 'HUB',
+            description: 'Entidades canônicas sincronizadas a partir das fontes externas',
+            total,
+            alerts: 0,
+            critical: 0,
+            tickets: 0
+        }];
+
+        hubPagination = {
+            isHub: true,
+            isLoading: false,
+            currentPage: Math.floor(currentOffset / limit) + 1,
+            limit,
+            offset: currentOffset,
+            total,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+            hasMore: Boolean(pagination.hasMore)
+        };
+
+        window.hubClients = entities.map(mapHubEntityToModalClient);
+        assets = entities.map((entity, index) => ({
+            clientId: entity.entityId,
+            modalIndex: index,
+            project: 'HUB',
+            point: entity.name || `Entidade HUB ${entity.entityId}`,
+            city: entity.latitude ?? 'N/A',
+            unit: entity.longitude ?? 'N/A',
+            responsible: entity.sourceSystem || 'HUB'
+        }));
+    } catch (error) {
+        hubPagination = {
+            isHub: false,
+            isLoading: false,
+            currentPage: 1,
+            limit: assets.length || HUB_PAGE_LIMIT,
+            offset: 0,
+            total: assets.length,
+            totalPages: 1,
+            hasMore: false
+        };
+        console.warn('[Clientes] Usando dados mockados. Falha ao carregar /api/hub/entities:', error.message);
+    }
+}
+
+function mapHubEntityToModalClient(entity) {
+    const name = entity.name || `Entidade HUB ${entity.entityId}`;
+
+    return {
+        hubId: entity.entityId,
+        clientId: entity.entityId,
+        ticketId: entity.sourceRecordId || '',
+        pointId: name,
+        assetName: name,
+        address: name,
+        type: entity.entityType || 'HUB',
+        cicom: entity.sourceSystem || 'HUB',
+        city: 'N/A',
+        unit: entity.sourceSystem || 'HUB',
+        region: entity.sourceEntity || 'Fonte externa',
+        latitude: entity.latitude,
+        longitude: entity.longitude,
+        state: 'BA',
+        network: {
+            ip: 'N/A',
+            gateway: 'N/A',
+            subnet: 'N/A',
+            wanIp: 'N/A',
+            circuit: 'N/A',
+            linkStatus: 'N/A',
+            uptime: 'N/A',
+            availabilityDate: 'N/A'
+        },
+        pointStatus: {
+            inspectionDate: 'N/A',
+            cameraInstallation: 'N/A',
+            cameraSubstitution: 'N/A',
+            uninstallDate: 'N/A',
+            dedicatedPole: 'N/A',
+            installationDate: 'N/A',
+            boxType: 'N/A',
+            boxInstallation: 'N/A',
+            boxInstallationDate: 'N/A',
+            armInstallation: 'N/A',
+            poleStatus: 'N/A'
+        },
+        operationalHistory: [],
+        attendances: []
+    };
+}
+
+function openAssetModal(modalIndex, fallbackClientId = 1) {
+    if (Number.isInteger(modalIndex) && window.hubClients[modalIndex]) {
+        openPointModal(window.hubClients[modalIndex]);
+        return;
+    }
+
+    openPointModal(fallbackClientId);
+}
+
+function renderPaginationControls(visibleCount = assets.length) {
+    const containers = document.querySelectorAll('[data-pagination]');
+    if (!containers.length) return;
+
+    const page = hubPagination.currentPage || 1;
+    const totalPages = hubPagination.totalPages || 1;
+    const total = hubPagination.total || visibleCount;
+    const from = total === 0 ? 0 : hubPagination.offset + 1;
+    const to = hubPagination.isHub
+        ? Math.min(hubPagination.offset + visibleCount, total)
+        : visibleCount;
+    const disabled = hubPagination.isLoading || !hubPagination.isHub;
+    const prevDisabled = disabled || page <= 1;
+    const nextDisabled = disabled || page >= totalPages;
+    const summary = hubPagination.isLoading
+        ? 'Carregando pagina...'
+        : `Pagina ${page} de ${totalPages} - ${from}-${to} de ${total} itens`;
+
+    const html = `
+      <div class="hub-pagination-info">${summary}</div>
+      <div class="hub-pagination-actions">
+        <button class="hub-page-btn" type="button" onclick="goToHubPage(1)" ${prevDisabled ? 'disabled' : ''} title="Primeira pagina">&laquo;</button>
+        <button class="hub-page-btn" type="button" onclick="goToHubPage(${page - 1})" ${prevDisabled ? 'disabled' : ''} title="Pagina anterior">&lsaquo;</button>
+        <button class="hub-page-btn" type="button" onclick="goToHubPage(${page + 1})" ${nextDisabled ? 'disabled' : ''} title="Proxima pagina">&rsaquo;</button>
+        <button class="hub-page-btn" type="button" onclick="goToHubPage(${totalPages})" ${nextDisabled ? 'disabled' : ''} title="Ultima pagina">&raquo;</button>
+      </div>
+    `;
+
+    containers.forEach(container => {
+        container.innerHTML = html;
+    });
+}
+
+async function goToHubPage(page) {
+    if (!hubPagination.isHub || hubPagination.isLoading) return;
+
+    const targetPage = Math.min(Math.max(parseInt(page, 10) || 1, 1), hubPagination.totalPages || 1);
+    if (targetPage === hubPagination.currentPage) return;
+
+    await loadHubEntities(targetPage);
+    renderProjects(document.getElementById('projectSearch')?.value || '');
+    selectProject(0);
+    scrollClientesToTop();
+}
+
+function scrollClientesToTop() {
+    const target = document.querySelector('.content-area') || document.querySelector('.page-wrapper');
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // Estado atual da aplicação no frontend
 let selectedProjectIndex = 0;
 let activeTab = 'visao-geral';
 
 // Inicializar e registrar os escutadores de eventos
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadHubEntities();
     renderProjects();
     selectProject(0);
     setupFilters();
@@ -138,6 +351,7 @@ function renderProjects(filterText = '') {
 function selectProject(index) {
     selectedProjectIndex = index;
     const project = projects[index];
+    if (!project) return;
 
     // Atualizar classe ativa na lista
     renderProjects(document.getElementById('projectSearch')?.value || '');
@@ -174,14 +388,14 @@ function populateFilterOptions() {
 
     if (filterCity) {
         const cities = [...new Set(projectAssets.map(a => a.city))].sort();
-        filterCity.innerHTML = '<option value="">Município: Todos</option>' + 
-            cities.map(c => `<option value="${c}">${c}</option>`).join('');
+        filterCity.innerHTML = '<option value="">Latitude: Todas</option>' + 
+            cities.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     }
 
     if (filterUnit) {
         const units = [...new Set(projectAssets.map(a => a.unit))].sort();
-        filterUnit.innerHTML = '<option value="">Unidade: Todas</option>' + 
-            units.map(u => `<option value="${u}">${u}</option>`).join('');
+        filterUnit.innerHTML = '<option value="">Longitude: Todas</option>' + 
+            units.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
     }
 }
 
@@ -211,8 +425,10 @@ function applyFilters() {
 
     if (searchText) {
         filtered = filtered.filter(a => 
-            a.point.toLowerCase().includes(searchText) ||
-            a.responsible.toLowerCase().includes(searchText)
+            String(a.point).toLowerCase().includes(searchText) ||
+            String(a.city).toLowerCase().includes(searchText) ||
+            String(a.unit).toLowerCase().includes(searchText) ||
+            String(a.responsible).toLowerCase().includes(searchText)
         );
     }
 
@@ -227,6 +443,7 @@ function applyFilters() {
     // Renderizar tabela
     const tbody = document.getElementById('assetsTableBody');
     if (!tbody) return;
+    renderPaginationControls(filtered.length);
 
     if (filtered.length === 0) {
         tbody.innerHTML = `
@@ -241,11 +458,11 @@ function applyFilters() {
 
     tbody.innerHTML = filtered
         .map(asset => `
-          <tr>
-            <td style="font-weight: 600; text-align: left; padding-left: 24px;">${asset.point}</td>
-            <td style="text-align: center;">${asset.city}</td>
-            <td style="text-align: center;">${asset.unit}</td>
-            <td style="text-align: center; padding-right: 24px;">${asset.responsible}</td>
+          <tr style="cursor: pointer;" onclick="openAssetModal(${Number.isInteger(asset.modalIndex) ? asset.modalIndex : 'null'}, ${asset.clientId || 1})">
+            <td style="font-weight: 600; text-align: left; padding-left: 24px;">${escapeHtml(asset.point)}</td>
+            <td style="text-align: center;">${escapeHtml(asset.city)}</td>
+            <td style="text-align: center;">${escapeHtml(asset.unit)}</td>
+            <td style="text-align: center; padding-right: 24px;">${escapeHtml(asset.responsible)}</td>
           </tr>
         `)
         .join('');

@@ -13,6 +13,7 @@ import glpiRoutes from "../routes/glpiRoutes.js";
 import systemRoutes from "../routes/systemRoutes.js";
 import scheduleRoutes from "../routes/scheduleRoutes.js";
 import dashboardRoutes from "../routes/dashboardRoutes.js";
+import hubRoutes from "../routes/hubRoutes.js";
 
 import { fileURLToPath } from "url";
 import path from "path";
@@ -31,6 +32,7 @@ const customExpress = () => {
   app.use("/api/glpi", glpiRoutes);
   app.use("/api/system", systemRoutes);
   app.use("/api/schedules", scheduleRoutes);
+  app.use("/api/hub", hubRoutes);
   app.use("/api", dashboardRoutes);
   app.use("/api", routes);
   app.use("/health-check", healthRoutes); // Movido da raiz para evitar conflito

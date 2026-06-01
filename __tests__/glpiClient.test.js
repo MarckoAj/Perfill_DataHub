@@ -58,13 +58,14 @@ describe("Integração do Cliente e Serviço GLPI", () => {
 
         // We fetch the basic request, no mapping from glpiClient:
         const ticketsResponse = await glpi_client.glpiRequestData("search/Ticket", "GET");
-        expect(Array.isArray(ticketsResponse)).toBeTruthy();
-        expect(ticketsResponse[0]["2"]).toBe(999);
+        expect(Array.isArray(ticketsResponse.data)).toBeTruthy();
+        expect(ticketsResponse.data[0]["2"]).toBe(999);
     });
 
     it("deve processar e mapear tickets corretamente no glpiService", async () => {
         // Mockando diretamente a reposta do glpiRequestData para focar apenas no Service -> Mapper
-        jest.spyOn(glpi_client, "glpiRequestData").mockResolvedValueOnce([
+        jest.spyOn(glpi_client, "glpiRequestData").mockResolvedValueOnce({
+            data: [
             {
                 "2": 50,              // ticketId
                 "1": "Erro no SAP",   // titulo
@@ -74,7 +75,9 @@ describe("Integração do Cliente e Serviço GLPI", () => {
                 "19": "2026-03-01",   // dataAtualizacao
                 "12": 5               // status (5 = solucionado)
             }
-        ]);
+            ],
+            headers: null
+        });
 
         const tickets = await glpi_service.getTicketsByStatus("solucionado");
         

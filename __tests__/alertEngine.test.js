@@ -1,88 +1,84 @@
-import alertEngine, { ALERT_TYPES } from "../src/services/alertEngine.js";
+import ruleEngine from "../src/engine/RuleEngine.js";
 
 describe("Motor de Alertas", () => {
-  beforeEach(() => {
-    alertEngine.resetState();
+  beforeAll(async () => {
+    await ruleEngine.loadRules();
   });
 
-  it("deve abrir alerta new_unhandled para tickets novos parados", () => {
+  function evaluateTicket(ticket, now = new Date("2026-03-15T12:00:00.000Z")) {
+    const reference = ticket.dataAtualizacao || ticket.dataCriacao;
+    const parsedReference = reference ? new Date(reference) : null;
+    const elapsed = parsedReference && !Number.isNaN(parsedReference.getTime())
+      ? Math.max(0, now.getTime() - parsedReference.getTime())
+      : null;
+
+    return ruleEngine.evaluateAll({
+      ticket,
+      tasksAuvo: ticket.tasksAuvo || [],
+      timestamps: { elapsed }
+    });
+  }
+
+  function findRule(results, ruleId) {
+    return results.find(rule => rule.ruleId === ruleId);
+  }
+
+  it("deve sinalizar GLPI_NEW_UNHANDLED para tickets novos parados", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
     const staleDate = new Date(now.getTime() - 6 * 60 * 1000).toISOString();
 
-    const result = alertEngine.processTickets([
-      {
-        ticketId: 1001,
-        status: "novo",
-        dataAtualizacao: staleDate,
-      },
-    ], now);
+    const result = evaluateTicket({
+      ticketId: 1001,
+      status: "novo",
+      dataAtualizacao: staleDate,
+    }, now);
 
-    expect(result.counters.opened).toBe(1);
-    expect(result.active[0].type).toBe(ALERT_TYPES.NEW_UNHANDLED);
+    expect(findRule(result, "GLPI_NEW_UNHANDLED")).toMatchObject({
+      ruleId: "GLPI_NEW_UNHANDLED",
+      condition: true
+    });
   });
 
-  it("deve abrir alerta paused_stale para tickets pendentes sem atualização", () => {
+  it("deve sinalizar GLPI_PAUSED_STALE para tickets pendentes sem atualizacao", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
     const staleDate = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString();
 
-    const result = alertEngine.processTickets([
-      {
-        ticketId: 2002,
-        status: "pendente",
-        dataAtualizacao: staleDate,
-      },
-    ], now);
+    const result = evaluateTicket({
+      ticketId: 2002,
+      status: "pendente",
+      dataAtualizacao: staleDate,
+    }, now);
 
-    expect(result.counters.opened).toBe(1);
-    expect(result.active[0].type).toBe(ALERT_TYPES.PAUSED_STALE);
+    expect(findRule(result, "GLPI_PAUSED_STALE")).toMatchObject({
+      ruleId: "GLPI_PAUSED_STALE",
+      condition: true
+    });
   });
 
-  it("deve abrir alerta sla_overdue quando o ticket estiver atrasado", () => {
-    const now = new Date("2026-03-15T12:00:00.000Z");
+  it("deve sinalizar GLPI_SLA_BREACHED quando o ticket estiver com SLA vencido sem tarefa", () => {
+    const result = evaluateTicket({
+      ticketId: 3003,
+      status: "atribuido",
+      statusSla: "Vencido",
+      ultimaTarefa: "Sem tarefas",
+    });
 
-    const result = alertEngine.processTickets([
-      {
-        ticketId: 3003,
-        status: "atribuido",
-        statusSla: "Vencido",
-      },
-    ], now);
-
-    expect(result.counters.opened).toBe(1);
-    expect(result.active[0].type).toBe(ALERT_TYPES.SLA_OVERDUE);
+    expect(findRule(result, "GLPI_SLA_BREACHED")).toMatchObject({
+      ruleId: "GLPI_SLA_BREACHED",
+      condition: true
+    });
   });
 
-  it("não deve duplicar alertas abertos entre execuções", () => {
+  it("nao deve sinalizar regras de ticket parado quando a condicao nao for verdadeira", () => {
     const now = new Date("2026-03-15T12:00:00.000Z");
-    const staleDate = new Date(now.getTime() - 6 * 60 * 1000).toISOString();
 
-    const first = alertEngine.processTickets([
-      { ticketId: 4004, status: "novo", dataAtualizacao: staleDate },
-    ], now);
+    const result = evaluateTicket({
+      ticketId: 5005,
+      status: "atribuido",
+      dataAtualizacao: now.toISOString(),
+    }, now);
 
-    const second = alertEngine.processTickets([
-      { ticketId: 4004, status: "novo", dataAtualizacao: staleDate },
-    ], new Date(now.getTime() + 60 * 1000));
-
-    expect(first.counters.opened).toBe(1);
-    expect(second.counters.opened).toBe(0);
-    expect(second.counters.active).toBe(1);
-  });
-
-  it("deve fechar alerta aberto anteriormente quando a condição não for mais verdadeira", () => {
-    const now = new Date("2026-03-15T12:00:00.000Z");
-    const staleDate = new Date(now.getTime() - 6 * 60 * 1000).toISOString();
-
-    alertEngine.processTickets([
-      { ticketId: 5005, status: "novo", dataAtualizacao: staleDate },
-    ], now);
-
-    const next = alertEngine.processTickets([
-      { ticketId: 5005, status: "atribuido", dataAtualizacao: now.toISOString() },
-    ], new Date(now.getTime() + 60 * 1000));
-
-    expect(next.counters.closed).toBe(1);
-    expect(next.closed[0].ticketId).toBe(5005);
-    expect(next.closed[0].state).toBe("closed");
+    expect(findRule(result, "GLPI_NEW_UNHANDLED")?.condition).toBe(false);
+    expect(findRule(result, "GLPI_PAUSED_STALE")?.condition).toBe(false);
   });
 });

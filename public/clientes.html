@@ -18,6 +18,8 @@
     <!-- CSS Global e CSS da Página -->
     <link rel="stylesheet" href="/css/index.css" />
     <link rel="stylesheet" href="/css/clientes.css" />
+    <link rel="stylesheet" href="/css/point-modal.css" />
+    <link rel="stylesheet" href="/css/new-point-model.css" />
 
     <script defer src="/js/clientes.js"></script>
 </head>
@@ -184,11 +186,11 @@
                 <input type="text" placeholder="Buscar ativo..." class="filter-input" id="searchAsset" />
 
                 <select class="filter-select" id="filterCity">
-                    <option value="">Município: Todos</option>
+                    <option value="">Latitude: Todas</option>
                 </select>
 
                 <select class="filter-select" id="filterUnit">
-                    <option value="">Unidade: Todas</option>
+                    <option value="">Longitude: Todas</option>
                 </select>
             </div>
 
@@ -197,19 +199,21 @@
 
                 <!-- TABLE -->
                 <div class="table-card">
+                    <div class="hub-pagination" data-pagination="top"></div>
                     <table>
                         <thead>
                             <tr>
-                                <th style="text-align: left; padding-left: 24px;">Ponto</th>
-                                <th style="text-align: center;">Município</th>
-                                <th style="text-align: center;">Unidade</th>
-                                <th style="text-align: center; padding-right: 24px;">Responsável Campo/NOC</th>
+                                <th style="text-align: left; padding-left: 24px;">Nome</th>
+                                <th style="text-align: center;">Latitude</th>
+                                <th style="text-align: center;">Longitude</th>
+                                <th style="text-align: center; padding-right: 24px;">Fonte</th>
                             </tr>
                         </thead>
                         <tbody id="assetsTableBody">
                             <!-- Injetado via JS -->
                         </tbody>
                     </table>
+                    <div class="hub-pagination" data-pagination="bottom"></div>
                 </div>
 
             </div>
@@ -226,6 +230,20 @@
             window.location.replace('/login.html');
         }
     </script>
+
+    <!-- MODAL PONTO/CLIENTE -->
+    <div class="point-modal-overlay" id="pointModalOverlay">
+        <div class="point-modal">
+            <!-- Header preenchido dinamicamente pelo JS (_renderHeader) -->
+            <div class="point-modal-header"></div>
+            <div class="point-modal-content">
+                <div id="pointTabContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/client-mock.js"></script>
+    <script src="/js/new-point-model.js"></script>
 </body>
 
 </html>

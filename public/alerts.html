@@ -237,6 +237,10 @@
       gap: 12px;
     }
 
+    .panel-header-top.no-actions {
+      align-items: center;
+    }
+
     .btn {
       border: none;
       padding: 10px 20px;
@@ -629,6 +633,52 @@
         overflow-x: auto;
       }
     }
+
+    /* ==========================================================================
+       CUSTOMIZAÇÕES DA PÁGINA DE ALERTAS
+       ========================================================================== */
+
+    /* Scrollbars temáticos */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(2, 8, 38, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(20, 231, 197, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(20, 231, 197, 0.6);
+    }
+
+    /* Alinhamento dos cabeçalhos da tabela de alertas */
+    .table-wrapper th {
+      text-align: center !important;
+    }
+
+    /* Glow Neon Suave e Gradientes nos Cards de Estatísticas */
+    .metric-card {
+      background: linear-gradient(135deg, rgba(7, 20, 55, 0.8), rgba(18, 35, 84, 0.7)) !important;
+      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+      border-radius: 14px !important;
+      padding: 18px 22px !important;
+      transition: all 0.3s ease !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px) !important;
+    }
+
+    /* Glow especial nos cards importantes */
+    #metricCritical {
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.3) !important;
+    }
+    #metricActive {
+      text-shadow: 0 0 10px rgba(20, 231, 197, 0.3) !important;
+    }
   </style>
 </head>
 
@@ -667,7 +717,6 @@
         <div class="dot-cron"></div>
         <span>Ao Vivo</span>
       </div>
-      <button class="btn-refresh-nav" onclick="loadAlerts()">↻ Atualizar</button>
       <div class="nav-item">
         <a class="nav-link logout-link" onclick="doLogout()">⏻ Sair</a>
       </div>
@@ -709,15 +758,10 @@
 
         <!-- HEADER & METRICS -->
         <section class="panel-header">
-          <div class="panel-header-top">
+          <div class="panel-header-top no-actions">
             <div class="panel-title">
               <h1 id="panelTitleText">Todos os Alertas</h1>
               <p id="panelSubtitleText">Visualização integrada de eventos operacionais ativos.</p>
-            </div>
-            <div class="header-actions">
-              <button class="btn btn-primary" onclick="loadAlerts()">
-                Atualizar Painel
-              </button>
             </div>
           </div>
 
@@ -1085,7 +1129,7 @@
                 </div>
               ` : ''}
             </td>
-            <td style="cursor: pointer;" onclick="event.stopPropagation(); openPointModal(1)">
+            <td style="cursor: pointer;" onclick="event.stopPropagation(); openAlertPointModal(${alert.id})">
               <div style="font-weight:700; color:var(--text-primary);">${alert.pointId || 'Não Atribuído'}</div>
               <div style="font-size:11px; color:var(--text-muted);">${alert.assetCode || ''}</div>
             </td>
@@ -1103,6 +1147,57 @@
           </tr>
         `;
       }).join('');
+    }
+
+    function openAlertPointModal(alertId) {
+      const alert = allAlerts.find(a => a.id === alertId);
+      if (!alert) return;
+
+      openPointModal({
+        clientId: alert.id,
+        ticketId: alert.Ticket,
+        pointId: alert.pointId,
+        address: alert.pointId || alert.Chamado || 'Ponto sem identificação',
+        type: alert.type || alert.ruleId || 'Alerta',
+        city: 'Salvador',
+        state: 'BA',
+        cicom: alert.assetCode || 'Projeto não informado',
+        unit: alert.assetCode || 'Não informado',
+        region: alert.source || 'DataHub',
+        latitude: 'N/A',
+        longitude: 'N/A',
+        network: {
+          ip: 'N/A',
+          gateway: 'N/A',
+          subnet: 'N/A',
+          wanIp: 'N/A',
+          circuit: alert.Ticket ? `GLPI #${alert.Ticket}` : 'N/A',
+          linkStatus: alert.statusPing || 'N/A',
+          uptime: alert.slaText || 'N/A',
+          availabilityDate: alert.first_detected_at ? new Date(alert.first_detected_at).toLocaleString('pt-BR') : 'N/A',
+        },
+        pointStatus: {
+          inspectionDate: 'N/A',
+          cameraInstallation: 'N/A',
+          cameraSubstitution: alert.slaStatus || 'N/A',
+          uninstallDate: 'N/A',
+          dedicatedPole: 'N/A',
+          boxType: alert.type || 'N/A',
+          boxInstallation: 'N/A',
+          boxInstallationDate: 'N/A',
+          armInstallation: 'N/A',
+          poleStatus: alert.severity || 'N/A',
+        },
+        operationalHistory: [
+          {
+            title: alert.ruleId || 'Alerta DataHub',
+            from: alert.source || 'DataHub',
+            to: alert.state || 'open',
+            date: alert.first_detected_at ? new Date(alert.first_detected_at).toLocaleString('pt-BR') : 'N/A',
+          },
+        ],
+        attendances: [],
+      });
     }
 
     function connectWebSocket() {

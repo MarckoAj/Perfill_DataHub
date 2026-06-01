@@ -284,9 +284,10 @@
     }
 
     .summary-card {
-      background: var(--glass-bg);
+      background: rgba(30, 41, 59, 0.4);
       border-radius: 16px;
-      padding: 24px;
+      border: 2px solid var(--glass-border);
+      padding: 32px 24px 24px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -304,7 +305,7 @@
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     }
 
     .summary-card::after {
@@ -313,17 +314,16 @@
       color: var(--text-muted);
       margin-top: auto;
       font-weight: 500;
+      transition: all 0.3s ease;
     }
 
     .summary-card:hover {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(30, 41, 59, 0.6);
       transform: translateY(-4px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
 
     .summary-card.active-filter {
-      background: var(--bg-card);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      background: var(--bg-card) !important;
     }
 
     .card-icon {
@@ -355,73 +355,69 @@
       font-weight: 600;
     }
 
-    /* Full colored borders matching Auvo styling */
+    /* Mapeamento de Cores Sólidas de 2px e Glows Reflexivos */
     .card--novo {
-      border: 1px solid var(--success);
+      border-color: var(--success) !important;
+      box-shadow: 0 4px 15px rgba(0, 214, 143, 0.12) !important;
     }
-    .card--novo.active-filter {
-      border-color: var(--success);
+    .card--novo:hover, .card--novo.active-filter {
+      box-shadow: 0 10px 25px rgba(0, 214, 143, 0.25) !important;
     }
     
     .card--planejado {
-      border: 1px solid #3b82f6;
+      border-color: #3b82f6 !important;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.12) !important;
     }
-    .card--planejado.active-filter {
-      border-color: #3b82f6;
+    .card--planejado:hover, .card--planejado.active-filter {
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25) !important;
     }
 
     .card--atribuido {
-      border: 1px solid #a855f7;
+      border-color: #a855f7 !important;
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.12) !important;
     }
-    .card--atribuido.active-filter {
-      border-color: #a855f7;
+    .card--atribuido:hover, .card--atribuido.active-filter {
+      box-shadow: 0 10px 25px rgba(168, 85, 247, 0.25) !important;
     }
 
     .card--solucionado {
-      border: 1px solid var(--accent);
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 15px rgba(20, 231, 197, 0.12) !important;
     }
-    .card--solucionado.active-filter {
-      border-color: var(--accent);
+    .card--solucionado:hover, .card--solucionado.active-filter {
+      box-shadow: 0 10px 25px rgba(20, 231, 197, 0.25) !important;
     }
 
     .card--atrasado {
-      border: 1px solid var(--danger);
+      border-color: var(--danger) !important;
+      box-shadow: 0 4px 15px rgba(255, 77, 109, 0.12) !important;
     }
-    .card--atrasado.active-filter {
-      border-color: var(--danger);
+    .card--atrasado:hover, .card--atrasado.active-filter {
+      box-shadow: 0 10px 25px rgba(255, 77, 109, 0.25) !important;
     }
 
     .card--justificado {
-      border: 1px solid var(--warning);
+      border-color: var(--warning) !important;
+      box-shadow: 0 4px 15px rgba(255, 176, 32, 0.12) !important;
     }
-    .card--justificado.active-filter {
-      border-color: var(--warning);
+    .card--justificado:hover, .card--justificado.active-filter {
+      box-shadow: 0 10px 25px rgba(255, 176, 32, 0.25) !important;
     }
 
     .card--pendente {
-      border: 1px solid #64748b;
+      border-color: #64748b !important;
+      box-shadow: 0 4px 15px rgba(100, 116, 139, 0.12) !important;
     }
-    .card--pendente.active-filter {
-      border-color: #64748b;
+    .card--pendente:hover, .card--pendente.active-filter {
+      box-shadow: 0 10px 25px rgba(100, 116, 139, 0.25) !important;
     }
 
     .card--fechado {
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.03) !important;
     }
-    .card--fechado.active-filter {
-      border-color: rgba(255, 255, 255, 0.25);
-    }
-
-    .card--critico {
-      border: 1px solid var(--danger);
-    }
-
-    .card--atencao {
-      border: 1px solid var(--warning);
-    }
-
-    .card--informativo {
-      border: 1px solid var(--accent);
+    .card--fechado:hover, .card--fechado.active-filter {
+      box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1) !important;
     }
 
     /* Table */

@@ -7,6 +7,7 @@ import { createSyncLogsTables } from "./migrations/syncLogsTables.js";
 import { createSyncSchedulesTable } from "./migrations/syncSchedulesTables.js";
 import { runScheduleSeeds } from "./seeds/scheduleSeeds.js";
 import { createAlertsHistoryTable } from "./migrations/alertsHistoryTable.js";
+import { createHubCoreTables } from "./migrations/hubCoreTables.js";
 
 dotenv.config();
 
@@ -217,6 +218,9 @@ export async function runMigrations() {
         // Executar Migrations e Seeds do AUVO
         await runAuvoMigrations();
         await runAuvoSeeds();
+
+        // Tabelas canonicas do HUB
+        await createHubCoreTables();
 
         // Garantir existência e senha do usuário administrador nativo (admin)
         console.log("Migration: Garantindo integridade do usuário 'admin'...");
