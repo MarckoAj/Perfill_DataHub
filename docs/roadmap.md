@@ -1,39 +1,99 @@
-# Roadmap Técnico
+# Roadmap Tecnico
 
-## Fase 1 — Base do Hub (Concluído ✅)
+## Concluido
 
-- integração GLPI
-- endpoints para BI
-- estrutura modular
+### Base do Hub
 
----
+- Estrutura modular Node/Express.
+- Integracao GLPI.
+- Endpoints BI.
+- Persistencia local.
+- Frontend Vanilla inicial.
 
-## Fase 2 — Data Pipeline & Orchestration (Concluído ✅)
+### Data Pipeline e Scheduler
 
-- camada RAW
-- normalização
-- sync incremental
-- Motor Dinâmico de Auto-Sync 2.0 (Gerenciado via Banco) 
-- HUD e Painel Web de Gerenciamento 
+- Camada RAW/normalizada.
+- Sincronizacao manual e automatizada.
+- Scheduler dinamico.
+- Logs e historico de sync.
+- Soft delete e retention para AUVO.
 
----
+### AUVO
 
-## Fase 3 — Alert Engine (Em Andamento)
+- Client e sync service.
+- Repositories por entidade.
+- Sincronizacao de tarefas e entidades operacionais.
+- Painel de status e logs.
+- Uso de clientes AUVO como fonte inicial do HUB canonico.
 
-- regras avançadas
-- correlação de eventos
+### UI Operacional
 
----
+- `/noc`
+- `/alerts`
+- `/tickets`
+- `/clientes`
+- `/admin/sync`
+- Topbar global.
+- Modais operacionais.
 
-## Fase 4 — Integrações adicionais
+### Alert Engine
 
-- AUVO (Concluído ✅)
-- Zabbix (Pendente)
+- `RuleEngine`.
+- Regras modulares.
+- Persistencia de alertas.
+- Justificativa manual.
+- Broadcast via WebSocket.
 
----
+## Em Andamento
 
-## Fase 5 — Automação
+### HUB Canonico
 
-- criação automática de tickets
-- geração de tarefas
-- workflows operacionais
+- Consolidar entidades operacionais alem da fonte AUVO.
+- Ampliar campos canonicos.
+- Criar regras de divergencia entre fontes.
+- Melhorar testes do endpoint `GET /api/hub/entities`.
+
+### Observabilidade do Proprio Hub
+
+- Transformar falhas de integracao em alertas visiveis.
+- Expor healthcheck consolidado no frontend.
+- Melhorar metricas do scheduler.
+
+### Performance
+
+- Revisar queries pesadas de dashboard.
+- Avaliar cache ou views de resumo.
+- Monitorar crescimento das tabelas GLPI/AUVO.
+
+## Proximas Fases
+
+### Zabbix
+
+- Criar receiver/client.
+- Persistir eventos de host/status.
+- Correlacionar eventos com GLPI e HUB.
+- Criar regras Zabbix no Alert Engine.
+
+### Automacoes Operacionais
+
+- Automatizar abertura/atualizacao de tickets quando permitido.
+- Integrar tarefas AUVO com status do chamado.
+- Criar workflows de resposta a incidente.
+
+### Seguranca e Governanca
+
+- Avaliar troca de token/localStorage por cookie HttpOnly.
+- Implementar RBAC para rotas administrativas.
+- Auditar exposicao de endpoints manuais.
+
+### Qualidade
+
+- Expandir testes para scheduler, HUB e regras.
+- Criar cenarios de regressao para sincronizacoes.
+- Documentar migrations e dependencias de banco.
+
+## Longo Prazo
+
+- Editor visual de regras.
+- Event bus interno para desacoplar sync, alertas e broadcast.
+- Migrar partes criticas de UI para arquitetura frontend mais componentizada, se a complexidade continuar crescendo.

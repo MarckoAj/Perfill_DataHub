@@ -1,100 +1,109 @@
-# Status de Implementação
+# Status de Implementacao
+
+## Resumo Executivo
+
+O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard operacional, sincronizacao automatizada, Alert Engine modular e fase inicial do HUB canonico. Zabbix e automacoes mais avancadas seguem como proximas etapas.
 
 ## Arquitetura Base
 
-[x] Estrutura modular do projeto
-[x] Separação de camadas (API / Core / Integrations)
-[x] Sistema de rotas
-[x] Middlewares
-[x] Sistema de autenticação
+- [x] Estrutura modular em `src`.
+- [x] Separacao por rotas, controllers, services e repositories.
+- [x] Boot centralizado em `src/app/server.js`.
+- [x] Migrations no startup.
+- [x] Middleware de autenticacao por token.
+- [x] Frontend Vanilla servido por Express.
+- [x] WebSocket para broadcast de alertas.
 
----
+## GLPI
 
-# Integração GLPI
+- [x] Client de API GLPI.
+- [x] Mappers de tickets.
+- [x] Repositories GLPI e RAW.
+- [x] Persistencia de tickets e tarefas.
+- [x] Sync manual e automatizado.
+- [x] Endpoint BI.
+- [x] Endpoints operacionais para tickets e alertas.
+- [x] Participacao no Alert Engine.
 
-[x] Cliente de API GLPI
-[x] Mappers de dados
-[x] Endpoints de consulta
-[x] Sync incremental e massivo via Fila Async
-[x] Persistência RAW
-[x] Normalização automática no Banco de Dados
-[x] Desvio de Autenticação Auto-Assinada / Expirada TLS (Bypass)
+## AUVO
 
----
+- [x] Client AUVO.
+- [x] Sync service AUVO.
+- [x] Repositories para customers, tasks, users, groups, segments, questionnaires e task types.
+- [x] Controle de status de sincronizacao.
+- [x] Logs de sincronizacao.
+- [x] Politica de soft delete/purge para dados removidos da origem.
+- [x] Apoio ao painel `/clientes`.
+- [ ] Webhook handler dedicado.
 
-# Banco de Dados
+## HUB Canonico
 
-[x] Estrutura de repositórios
-[x] Persistência de tickets (GLPI) e Entidades (AUVO)
-[x] Tabelas RAW
-[x] Versionamento de schema via Migrations
-[x] Seeding de Agendamentos e Auditorias
-[x] Correção de Palavras Reservadas no CRUD (System->`system`)
-[x] Setup de 11 índices estratégicos de performance nas tabelas tickets, tasks_auvo, glpi_tickettasks e alerts
-[x] Refatoração Sargable de consultas temporais de métricas (conversão de DATE(col) = CURDATE() para col >= CURDATE())
+- [x] Modelo inicial de entidades HUB.
+- [x] Repository, service, controller e route.
+- [x] Endpoint `GET /api/hub/entities`.
+- [x] Alimentacao inicial por `AUVO/customer`.
+- [x] Paginacao e fallback no painel de clientes.
+- [ ] Inclusao de GLPI como fonte canonica complementar.
+- [ ] Inclusao de Zabbix como fonte canonica.
+- [ ] Motor de divergencias por campo.
 
----
+## Alert Engine
 
-# Alert Engine
+- [x] `RuleEngine` modular.
+- [x] Regras em `src/engine/rules`.
+- [x] Persistencia de alertas.
+- [x] Endpoint de consulta de alertas.
+- [x] Justificativa manual de alertas.
+- [x] Broadcast via WebSocket.
+- [x] Regras para SLA, novo sem atendimento, pausado estagnado e proativo estagnado.
+- [ ] Regras cruzadas com Zabbix.
+- [ ] Editor visual de regras.
 
-[x] Estrutura do alert engine
-[x] Persistência de alertas
-[x] Endpoint de consulta de alertas
-[ ] Regras avançadas
-[ ] correlação entre sistemas
+## Scheduler e Jobs
 
----
+- [x] Scheduler dinamico via `dynamicScheduler`.
+- [x] Configuracao por banco/UI.
+- [x] Limpeza de sincronizacoes travadas no boot.
+- [x] Sync manual sob demanda.
+- [x] Retention/purge AUVO.
+- [ ] Lock distribuido para ambientes com multiplas instancias.
 
-# Jobs e Automacação (Auto-Sync 2.0)
+## Banco de Dados
 
-[x] Motor Dinâmico via Banco de Dados (Substituição de Código Fixo)
-[x] Criação de Painel/HUD de Configuração no Frontend Web
-[x] Carga Assíncrona Não-Bloqueante (Background Queue)
-[x] Agendador Customizável com expressões amigáveis (Semana, Mês)
-[x] Suporte à Filtros Específicos por Entidade (Checkboxes independentes)
+- [x] Migrations.
+- [x] Repositories por dominio.
+- [x] Tabelas GLPI/AUVO normalizadas.
+- [x] Camada RAW onde aplicavel.
+- [x] Historico e logs de sync.
+- [x] Indices de performance adicionados em fases anteriores.
+- [ ] Revisao continua de queries pesadas do dashboard.
 
----
+## Frontend e Observabilidade
 
-# Integração AUVO
+- [x] Login.
+- [x] Dashboard NOC em `/noc`.
+- [x] Central de alertas em `/alerts`.
+- [x] Tabela de chamados em `/tickets`.
+- [x] Painel de clientes em `/clientes`.
+- [x] Painel de sync em `/admin/sync`.
+- [x] Topbar global e rotas amigaveis.
+- [x] Modais operacionais.
+- [x] Polling/telemetria de sync.
+- [ ] Healthcheck visual consolidado para falha de integracoes.
+- [ ] Revisao de responsividade fina em todas as telas.
 
-[x] client AUVO
-[x] mapper AUVO (embutido no service/repo)
-[x] ingestão de tarefas e demais entidades
-[x] sync incremental e motores de purge
-[ ] webhook handler
+## Zabbix
 
----
+- [ ] Client Zabbix.
+- [ ] Webhook receiver.
+- [ ] Persistencia de eventos/hosts.
+- [ ] Correlacao com tickets GLPI.
+- [ ] Regras Zabbix no Alert Engine.
 
-# Integração Zabbix
+## Testes
 
-[ ] client Zabbix
-[ ] ingestão de alertas
-[ ] correlação com tickets
-
----
-
-# Data Pipeline
-
-[x] camada RAW
-[x] camada normalizada (com Soft Delete e Resurrection)
-[x] lógica de expurgo (Retention Policy)
-[x] processamento modular de filas (Retry, Pause, Cancel, Start)
-[x] reprocessamento de dados globais sob-demanda
-
----
-
-# Observabilidade e UI
-
-[x] Dashboard UI Estilo Deep Dark Glassmorphism 
-[x] Componente Global Timer UI Tracker (Tempo Regressivo/Sincronizando)
-[x] Endpoint de Telemetria Contínua (Polling 1.5s)
-[x] Métricas de sync (Progresso Delta: Novas Inserções, Hits de Base)
-[x] Modal de Auditoria de Erros Específicos e Log em Tabela
-[x] Proteção Anti-Congelamento (Escudo Try/Catch nas requisições HTTPs)
-[x] Navegação unificada via Topbar Global em todas as páginas
-[x] Roteamento dinâmico no frontend e backend (URLs amigáveis `/noc`, `/alerts`, `/tickets`, `/admin/sync`)
-[x] Refatoração do Enterprise NOC Modal e Point Modal (CSS Grid, Glassmorphism, Zero Layout Overlap)
-[x] Mapeamento e auditoria de dependências CSS e arquivos estáticos (Pasta `public`)
-[x] Correção de bugs de carregamento de alertas e estabilização de conexão de Banco de Dados
-[x] Painel de Clientes Operacionais reativo em tempo real com filtros por Município e Unidades (`/clientes`)
-[x] Descontinuação e remoção definitiva da interface visual órfã do Motor de Regras (`/rules.html`)
+- [x] Suite Jest/Supertest configurada.
+- [x] Testes de autenticacao/BI/integracoes em fases anteriores.
+- [ ] Expandir cobertura para HUB canonico.
+- [ ] Expandir cobertura para scheduler dinamico.
+- [ ] Expandir cobertura para regras do Alert Engine.

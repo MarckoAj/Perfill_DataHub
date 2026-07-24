@@ -1,60 +1,74 @@
-# Escopo: Modo Dashboard & Alert Engine
+# Dashboard e Alert Engine
 
-Este documento detalha a implementação do novo componente de monitoramento operacional e o motor de alertas do Perfill DataHub.
+## Objetivo
 
-## 1. Visão Geral (Video Wall v2)
+Este documento registra o escopo do dashboard operacional e do motor de alertas do Perfill Data Hub.
 
-O **Modo Dashboard** foi evoluído para uma versão de alta densidade (v2), focada em visibilidade de longo alcance e interatividade rápida.
+## Estado Atual
 
-### 1.1 Elementos de Interface
-- **Header dinâmico**: Contadores de severidade que funcionam como filtros globais para a galeria de alertas.
-- **Chip "Total"**: Adicionado no header para visão geral do ecossistema de chamados.
-- **Galeria de Banners (Sidebar)**: Lista de alertas que utilizam o estilo completo do `TicketAlertBanner` em escala reduzida, com paginação por setas.
-- **Mini-Tabela (Lista Geral)**: Versão compacta da lista de chamados principal, contendo apenas: Local, Ativo, Categoria e SLA.
+- Dashboard NOC disponivel em `/noc`.
+- Central de alertas disponivel em `/alerts`.
+- APIs de alertas disponiveis em `/api/alerts`.
+- `RuleEngine` implementado em `src/engine/RuleEngine.js`.
+- Regras modulares em `src/engine/rules`.
+- Persistencia de alertas via `alertRepository`.
+- Broadcast de eventos via `alertBroadcaster`.
 
----
+## Dashboard NOC
 
-## 2. Modelo de Dados Sincronizado (API GLPI)
+O dashboard NOC e uma tela de alta densidade para acompanhamento operacional. Ele prioriza:
 
-Para garantir compatibilidade com os dados existentes no `index.html`, o mapeamento de campos foi padronizado:
+- visibilidade de chamados criticos;
+- contadores e filtros de severidade;
+- leitura rapida de SLA;
+- atualizacao operacional sem depender de Power BI;
+- navegacao para detalhes e justificativas.
 
-| Campo Dashboard | Propriedade API | Descrição |
-| :--- | :--- | :--- |
-| **Ticket ID** | `Ticket` | ID numérico do chamado no GLPI |
-| **Título** | `Chamado` | Título curto ou descrição resumida |
-| **Descrição** | `Descrição` | Texto completo do chamado |
-| **Local** | `Cliente Local` | Localização (última parte da string com `>`) |
-| **Categoria** | `Categoria` | Categoria ITIL ou técnica |
-| **Status SLA** | `Status do SLA` | Vencido, No Prazo, Atenção |
-| **Status Chamado** | `Status do Chamado` | Novo, Atribuído, Solucionado, etc |
+Arquivos relevantes:
 
----
+- `public/video_wall_v2.html`
+- `public/main.js`
+- `src/controllers/dashboardController.js`
+- `src/repositories/dashboardRepository.js`
+- `src/routes/dashboardRoutes.js`
 
-## 3. Gatilhos de Eventos (Alert Engine)
+## Alert Engine
 
-A lógica do Backend (próxima fase) deve processar as seguintes triggers:
+Fluxo principal:
 
-- **T1 (Informativo)**: Ticket aberto sem interação por mais de **5 minutos**.
-- **T2 (Atenção)**: Ticket com consumo superior a **50% do prazo de SLA**.
-- **T3 (Atenção/Zabbix)**: Ponto operacional sem interação por mais de **10 minutos** (integração futura).
+```text
+ticket/tarefa normalizada
+  -> TicketAlertService
+  -> RuleEngine
+  -> alertRepository
+  -> API/WebSocket
+```
 
----
+Regras atuais:
 
-## 4. Progresso e Status
+- ticket novo sem atendimento;
+- SLA em atencao;
+- SLA vencido;
+- chamado pausado estagnado;
+- proativo estagnado.
 
-### ✅ Frontend (Concluído)
-- [x] Layout Base (Grid/Stacks) idêntico ao `main.js`.
-- [x] Estilização Ultra-Compacta de banners para barra lateral.
-- [x] Lógica de filtragem e contagem dinâmica no Header.
-- [x] Mini-tabela lateral com badges de SLA coloridos.
-- [x] Navegação e Paginação da galeria de alertas.
+## Dados Expostos
 
-### ⏳ Backend (Pendente)
-- [ ] Criação da tabela `dashboard_alerts`.
-- [ ] Implementação do `alertEngineService.js` (Processamento de Triggers).
-- [ ] Integração real via API `GET /api/dashboard/alerts`.
+Endpoints relevantes:
 
----
+- `GET /api/alerts`
+- `GET /api/alerts/:ticketId`
+- `GET /api/alerts/:id/details`
+- `POST /api/alerts/:id/justify`
+- `GET /api/rules`
+- `GET /api/dashboard/alerts`
+- `GET /api/dashboard/metrics`
+- `GET /api/dashboard/glpi`
+- `GET /api/dashboard/auvo`
 
-**Nível de Esforço Recomendado:** `médio/alto`
-**Última Atualização:** 27/04/2026 - Finalização do Protótipo Visual v2.
+## Pendencias
+
+- Criar regras cruzadas com Zabbix.
+- Melhorar healthcheck visual quando integracoes externas falham.
+- Expandir testes das regras.
+- Avaliar cache ou resumo materializado para metricas pesadas.

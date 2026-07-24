@@ -2,103 +2,116 @@
 
 ## Conceito
 
-O Perfill Data Hub implementa um pipeline de ingestão de dados para coletar informações de sistemas externos e transformá-las em dados estruturados.
+O pipeline do Perfill Data Hub coleta dados externos, persiste estado local, normaliza informacoes operacionais e disponibiliza os dados para dashboards, BI, HUB canonico e Alert Engine.
 
----
+## Fluxo Geral
 
-# Pipeline de Ingestão
+```text
+Fonte externa
+  -> integration client
+  -> mapper
+  -> raw/normalized repository
+  -> banco local
+  -> services de dominio
+  -> APIs, dashboards, HUB canonico e Alert Engine
+```
 
-Fluxo:
+## Camada RAW
 
-External API
-↓
-Raw Data Storage
-↓
-Normalization
-↓
-Business Logic
-↓
-API / Analytics
+A camada RAW preserva payloads externos quando aplicavel. Ela e importante para:
 
----
-
-# RAW Data Layer
-
-Antes de qualquer transformação, os dados são armazenados em formato bruto.
-
-Exemplo de tabela:
-
-raw_glpi_tickets
-
-Campos:
-
-id
-external_id
-payload_json
-fetched_at
-
-Benefícios:
-
-- rastreabilidade
-- auditoria
-- reprocessamento
-- recuperação de erros
-
----
-
-# Normalização
-
-Após o armazenamento RAW, os dados são mapeados para o modelo interno.
+- auditoria;
+- rastreabilidade;
+- diagnostico;
+- reprocessamento;
+- comparacao entre payload original e modelo normalizado.
 
 Exemplo:
 
-GLPI ticket → internal ticket
+- `raw_glpi_tickets`
 
-Transformações comuns:
+## Camada Normalizada por Fonte
 
-- normalização de status
-- conversão de datas
-- mapeamento de campos
+As tabelas normalizadas guardam o estado operacional de cada sistema externo.
 
----
+Exemplos:
 
-# Incremental Sync
+- `tickets`
+- `tasks_auvo`
+- `customers_auvo`
+- tabelas auxiliares AUVO;
+- tabelas de alertas e logs.
 
-Para evitar processamento desnecessário, a sincronização utilizará:
+Essa camada deve continuar existindo mesmo com o crescimento do HUB canonico. O HUB consolida; ele nao apaga a necessidade do estado por fonte.
 
-last_update timestamp
+## Mappers
 
-ou
+Os mappers convertem campos externos para o formato interno. O padrao esperado e:
 
-time range incremental
+```text
+payload externo -> mapper -> objeto interno -> repository
+```
 
-Exemplo:
+Nao duplicar logica de mapper em controllers ou frontend.
 
-buscar tickets atualizados nos últimos 5 minutos
+## Sincronizacao Incremental e Manual
 
----
+O projeto possui sincronizacao automatizada e endpoints manuais.
 
-# Event Generation
+Exemplos:
 
-Após normalização, eventos poderão ser gerados:
+- `GET|POST /api/bi/sync` para GLPI.
+- `POST /api/auvo/sync` para AUVO.
+- scheduler dinamico iniciado por `dynamicScheduler.startManager()`.
 
-ticket.created
-ticket.updated
-ticket.closed
+O sistema tambem limpa sincronizacoes travadas no boot usando `syncLogRepository.cleanupStuckSyncs()`.
 
-Esses eventos poderão alimentar:
+## Soft Delete e Retencao
 
-- alert engine
-- automações
-- correlação entre plataformas
+Para entidades AUVO, o projeto usa ciclo de vida com soft delete:
 
----
+- ativo: registro ainda existe na origem;
+- deletado logico: registro deixou de aparecer na origem;
+- deletado fisico: purge posterior conforme politica de retencao.
 
-# Políticas de Retenção e Soft Delete
+Isso evita perda brusca de dados para dashboard/BI e permite tolerancia a inconsistencias temporarias da origem.
 
-Para garantir consistência com ferramentas de BI sem perder o poder da camada RAW, foi implementado o conceito de Soft Delete nas camadas relacionais.
+## HUB Canonico
 
-Ciclo de Vida:
-- **Ativo**: Registro existe na origem (`isActive = 1`, `deletedAt = NULL`).
-- **Deletado Lógico**: Registro "sumiu" da origem. O motor de inferência (`AuvoSyncService.markAsDeletedPhase`) aplica o Inativo.
-- **Deletado Físico**: O dado lógico expira após 30 dias na tabela e um Job agendado faz a exclusão definitiva (Purge).
+O HUB canonico cria uma camada de entidades operacionais consolidadas. A primeira fase expoe dados basicos como:
+
+- nome;
+- latitude;
+- longitude;
+- origem do valor.
+
+Endpoint atual:
+
+- `GET /api/hub/entities`
+
+Fonte inicial:
+
+- AUVO customers.
+
+## Alert Engine
+
+Apos a normalizacao, dados de GLPI/AUVO podem alimentar o `RuleEngine`.
+
+Fluxo resumido:
+
+```text
+ticket/tarefa normalizada
+  -> service de alerta
+  -> RuleEngine
+  -> alertRepository
+  -> WebSocket/API
+```
+
+As regras devem ser pequenas, testaveis e sem efeitos colaterais diretos de banco ou rede.
+
+## Pontos de Atencao
+
+- Evitar jobs sobrepostos quando uma sincronizacao demora mais que o intervalo configurado.
+- Monitorar queries pesadas do dashboard.
+- Expandir logs de falha de integracao para alertas visiveis ao NOC.
+- Cobrir HUB e scheduler com testes automatizados.
