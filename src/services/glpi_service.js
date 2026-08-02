@@ -2,6 +2,7 @@ import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpi_client from "../integrations/glpi/glpiClient.js";
 import ticketMapper from "../mappers/ticketMapper.js";
 import ticketStatusMapper from "../mappers/ticketStatusMapper.js";
+import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 
 class GlpiTickets {
     constructor() {
@@ -137,6 +138,24 @@ class GlpiTickets {
         return this.addTechniciansToTickets(filteredTickets);
     }
 
+    async getTechnicianName(id) {
+        if (!id) return "Não Atribuido";
+
+        if (this.techniciansCache.has(id)) {
+            return this.techniciansCache.get(id);
+        }
+
+        try {
+            const user = await glpi_client.glpiRequestData("User", "GET", null, id);
+            const name = user?.data?.name || user?.data?.realname || "Não encontrado";
+            this.techniciansCache.set(id, name);
+            return name;
+        } catch {
+            this.techniciansCache.set(id, "Não encontrado");
+            return "Não encontrado";
+        }
+    }
+
     async addTechniciansToTickets(tickets) {
 
         // coleta IDs únicos de técnicos
@@ -156,8 +175,8 @@ class GlpiTickets {
             const techniciansResponses = await Promise.all(
                 missingIds.map(async (id) => {
                     try {
-                        const user = await glpi_client.glpiRequestData(`/user/${id}`);
-                        return { id, name: user?.name || "Não encontrado" };
+                        const name = await this.getTechnicianName(id);
+                        return { id, name };
                     } catch {
                         return { id, name: "Não encontrado" };
                     }
@@ -175,6 +194,28 @@ class GlpiTickets {
             nomeTecnico:
                 this.techniciansCache.get(ticket.idTecnicoAtribuido) || "Não Atribuido",
         }));
+    }
+
+    async refreshStoredTechnicianNames({ limit = null } = {}) {
+        const technicianIds = await glpiTicketRepository.getAssignedTechnicianIds({ limit });
+        const metrics = { updated: 0, notFound: 0, skipped: 0, errors: 0 };
+
+        for (const id of technicianIds) {
+            try {
+                const name = await this.getTechnicianName(id);
+                if (!name || name === "Não encontrado") {
+                    metrics.notFound++;
+                    continue;
+                }
+
+                const result = await glpiTicketRepository.updateTechnicianName(id, name);
+                metrics.updated += result.affectedRows || 0;
+            } catch {
+                metrics.errors++;
+            }
+        }
+
+        return metrics;
     }
 }
 

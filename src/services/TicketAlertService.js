@@ -48,18 +48,20 @@ class TicketAlertService {
       await this.createNewAlert(ticketId, rule);
     } else if (!condition && activeAlert) {
       // Condição resolvida e havia alerta aberto → fecha ou justifica
+      let resolutionReason = "Status justificado pelo sistema";
       
       // Lógica de auto-justificativa específica para R4
       if (ruleId === 'GLPI_SLA_BREACHED' && ticket.ultimaTarefa && ticket.ultimaTarefa !== 'Sem tarefas') {
+        resolutionReason = "Alerta justificado via GLPI";
         await alertRepository.justifyAlert({
           alertId: activeAlert.id,
           justifiedBy: 'system',
-          justifiedText: "Alerta justificado via GLPI"
+          justifiedText: resolutionReason
         });
       } else {
         await alertRepository.updateTicketAlert({
           checked: true,
-          justifiedText: "Status justificado pelo sistema",
+          justifiedText: resolutionReason,
           glpi_ticketId: ticketId,
           ruleId: ruleId,
         });
@@ -70,7 +72,7 @@ class TicketAlertService {
         ticketId,
         ruleId,
         author: 'system',
-        reason: justifiedText
+        reason: resolutionReason
       });
     }
   }
@@ -132,4 +134,3 @@ class TicketAlertService {
 }
 
 export default new TicketAlertService();
-

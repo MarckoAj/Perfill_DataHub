@@ -2,6 +2,7 @@ import glpiTickets from "../services/glpi_service.js";
 import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 import glpiRawRepository from "../repositories/glpi/glpiRawRepository.js";
 import glpiTicketTaskService from "./glpiTicketTaskService.js";
+import glpiSolutionService from "./glpiSolutionService.js";
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpiClient from "../integrations/glpi/glpiClient.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
@@ -157,7 +158,8 @@ class GlpiSyncService {
              { id: 'atrasado', label: 'Tickets atrasados' },
              { id: 'pendente', label: 'Tickets pendentes' },
              { id: 'fechado', label: 'Tickets fechados' },
-             { id: 'tarefas', label: 'Tarefas de Chamados (Secundárias)' }
+             { id: 'tarefas', label: 'Tarefas de Chamados (Secundárias)' },
+             { id: 'solucoes', label: 'Soluções de Chamados (Secundárias)' }
           ];
 
           let modifiedEntities = allEntities;
@@ -194,9 +196,17 @@ class GlpiSyncService {
                   await this.syncStatus("atrasado"); 
               } else if (ent.id === 'tarefas') {
                   this._setEntityState(ent.id, { status: 'SYNCING' });
-                  const tDeltas = await glpiTicketTaskService.syncRecentTasks(2000);
+                  const tDeltas = await glpiTicketTaskService.syncAllTasks();
+                  await glpiTicketRepository.updateLastSyncDate(ent.id);
                   this._setEntityState(ent.id, {
                       status: 'DONE', count: tDeltas.inserts + tDeltas.updates, targetCount: tDeltas.inserts + tDeltas.updates, deltas: tDeltas
+                  });
+              } else if (ent.id === 'solucoes') {
+                  this._setEntityState(ent.id, { status: 'SYNCING' });
+                  const sDeltas = await glpiSolutionService.syncAllSolutions();
+                  await glpiTicketRepository.updateLastSyncDate(ent.id);
+                  this._setEntityState(ent.id, {
+                      status: 'DONE', count: sDeltas.inserts + sDeltas.updates, targetCount: sDeltas.inserts + sDeltas.updates + sDeltas.skips, deltas: sDeltas
                   });
               } else {
                   await this.syncStatus(ent.id);
@@ -264,7 +274,7 @@ class GlpiSyncService {
 
   async syncAll() {
       // Alias para legacy background jobs
-      return this.runQueue(["novo", "atribuido", "planejado", "pendente", "solucionado", "fechado", "atrasado", "tarefas"]);
+      return this.runQueue(["novo", "atribuido", "planejado", "pendente", "solucionado", "fechado", "atrasado", "tarefas", "solucoes"]);
   }
 }
 

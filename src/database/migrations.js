@@ -8,6 +8,8 @@ import { createSyncSchedulesTable } from "./migrations/syncSchedulesTables.js";
 import { runScheduleSeeds } from "./seeds/scheduleSeeds.js";
 import { createAlertsHistoryTable } from "./migrations/alertsHistoryTable.js";
 import { createHubCoreTables } from "./migrations/hubCoreTables.js";
+import { createGlpiSolutionsTable } from "./migrations/glpiSolutionsTable.js";
+import { createPowerBiTicketsView } from "./migrations/powerBiTicketsView.js";
 
 dotenv.config();
 
@@ -176,7 +178,9 @@ export async function runMigrations() {
         }
 
         await pool.query(glpiTasksTableQuery);
-        console.log("Migration: Tabela 'tickets' verificada/criada com sucesso.");
+        console.log("Migration: Tabela 'glpi_tickettasks' verificada/criada com sucesso.");
+        await createGlpiSolutionsTable();
+        await createPowerBiTicketsView();
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
 

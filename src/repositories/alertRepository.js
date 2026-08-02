@@ -306,6 +306,20 @@ class AlertRepository {
       INSERT INTO datahub_ticket_alerts (
         ticket_id, alert_type, severity, message, state, first_detected_at, last_detected_at
       ) VALUES (?, ?, ?, ?, 'open', NOW(), NOW())
+      ON DUPLICATE KEY UPDATE
+        severity = VALUES(severity),
+        message = VALUES(message),
+        state = 'open',
+        first_detected_at = IF(
+          datahub_ticket_alerts.state IN ('closed', 'justified'),
+          VALUES(first_detected_at),
+          datahub_ticket_alerts.first_detected_at
+        ),
+        last_detected_at = VALUES(last_detected_at),
+        closed_at = NULL,
+        justified_by = NULL,
+        justified_text = NULL,
+        justified_at = NULL
     `;
     const [result] = await pool.query(query, [glpi_ticketId, rule.ruleId, mappedSeverity, rule.description]);
     return result;

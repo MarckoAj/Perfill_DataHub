@@ -85,7 +85,35 @@ class GlpiTicketRepository {
     }
   }
 
-  async getAllTickets(startDate, endDate, statusGroup = "todos", limit = 100, offset = 0) {
+  async getAssignedTechnicianIds({ limit = null } = {}) {
+    let query = `
+      SELECT DISTINCT idTecnicoAtribuido
+      FROM tickets
+      WHERE idTecnicoAtribuido IS NOT NULL
+      ORDER BY idTecnicoAtribuido ASC
+    `;
+    const params = [];
+
+    if (Number.isFinite(Number(limit)) && Number(limit) > 0) {
+      query += " LIMIT ?";
+      params.push(Number(limit));
+    }
+
+    const [rows] = await pool.query(query, params);
+    return rows.map((row) => row.idTecnicoAtribuido).filter(Boolean);
+  }
+
+  async updateTechnicianName(technicianId, technicianName) {
+    const query = `
+      UPDATE tickets
+      SET nomeTecnico = ?
+      WHERE idTecnicoAtribuido = ?
+    `;
+    const [result] = await pool.query(query, [technicianName, technicianId]);
+    return result;
+  }
+
+  async getAllTickets(startDate, endDate, statusGroup = "todos", limit = null, offset = 0) {
     let query = "SELECT * FROM tickets";
     const params = [];
     const conditions = [];
@@ -106,8 +134,12 @@ class GlpiTicketRepository {
       query += ` WHERE ${conditions.join(" AND ")}`;
     }
 
-    query += " ORDER BY dataCriacao DESC LIMIT ? OFFSET ?";
-    params.push(limit, offset);
+    query += " ORDER BY dataCriacao DESC";
+
+    if (Number.isFinite(Number(limit)) && Number(limit) > 0) {
+      query += " LIMIT ? OFFSET ?";
+      params.push(Number(limit), Number(offset) || 0);
+    }
 
     try {
       const [rows] = await pool.query(query, params);
@@ -203,7 +235,9 @@ class GlpiTicketRepository {
       { id: 'solucionado', label: 'Tickets solucionados', color: '#64748b' },
       { id: 'atrasado', label: 'Tickets atrasados', color: '#ef4444' },
       { id: 'pendente', label: 'Tickets pendentes', color: '#f59e0b' },
-      { id: 'fechado', label: 'Tickets fechados', color: '#ffffff' }
+      { id: 'fechado', label: 'Tickets fechados', color: '#ffffff' },
+      { id: 'tarefas', label: 'Tarefas de chamados', color: '#22c55e' },
+      { id: 'solucoes', label: 'Solucoes de chamados', color: '#06b6d4' }
     ];
 
     const stats = [];
@@ -213,6 +247,12 @@ class GlpiTicketRepository {
         try {
             if (t.id === 'atrasado') {
                 const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM tickets WHERE isAtrasado = 1`);
+                count = countRows[0].count;
+            } else if (t.id === 'tarefas') {
+                const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM glpi_tickettasks`);
+                count = countRows[0].count;
+            } else if (t.id === 'solucoes') {
+                const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM glpi_itilsolutions`);
                 count = countRows[0].count;
             } else {
                 const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM tickets WHERE LOWER(status) = ?`, [t.id]);

@@ -14,13 +14,15 @@ export const getTicketsByStatus = asyncHandler(async (req, res) => {
 
 export const getTicketsForBi = asyncHandler(async (req, res) => {
   const { startDate, endDate, statusGroup, limit, offset } = req.query;
+  const parsedLimit = limit === undefined ? null : parseInt(limit, 10);
+  const parsedOffset = offset === undefined ? 0 : parseInt(offset, 10);
   
   const tickets = await glpiTicketRepository.getAllTickets(
     startDate, 
     endDate, 
     statusGroup || 'todos', 
-    parseInt(limit) || 100, 
-    parseInt(offset) || 0
+    Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : null,
+    Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0
   );
   
   res.status(200).json(tickets);
@@ -38,10 +40,10 @@ export const getGlpiStats = asyncHandler(async (req, res) => {
 });
 
 export const syncGlpiManual = asyncHandler(async (req, res) => {
-  const { entities, startDate, endDate } = req.body || {}; 
+  const { entities } = req.body || {}; 
   
   // Processo precisa rodar sem prender o Event Loop
-  glpiSyncService.runQueue(entities, startDate, endDate).catch((e) => {
+  glpiSyncService.runQueue(entities, null, 'Gatilho Manual').catch((e) => {
       console.error("RunQueue GLPI Failed: ", e.message);
   });
   
