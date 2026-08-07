@@ -11,12 +11,13 @@ class GlpiTicketRepository {
 
     const query = `
       INSERT INTO tickets (
-        ticketId, nomeCliente, titulo, descricao, dataCriacao, status,
+        ticketId, nomeCliente, idLocalizacaoPonto, titulo, descricao, dataCriacao, status,
         dataFechamento, dataSolucao, dataAtualizacao, categoriaSla, tempoSla,
         statusSla, motivoPausa, idTecnicoAtribuido, nomeTecnico, isAtrasado, tipo, projeto
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         nomeCliente = VALUES(nomeCliente),
+        idLocalizacaoPonto = VALUES(idLocalizacaoPonto),
         titulo = VALUES(titulo),
         descricao = VALUES(descricao),
         status = VALUES(status),
@@ -39,6 +40,7 @@ class GlpiTicketRepository {
       const values = [
         parseInt(t.ticketId, 10) || null,
         t.nomeCliente ? String(t.nomeCliente).substring(0, 255) : null,
+        t.idLocalizacaoPonto ? parseInt(t.idLocalizacaoPonto, 10) : null,
         t.titulo ? String(t.titulo).substring(0, 255) : null,
         t.descricao ? String(t.descricao) : null,
         t.dataCriacao || null,

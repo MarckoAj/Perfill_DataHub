@@ -50,6 +50,7 @@ export async function createPowerBiTicketsView() {
     SELECT
       t.ticketId,
       t.nomeCliente,
+      t.idLocalizacaoPonto,
       t.titulo,
       t.descricao,
       t.dataCriacao,

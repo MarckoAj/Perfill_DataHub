@@ -34,7 +34,8 @@ class GlpiTickets {
             return [];
         }
 
-        const processedTickets = ticketMapper.processTickets(ticketsArray);
+        let processedTickets = ticketMapper.processTickets(ticketsArray);
+        processedTickets = await this.enrichTicketsWithLocationIds(processedTickets);
 
         // Se a busca foi especificamente por "atrasado", adicionamos a flag sem sobrescrever o status
         if (status === "atrasado") {
@@ -60,10 +61,67 @@ class GlpiTickets {
         
         if (!ticketsArray) return { processedTickets: [], rawTickets: [], headers: null };
 
-        const processedTickets = ticketMapper.processTickets(ticketsArray);
+        let processedTickets = ticketMapper.processTickets(ticketsArray);
+        processedTickets = await this.enrichTicketsWithLocationIds(processedTickets);
         const withTechs = await this.addTechniciansToTickets(processedTickets);
 
         return { processedTickets: withTechs, rawTickets: ticketsArray, headers: result?.headers };
+    }
+
+    buildMultipleTicketsEndpoint(tickets) {
+        const params = new URLSearchParams({
+            expand_dropdowns: "false",
+            get_hateoas: "true"
+        });
+
+        tickets.forEach((ticket, index) => {
+            params.set(`items[${index}][itemtype]`, "Ticket");
+            params.set(`items[${index}][items_id]`, String(ticket.ticketId));
+        });
+
+        return `getMultipleItems?${params.toString()}`;
+    }
+
+    async enrichTicketsWithLocationIds(tickets) {
+        if (!Array.isArray(tickets) || tickets.length === 0) return tickets;
+
+        const ticketsMissingLocationId = tickets.filter(
+            (ticket) => ticket.ticketId && !ticket.idLocalizacaoPonto
+        );
+
+        if (ticketsMissingLocationId.length === 0) return tickets;
+
+        const locationIdsByTicketId = new Map();
+        const chunkSize = 50;
+
+        for (let start = 0; start < ticketsMissingLocationId.length; start += chunkSize) {
+            const chunk = ticketsMissingLocationId.slice(start, start + chunkSize);
+            const endpoint = this.buildMultipleTicketsEndpoint(chunk);
+
+            try {
+                const result = await glpi_client.glpiRequestData(endpoint, "GET");
+                const details = Array.isArray(result?.data)
+                    ? result.data
+                    : (Array.isArray(result?.data?.data) ? result.data.data : []);
+
+                details.forEach((detail) => {
+                    const ticketId = detail?.id || detail?.ticketId || detail?.["2"];
+                    const locationId = ticketMapper.extractLocationId(detail || {});
+                    if (ticketId && locationId) {
+                        locationIdsByTicketId.set(String(ticketId), locationId);
+                    }
+                });
+            } catch (error) {
+                console.warn("Aviso: não foi possível enriquecer IDs de localização do GLPI:", error.message);
+            }
+        }
+
+        if (locationIdsByTicketId.size === 0) return tickets;
+
+        return tickets.map((ticket) => ({
+            ...ticket,
+            idLocalizacaoPonto: ticket.idLocalizacaoPonto || locationIdsByTicketId.get(String(ticket.ticketId)) || null
+        }));
     }
 
     async getTicketsByStatus(status) {

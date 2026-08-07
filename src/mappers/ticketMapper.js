@@ -66,6 +66,38 @@ class TicketMapper {
     return text;
   }
 
+  parsePositiveInteger(value) {
+    if (value === null || value === undefined || value === "" || value === "&nbsp;") {
+      return null;
+    }
+
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  extractLocationId(ticket) {
+    const directLocationId = this.parsePositiveInteger(
+      ticket.locations_id ??
+      ticket.location_id ??
+      ticket.idLocalizacaoPonto ??
+      ticket["locations_id"] ??
+      ticket["83_id"] ??
+      ticket["83.id"]
+    );
+
+    if (directLocationId) {
+      return directLocationId;
+    }
+
+    if (Array.isArray(ticket.links)) {
+      const locationLink = ticket.links.find((link) => link?.rel === "Location" && link?.href);
+      const match = locationLink?.href?.match(/\/Location\/(\d+)(?:\D*$|$)/);
+      return match ? this.parsePositiveInteger(match[1]) : null;
+    }
+
+    return null;
+  }
+
   processTickets(tickets) {
     if (!Array.isArray(tickets)) {
       return [];
@@ -109,6 +141,7 @@ class TicketMapper {
       return {
         ticketId: ticket["2"],
         nomeCliente: nomeCliente ? nomeCliente.trim() : "Não informado",
+        idLocalizacaoPonto: this.extractLocationId(ticket),
         titulo,
         descricao,
         dataCriacao: ticket["15"],

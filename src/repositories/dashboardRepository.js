@@ -50,6 +50,7 @@ class DashboardRepository {
         tt.nomeAutor AS "Autor Tarefa",
         
         t.nomeCliente AS "Cliente Local",
+        t.idLocalizacaoPonto AS "ID Localização Ponto",
         t.nomeTecnico AS "Técnico",
 
         t.tempoSla AS "Tempo para Resolver",
@@ -204,7 +205,7 @@ class DashboardRepository {
             END
           ) AS Chamado,
           a.message AS description,
-          IFNULL(t.nomeCliente, 'Não Informado') AS pointId,
+          IFNULL(t.idLocalizacaoPonto, t.nomeCliente) AS pointId,
           IFNULL(t.categoriaSla, 'GERAL') AS type,
           IFNULL(t.statusSla, 'No Prazo') AS slaStatus,
           IFNULL(t.tempoSla, 'OK') AS slaText,

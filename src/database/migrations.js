@@ -28,6 +28,7 @@ export async function runMigrations() {
         CREATE TABLE IF NOT EXISTS tickets (
             ticketId BIGINT PRIMARY KEY,
             nomeCliente VARCHAR(255),
+            idLocalizacaoPonto BIGINT,
             titulo VARCHAR(255),
             descricao LONGTEXT,
             dataCriacao DATETIME,
@@ -133,6 +134,15 @@ export async function runMigrations() {
         }
 
         await pool.query(ticketsTableQuery);
+        try {
+            await pool.query("ALTER TABLE tickets ADD COLUMN idLocalizacaoPonto BIGINT AFTER nomeCliente;");
+            console.log("Migration: Coluna 'idLocalizacaoPonto' adicionada na tabela tickets.");
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error("Erro ao adicionar coluna 'idLocalizacaoPonto' em tickets:", error.message);
+            }
+        }
+
         try {
             await pool.query("ALTER TABLE tickets ADD COLUMN dataSolucao DATETIME AFTER dataFechamento;");
             console.log("Migration: Coluna dataSolucao adicionada na tabela tickets.");
