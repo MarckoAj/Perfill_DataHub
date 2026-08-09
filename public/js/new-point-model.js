@@ -189,6 +189,163 @@ function _formatHubId(client) {
   return `HUB-${String(hubId).padStart(6, "0")}`;
 }
 
+function _getPlatformLinks(client) {
+  return client.platformLinks || {};
+}
+
+function _getFieldRelations(client, fieldKey) {
+  return client.fieldRelations?.[fieldKey] || [];
+}
+
+function _relationHint(client, fieldKey) {
+  const relations = _getFieldRelations(client, fieldKey);
+  if (!relations.length) return "";
+
+  const rows = relations.map(item => `
+    <div class="pm-relation-row">
+      <span class="pm-relation-platform">${_escapeHtml(item.platform)}</span>
+      <span class="pm-relation-path">${_escapeHtml(item.entity)}.${_escapeHtml(item.field)}</span>
+      <span class="pm-relation-value">${_escapeHtml(item.value ?? "N/A")}</span>
+      <span class="pm-relation-role">${_escapeHtml(item.role || "")}</span>
+    </div>
+  `).join("");
+
+  return `
+    <span class="pm-relation-trigger" tabindex="0">?</span>
+    <div class="pm-relation-tooltip">
+      <div class="pm-relation-title">Relacionamentos deste campo</div>
+      ${rows}
+    </div>
+  `;
+}
+
+function _formatDateTime(value) {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("pt-BR");
+}
+
+function _getPlatformGeneralValue(client, fieldKey, fallback = "N/A") {
+  const platformFields = client.platformFields?.[currentPlatformTab];
+  if (platformFields) {
+    return Object.prototype.hasOwnProperty.call(platformFields, fieldKey)
+      ? platformFields[fieldKey]
+      : undefined;
+  }
+
+  const links = _getPlatformLinks(client);
+  const auvoCustomer = client.sources?.auvo?.customer || null;
+  const glpiTicket = client.sources?.glpi?.tickets?.[0] || null;
+
+  if (currentPlatformTab === "auvo") {
+    const auvoValues = {
+      id: links.auvo?.customerId,
+      name: auvoCustomer?.description,
+      type: "AUVO/customer",
+      city: client.city,
+      latitude: auvoCustomer?.latitude,
+      longitude: auvoCustomer?.longitude,
+      location: auvoCustomer?.address,
+      unit: auvoCustomer?.segmentName || client.unit,
+      region: auvoCustomer?.segmentName || client.region,
+      responsible: "AUVO"
+    };
+    return auvoValues[fieldKey] ?? fallback;
+  }
+
+  if (currentPlatformTab === "glpi") {
+    const glpiDevice = client.sources?.glpi?.device || null;
+    const glpiValues = {
+      id: links.glpi?.deviceId,
+      name: glpiDevice?.name || glpiTicket?.nomeCliente,
+      type: "GLPI/device",
+      city: client.city,
+      latitude: glpiDevice?.latitude,
+      longitude: glpiDevice?.longitude,
+      location: links.glpi?.locationId,
+      unit: links.glpi?.locationId ? `Localizacao ${links.glpi.locationId}` : client.unit,
+      region: glpiDevice?.region || glpiTicket?.projeto || client.region,
+      responsible: glpiTicket?.status || "GLPI"
+    };
+    return glpiValues[fieldKey] ?? fallback;
+  }
+
+  return fallback;
+}
+
+function _countPlatformDivergences(client, platform) {
+  if (platform === "glpi") return client.sources?.glpi?.device ? 0 : 1;
+  if (platform === "auvo") return client.sources?.auvo?.customer ? 0 : 1;
+  return 0;
+}
+
+function _hasPlatformField(client, fieldKey) {
+  if (currentPlatformTab === "hub") return true;
+  const platformFields = client.platformFields?.[currentPlatformTab];
+  if (!platformFields) return true;
+  return Object.prototype.hasOwnProperty.call(platformFields, fieldKey);
+}
+
+function _platformField(client, label, fieldKey, fallback = "N/A", badge = null, title = null, relationKey = fieldKey) {
+  if (!_hasPlatformField(client, fieldKey)) return "";
+  const value = _getPlatformGeneralValue(client, fieldKey, fallback);
+  return _field(label, value, badge, title, client, relationKey);
+}
+
+function _renderGeneralFieldGroups(client, assetName, nameBadge, links) {
+  const activeId = currentPlatformTab === "hub"
+    ? _formatHubId(client)
+    : _getPlatformGeneralValue(client, "id", _formatHubId(client));
+  const activeName = _getPlatformGeneralValue(client, "name", assetName);
+
+  const left = [
+    _field("Nome do ativo", _shortText(activeName, 36), nameBadge, activeName, client, "name"),
+    _field("ID do ativo", activeId, null, null, client, "id"),
+    _platformField(client, "Status", "status"),
+    _platformField(client, "Tipo", "deviceType", client.type),
+    _platformField(client, "Localizacao", "locationName", client.address, null, null, "location"),
+    _platformField(client, "Latitude", "latitude", client.latitude, { type: "critical", label: "Campo Critico" })
+  ].join("");
+
+  const right = [
+    _platformField(client, "Longitude", "longitude", client.longitude, { type: "critical", label: "Campo Critico" }),
+    _platformField(client, "Fabricante", "manufacturer"),
+    _platformField(client, "Modelo", "model", "N/A", null, null, "model"),
+    _platformField(client, "Tecnico encarregado", "hardwareTechnician"),
+    _platformField(client, "Projeto", "project"),
+    _platformField(client, "Fonte de Atualizacao", "updateSource"),
+    _platformField(client, "ID Auvo", "auvoCustomerId", links.auvo?.customerId, null, null, "id")
+  ].join("");
+
+  return `
+    <div class="pm-fields-grid">
+      <div>${left}</div>
+      <div>${right}</div>
+    </div>
+  `;
+}
+
+function requestHubSync(platform) {
+  const client = _getCurrentClient();
+  if (!client) return;
+
+  const label = String(platform || "").toUpperCase();
+  client.syncHistory = [
+    {
+      type: "warning",
+      title: `Sincronizacao manual solicitada: ${label} -> HUB`,
+      description: "Acao registrada no modal. A persistencia e aplicacao campo-a-campo entram na proxima etapa.",
+      at: new Date().toISOString(),
+      sourceSystem: label
+    },
+    ...(client.syncHistory || [])
+  ];
+
+  window.__currentPointModalClient = client;
+  _renderBody(client);
+}
+
 /* =========================================================
    HEADER RENDER
 ========================================================= */
@@ -222,9 +379,9 @@ function _renderHeader(client, overlay) {
         <div class="pm-sync-label">Situação de sincronização</div>
         <div class="pm-sync-pills">
           ${_syncPill("HUB",    pmIcons.hub,    "success", null)}
-          ${_syncPill("GLPI",   pmIcons.glpi,   "warning", 2)}
+          ${_syncPill("GLPI",   pmIcons.glpi,   _countPlatformDivergences(client, "glpi") ? "warning" : "success", _countPlatformDivergences(client, "glpi"))}
           ${_syncPill("ZABBIX", pmIcons.zabbix, "success", null)}
-          ${_syncPill("AUVO",   pmIcons.auvo,   "warning", 1)}
+          ${_syncPill("AUVO",   pmIcons.auvo,   _countPlatformDivergences(client, "auvo") ? "warning" : "success", _countPlatformDivergences(client, "auvo"))}
         </div>
       </div>
       <div class="pm-header-actions">
@@ -281,9 +438,9 @@ function _renderBody(client) {
   const platformTabs = `
     <div class="platform-tabs">
       ${_platformTab("hub",     "HUB",      pmIcons.hub,     0)}
-      ${_platformTab("glpi",    "GLPI",     pmIcons.glpi,    2)}
+      ${_platformTab("glpi",    "GLPI",     pmIcons.glpi,    _countPlatformDivergences(client, "glpi"))}
       ${_platformTab("zabbix",  "ZABBIX",   pmIcons.zabbix,  0)}
-      ${_platformTab("auvo",    "AUVO",     pmIcons.auvo,    1)}
+      ${_platformTab("auvo",    "AUVO",     pmIcons.auvo,    _countPlatformDivergences(client, "auvo"))}
       ${_platformTab("history", "Histórico",pmIcons.history, 0)}
     </div>`;
 
@@ -377,25 +534,44 @@ function _subTabContent(client) {
       ? { type: "warning", label: "Divergente do HUB" }
       : { type: "critical", label: "Campo Crítico" };
     const assetName = _getAssetName(client);
+    const links = _getPlatformLinks(client);
+    client.__renderedGeneralFieldKeys = new Set();
+    const fieldValues = {
+      name: _getPlatformGeneralValue(client, "name", assetName),
+      id: currentPlatformTab === "hub" ? _formatHubId(client) : _getPlatformGeneralValue(client, "id", _formatHubId(client)),
+      type: _getPlatformGeneralValue(client, "type", client.type),
+      city: _getPlatformGeneralValue(client, "city", client.city),
+      latitude: _getPlatformGeneralValue(client, "latitude", client.latitude),
+      longitude: _getPlatformGeneralValue(client, "longitude", client.longitude),
+      unit: _getPlatformGeneralValue(client, "unit", client.unit),
+      region: _getPlatformGeneralValue(client, "region", client.region),
+      responsible: _getPlatformGeneralValue(client, "responsible", "HUB")
+    };
 
     return `
       <div class="pm-general-layout">
         <!-- Campos: 2/3 esquerda -->
         <div class="pm-fields-grid">
           <div>
-            ${_field("Nome do ativo",    _shortText(assetName, 36), nameBadge, assetName)}
-            ${_field("ID do ativo (HUB)", _formatHubId(client))}
-            ${_field("Tipo",             client.type)}
-            ${_field("Cidade",           client.city)}
-            ${_field("Latitude",         client.latitude, { type:"critical", label:"Campo Crítico" })}
-            ${_field("Município",        client.city)}
+            ${_field("Nome do ativo",    _shortText(fieldValues.name, 36), nameBadge, fieldValues.name, client, "name")}
+            ${_field("ID do ativo", fieldValues.id, null, null, client, "id")}
+            ${_platformField(client, "Tipo", "deviceType", client.type)}
+            ${_platformField(client, "Status", "status")}
+            ${_platformField(client, "Latitude", "latitude", client.latitude, { type:"critical", label:"Campo Critico" })}
+            ${_field("Município",        fieldValues.city)}
           </div>
           <div>
-            ${_field("ID Antigo",        "00-00 TP - ID ANTIGO")}
-            ${_field("Unidade",          client.unit)}
-            ${_field("Região",           client.region)}
-            ${_field("Longitude",        client.longitude, { type:"critical", label:"Campo Crítico" })}
-            ${_field("Responsável técnico","Adriano Santos")}
+            ${_platformField(client, "ID Auvo", "auvoCustomerId", links.auvo?.customerId, null, null, "id")}
+            ${_platformField(client, "Localizacao", "locationName", client.address, null, null, "location")}
+            ${_platformField(client, "Fabricante", "manufacturer")}
+            ${_platformField(client, "Modelo", "model", "N/A", null, null, "model")}
+            ${_platformField(client, "Projeto", "project")}
+            ${_field("Longitude",        fieldValues.longitude, { type:"critical", label:"Campo Critico" }, null, client, "longitude")}
+            ${_platformField(client, "Fonte de Atualizacao", "updateSource")}
+            ${_platformField(client, "Tecnico encarregado", "hardwareTechnician")}
+            ${_field("Região",           fieldValues.region)}
+            ${_field("Longitude",        fieldValues.longitude, { type:"critical", label:"Campo Critico" }, null, client, "longitude")}
+            ${_field("Responsável técnico", fieldValues.responsible)}
           </div>
         </div>
 
@@ -433,20 +609,20 @@ function _subTabContent(client) {
           </div>
           <div class="pm-device-info">
             <div class="pm-device-info-row">
-              <span class="pm-device-info-key">Modelo</span>
-              <span class="pm-device-info-val">Hikvision DS-2CD</span>
+              <span class="pm-device-info-key">Codigo</span>
+              <span class="pm-device-info-val">${_escapeHtml(links.hub?.deviceCode || client.pointId || "N/A")}</span>
             </div>
             <div class="pm-device-info-row">
-              <span class="pm-device-info-key">Serial</span>
-              <span class="pm-device-info-val">HK-00${client.clientId}28X</span>
+              <span class="pm-device-info-key">AUVO</span>
+              <span class="pm-device-info-val">${_escapeHtml(links.auvo?.customerId || "N/A")}</span>
             </div>
             <div class="pm-device-info-row">
-              <span class="pm-device-info-key">Resolução</span>
-              <span class="pm-device-info-val">4MP / 2K</span>
+              <span class="pm-device-info-key">GLPI</span>
+              <span class="pm-device-info-val">${_escapeHtml(links.glpi?.deviceId || "N/A")}</span>
             </div>
             <div class="pm-device-info-row">
-              <span class="pm-device-info-key">Firmware</span>
-              <span class="pm-device-info-val">v5.7.15</span>
+              <span class="pm-device-info-key">Localizacao</span>
+              <span class="pm-device-info-val">${_escapeHtml(links.glpi?.locationId || "N/A")}</span>
             </div>
           </div>
         </div>
@@ -652,7 +828,26 @@ function _sidebarSync() {
     </div>`;
 }
 
+function _sidebarHubSyncActions() {
+  const client = _getCurrentClient() || {};
+  const canSyncFromAuvo = Boolean(client.sources?.auvo?.customer);
+  const canSyncFromGlpi = Boolean(client.sources?.glpi?.device || client.sources?.glpi?.tickets?.length);
+
+  return `
+    <div class="pm-sidebar-card">
+      <div class="pm-sidebar-title">Acoes rapidas</div>
+      <div class="pm-actions">
+        <button class="pm-action-btn cyan" onclick="requestHubSync('auvo')" ${canSyncFromAuvo ? "" : "disabled"}>${pmIcons.refresh} <span>Sincronizar HUB com AUVO</span></button>
+        <button class="pm-action-btn cyan" onclick="requestHubSync('glpi')" ${canSyncFromGlpi ? "" : "disabled"}>${pmIcons.refresh} <span>Sincronizar HUB com GLPI</span></button>
+        <button class="pm-action-btn orange">${pmIcons.warn} <span>Resolver divergencias pendentes</span></button>
+      </div>
+    </div>`;
+}
+
 function _sidebarActions() {
+  const dynamicActions = _sidebarHubSyncActions();
+  if (dynamicActions) return dynamicActions;
+
   return `
     <div class="pm-sidebar-card">
       <div class="pm-sidebar-title">Ações rápidas</div>
@@ -668,6 +863,27 @@ function _sidebarActions() {
 ========================================================= */
 
 function _historyTab() {
+  const client = _getCurrentClient() || {};
+  const history = client.syncHistory || [];
+
+  if (history.length > 0) {
+    return `
+      <div class="pm-history-wrap">
+        <div class="history-timeline">
+          ${history.map(item => `
+            <div class="timeline-item">
+              <div class="timeline-dot ${item.type === "warning" ? "warning" : "success"}"></div>
+              <div class="timeline-content">
+                <div class="timeline-title">${_escapeHtml(item.title || "Evento HUB")}</div>
+                <div class="timeline-meta">${_escapeHtml(item.description || "")}</div>
+                <div class="timeline-meta">${_escapeHtml(item.sourceSystem || "HUB")} - ${_escapeHtml(_formatDateTime(item.at))}</div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+  }
+
   return `
     <div class="pm-history-wrap">
       <div class="history-timeline">
@@ -700,16 +916,24 @@ function _historyTab() {
    INFO BLOCK GENERATOR
 ========================================================= */
 
-function _field(label, value, badge = null, title = null) {
+function _field(label, value, badge = null, title = null, client = null, fieldKey = null) {
+  if (value === undefined || value === null || value === "") return "";
+  if (client?.__renderedGeneralFieldKeys && fieldKey) {
+    const renderKey = `${label}|${fieldKey}`;
+    if (client.__renderedGeneralFieldKeys.has(renderKey)) return "";
+    client.__renderedGeneralFieldKeys.add(renderKey);
+  }
+
   let badgeHTML = "";
   if (badge) {
     const cls = badge.type === "critical" ? "pm-badge-critical" : `divergence-badge ${badge.type}`;
     badgeHTML = `<span class="${cls}">${badge.label}</span>`;
   }
   const titleAttr = title ? ` title="${_escapeHtml(title)}"` : "";
+  const relationHTML = client && fieldKey ? _relationHint(client, fieldKey) : "";
   return `
     <div class="info-block">
-      <div class="info-label">${label}</div>
+      <div class="info-label">${label}${relationHTML}</div>
       <div class="info-value-wrapper">
         <span class="info-value"${titleAttr}>${_escapeHtml(value || "N/A")}</span>
         ${badgeHTML}

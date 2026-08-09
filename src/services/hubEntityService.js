@@ -1,7 +1,7 @@
 import hubEntityRepository from "../repositories/hubEntityRepository.js";
 
 class HubEntityService {
-  async listEntities({ refresh = "auto", limit = 100, offset = 0 } = {}) {
+  async listEntities({ refresh = "auto", limit = 100, offset = 0, search = "" } = {}) {
     let refreshMetrics = null;
 
     if (refresh === true) {
@@ -14,8 +14,8 @@ class HubEntityService {
     }
 
     const [entities, total] = await Promise.all([
-      hubEntityRepository.listEntities({ limit, offset }),
-      hubEntityRepository.countEntities()
+      hubEntityRepository.listEntities({ limit, offset, search }),
+      hubEntityRepository.countEntities({ search })
     ]);
 
     return {
@@ -28,6 +28,10 @@ class HubEntityService {
         hasMore: offset + entities.length < total
       }
     };
+  }
+
+  async getEntityDetails(entityId) {
+    return hubEntityRepository.getEntityDetails(entityId);
   }
 }
 

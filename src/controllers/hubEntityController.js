@@ -14,7 +14,9 @@ export const listHubEntities = asyncHandler(async (req, res) => {
     ? requestedOffset
     : 0;
 
-  const result = await hubEntityService.listEntities({ refresh, limit, offset });
+  const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+  const result = await hubEntityService.listEntities({ refresh, limit, offset, search });
 
   res.status(200).json({
     success: true,
@@ -23,5 +25,30 @@ export const listHubEntities = asyncHandler(async (req, res) => {
       refresh: result.refresh,
       pagination: result.pagination
     }
+  });
+});
+
+export const getHubEntityDetails = asyncHandler(async (req, res) => {
+  const entityId = parseInt(req.params.entityId, 10);
+
+  if (!Number.isInteger(entityId) || entityId <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "entityId invalido"
+    });
+  }
+
+  const entity = await hubEntityService.getEntityDetails(entityId);
+
+  if (!entity) {
+    return res.status(404).json({
+      success: false,
+      message: "Entidade HUB nao encontrada"
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: entity
   });
 });

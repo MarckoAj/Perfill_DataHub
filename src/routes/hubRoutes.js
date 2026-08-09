@@ -1,5 +1,5 @@
 import express from "express";
-import { listHubEntities } from "../controllers/hubEntityController.js";
+import { getHubEntityDetails, listHubEntities } from "../controllers/hubEntityController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -7,5 +7,6 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get("/entities", listHubEntities);
+router.get("/entities/:entityId", getHubEntityDetails);
 
 export default router;

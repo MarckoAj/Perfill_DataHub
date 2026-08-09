@@ -104,6 +104,8 @@ let hubPagination = {
     totalPages: 1,
     hasMore: false
 };
+let hubSearchText = '';
+let hubSearchTimer = null;
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -114,7 +116,7 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
-async function loadHubEntities(page = 1) {
+async function loadHubEntities(page = 1, searchText = hubSearchText) {
     try {
         hubPagination.isLoading = true;
         renderPaginationControls();
@@ -122,7 +124,14 @@ async function loadHubEntities(page = 1) {
         const token = localStorage.getItem('authToken');
         const safePage = Math.max(parseInt(page, 10) || 1, 1);
         const offset = (safePage - 1) * HUB_PAGE_LIMIT;
-        const response = await fetch(`/api/hub/entities?limit=${HUB_PAGE_LIMIT}&offset=${offset}`, {
+        const params = new URLSearchParams({
+            limit: String(HUB_PAGE_LIMIT),
+            offset: String(offset)
+        });
+        const normalizedSearch = String(searchText || '').trim();
+        if (normalizedSearch) params.set('search', normalizedSearch);
+
+        const response = await fetch(`/api/hub/entities?${params.toString()}`, {
             headers: token ? { authorization: `Bearer ${token}` } : {}
         });
 
@@ -131,11 +140,6 @@ async function loadHubEntities(page = 1) {
         const payload = await response.json();
         const entities = Array.isArray(payload.data) ? payload.data : [];
         const pagination = payload.meta?.pagination || {};
-        if (entities.length === 0) {
-            hubPagination.isLoading = false;
-            renderPaginationControls();
-            return;
-        }
 
         const total = Number(pagination.total) || entities.length;
         const limit = Number(pagination.limit) || HUB_PAGE_LIMIT;
@@ -158,7 +162,8 @@ async function loadHubEntities(page = 1) {
             offset: currentOffset,
             total,
             totalPages: Math.max(1, Math.ceil(total / limit)),
-            hasMore: Boolean(pagination.hasMore)
+            hasMore: Boolean(pagination.hasMore),
+            search: normalizedSearch
         };
 
         window.hubClients = entities.map(mapHubEntityToModalClient);
@@ -232,9 +237,135 @@ function mapHubEntityToModalClient(entity) {
     };
 }
 
-function openAssetModal(modalIndex, fallbackClientId = 1) {
+function formatDateTime(value) {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString('pt-BR');
+}
+
+function inferCityFromAddress(address) {
+    const text = String(address || '').trim();
+    const match = text.match(/,\s*([^,-]+)\s*-\s*BA\b/i);
+    return match ? match[1].trim() : 'N/A';
+}
+
+function mapTaskStatus(task) {
+    if (task.finished) return 'done';
+    if (String(task.statusDescription || '').toLowerCase().includes('desloc')) return 'moving';
+    return 'warning';
+}
+
+function mapHubEntityDetailsToModalClient(details, fallbackClient) {
+    const auvoCustomer = details.sources?.auvo?.customer || null;
+    const auvoTasks = details.sources?.auvo?.recentTasks || [];
+    const glpiTickets = details.sources?.glpi?.tickets || [];
+    const glpiDevice = details.sources?.glpi?.device || null;
+    const name = details.displayName || auvoCustomer?.description || fallbackClient?.assetName || `HUB ${details.entityId}`;
+    const address = auvoCustomer?.address || fallbackClient?.address || name;
+    const city = inferCityFromAddress(address);
+    const locationId = glpiTickets.find(ticket => ticket.idLocalizacaoPonto)?.idLocalizacaoPonto || null;
+
+    return {
+        ...(fallbackClient || {}),
+        hubId: details.entityId,
+        entityId: details.entityId,
+        clientId: details.entityId,
+        ticketId: glpiTickets[0]?.ticketId || fallbackClient?.ticketId || '',
+        pointId: details.deviceCode || name,
+        assetName: name,
+        address,
+        type: 'Dispositivo',
+        cicom: glpiTickets[0]?.projeto || fallbackClient?.cicom || 'HUB',
+        city,
+        unit: locationId ? `GLPI Localizacao ${locationId}` : (fallbackClient?.unit || 'N/A'),
+        region: auvoCustomer?.segmentName || glpiTickets[0]?.projeto || fallbackClient?.region || 'N/A',
+        latitude: auvoCustomer?.latitude ?? fallbackClient?.latitude ?? null,
+        longitude: auvoCustomer?.longitude ?? fallbackClient?.longitude ?? null,
+        state: 'BA',
+        platformLinks: {
+            hub: {
+                entityId: details.entityId,
+                canonicalKey: details.canonicalKey,
+                deviceCode: details.deviceCode
+            },
+            auvo: auvoCustomer ? {
+                customerId: auvoCustomer.customerId,
+                description: auvoCustomer.description,
+                lastSyncAt: auvoCustomer.lastSyncAt
+            } : null,
+            glpi: {
+                deviceId: glpiDevice?.deviceId || null,
+                locationId,
+                tickets: glpiTickets.map(ticket => ticket.ticketId)
+            }
+        },
+        sources: details.sources || {},
+        fieldValues: details.fieldValues || [],
+        platformFields: details.platformFields || {},
+        fieldRelations: details.fieldRelations || {},
+        syncHistory: details.syncHistory || [],
+        network: fallbackClient?.network || {
+            ip: 'N/A',
+            gateway: 'N/A',
+            subnet: 'N/A',
+            wanIp: 'N/A',
+            circuit: 'N/A',
+            linkStatus: 'N/A',
+            uptime: 'N/A',
+            availabilityDate: 'N/A'
+        },
+        pointStatus: fallbackClient?.pointStatus || {
+            inspectionDate: 'N/A',
+            cameraInstallation: 'N/A',
+            cameraSubstitution: 'N/A',
+            uninstallDate: 'N/A',
+            dedicatedPole: 'N/A',
+            installationDate: 'N/A',
+            boxType: 'N/A',
+            boxInstallation: 'N/A',
+            boxInstallationDate: 'N/A',
+            armInstallation: 'N/A',
+            poleStatus: 'N/A'
+        },
+        operationalHistory: details.syncHistory || fallbackClient?.operationalHistory || [],
+        glpiTickets,
+        attendances: auvoTasks.map(task => ({
+            taskId: task.taskId,
+            status: mapTaskStatus(task),
+            title: task.taskType || `Tarefa AUVO ${task.taskId}`,
+            technician: 'AUVO',
+            date: formatDateTime(task.dateLastUpdate || task.taskDate || task.taskCreationDate),
+            taskUrl: task.taskUrl
+        }))
+    };
+}
+
+async function fetchHubEntityDetails(entityId) {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`/api/hub/entities/${entityId}`, {
+        headers: token ? { authorization: `Bearer ${token}` } : {}
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const payload = await response.json();
+    return payload.data;
+}
+
+async function openAssetModal(modalIndex, fallbackClientId = 1) {
     if (Number.isInteger(modalIndex) && window.hubClients[modalIndex]) {
-        openPointModal(window.hubClients[modalIndex]);
+        const fallbackClient = window.hubClients[modalIndex];
+        openPointModal(fallbackClient);
+
+        try {
+            const details = await fetchHubEntityDetails(fallbackClient.hubId || fallbackClient.entityId || fallbackClient.clientId);
+            const detailedClient = mapHubEntityDetailsToModalClient(details, fallbackClient);
+            window.hubClients[modalIndex] = detailedClient;
+            openPointModal(detailedClient);
+        } catch (error) {
+            console.warn('[Clientes] Falha ao carregar detalhes HUB do modal:', error.message);
+        }
         return;
     }
 
@@ -257,7 +388,7 @@ function renderPaginationControls(visibleCount = assets.length) {
     const nextDisabled = disabled || page >= totalPages;
     const summary = hubPagination.isLoading
         ? 'Carregando pagina...'
-        : `Pagina ${page} de ${totalPages} - ${from}-${to} de ${total} itens`;
+        : `${hubPagination.search ? `Busca "${escapeHtml(hubPagination.search)}" - ` : ''}Pagina ${page} de ${totalPages} - ${from}-${to} de ${total} itens`;
 
     const html = `
       <div class="hub-pagination-info">${summary}</div>
@@ -280,7 +411,7 @@ async function goToHubPage(page) {
     const targetPage = Math.min(Math.max(parseInt(page, 10) || 1, 1), hubPagination.totalPages || 1);
     if (targetPage === hubPagination.currentPage) return;
 
-    await loadHubEntities(targetPage);
+    await loadHubEntities(targetPage, hubSearchText);
     renderProjects(document.getElementById('projectSearch')?.value || '');
     selectProject(0);
     scrollClientesToTop();
@@ -468,13 +599,38 @@ function applyFilters() {
         .join('');
 }
 
+async function runHubSearch(searchText) {
+    if (hubPagination.isLoading) return;
+
+    hubSearchText = String(searchText || '').trim();
+    await loadHubEntities(1, hubSearchText);
+    renderProjects(document.getElementById('projectSearch')?.value || '');
+    selectProject(0);
+}
+
+function scheduleHubSearch(searchText) {
+    clearTimeout(hubSearchTimer);
+    hubSearchTimer = setTimeout(() => {
+        runHubSearch(searchText).catch(error => {
+            console.warn('[Clientes] Falha ao buscar entidades HUB:', error.message);
+        });
+    }, 300);
+}
+
 // Configurar escutadores para os filtros
 function setupFilters() {
     const searchAsset = document.getElementById('searchAsset');
     const filterCity = document.getElementById('filterCity');
     const filterUnit = document.getElementById('filterUnit');
 
-    searchAsset?.addEventListener('input', applyFilters);
+    searchAsset?.addEventListener('input', (event) => {
+        if (hubPagination.isHub) {
+            scheduleHubSearch(event.target.value);
+            return;
+        }
+
+        applyFilters();
+    });
     filterCity?.addEventListener('change', applyFilters);
     filterUnit?.addEventListener('change', applyFilters);
 }

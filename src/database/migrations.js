@@ -8,6 +8,7 @@ import { createSyncSchedulesTable } from "./migrations/syncSchedulesTables.js";
 import { runScheduleSeeds } from "./seeds/scheduleSeeds.js";
 import { createAlertsHistoryTable } from "./migrations/alertsHistoryTable.js";
 import { createHubCoreTables } from "./migrations/hubCoreTables.js";
+import { createHubOperationalLinksTables } from "./migrations/hubOperationalLinksTables.js";
 import { createGlpiSolutionsTable } from "./migrations/glpiSolutionsTable.js";
 import { createPowerBiTicketsView } from "./migrations/powerBiTicketsView.js";
 
@@ -235,6 +236,7 @@ export async function runMigrations() {
 
         // Tabelas canonicas do HUB
         await createHubCoreTables();
+        await createHubOperationalLinksTables();
 
         // Garantir existência e senha do usuário administrador nativo (admin)
         console.log("Migration: Garantindo integridade do usuário 'admin'...");

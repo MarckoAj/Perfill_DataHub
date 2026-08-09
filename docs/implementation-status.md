@@ -20,10 +20,13 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Mappers de tickets.
 - [x] Repositories GLPI e RAW.
 - [x] Persistencia de tickets e tarefas.
+- [x] Cache local inicial para `Peripheral` em `glpi_devices`.
+- [x] Campo `Peripheral.contact_num` identificado como "ID do Auvo" para associacao com AUVO.
 - [x] Sync manual e automatizado.
 - [x] Endpoint BI.
 - [x] Endpoints operacionais para tickets e alertas.
 - [x] Participacao no Alert Engine.
+- [ ] Associacao automatica em lote de `Peripheral` com Hub via `contact_num` e fallback por nome.
 
 ## AUVO
 
@@ -41,9 +44,14 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Modelo inicial de entidades HUB.
 - [x] Repository, service, controller e route.
 - [x] Endpoint `GET /api/hub/entities`.
+- [x] Endpoint `GET /api/hub/entities/:entityId`.
 - [x] Alimentacao inicial por `AUVO/customer`.
 - [x] Paginacao e fallback no painel de clientes.
-- [ ] Inclusao de GLPI como fonte canonica complementar.
+- [x] Busca server-side no painel de clientes.
+- [x] Tabela `hub_entity_links` para vinculos com plataformas.
+- [x] Tabela `hub_entity_history` para rastreabilidade inicial.
+- [x] Inclusao piloto de GLPI como fonte canonica complementar para `64-097`.
+- [ ] Inclusao automatica de GLPI como fonte canonica complementar para todos os matches confiaveis.
 - [ ] Inclusao de Zabbix como fonte canonica.
 - [ ] Motor de divergencias por campo.
 
@@ -85,6 +93,8 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Central de alertas em `/alerts`.
 - [x] Tabela de chamados em `/tickets`.
 - [x] Painel de clientes em `/clientes`.
+- [x] Modal de cliente consumindo detalhe real por entidade HUB.
+- [x] Abas de plataforma com `platformFields` e hover comparativo de vinculos.
 - [x] Painel de sync em `/admin/sync`.
 - [x] Topbar global e rotas amigaveis.
 - [x] Modais operacionais.

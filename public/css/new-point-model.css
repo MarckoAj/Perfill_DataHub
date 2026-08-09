@@ -445,7 +445,7 @@
     border-radius: 14px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .pm-info-card-header {
@@ -482,6 +482,8 @@
 .pm-info-card-body {
     padding: 20px 24px;
     flex: 1;
+    min-width: 0;
+    overflow: visible;
 }
 
 .pm-info-card-footer {
@@ -518,8 +520,10 @@
 /* Fields grid */
 .pm-fields-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 28px;
+    align-items: start;
+    min-width: 0;
 }
 
 .pm-fields-grid > div {
@@ -529,11 +533,14 @@
 }
 
 .info-block {
-    padding: 14px 0;
+    min-height: 64px;
+    padding: 12px 0;
     border-bottom: 1px solid rgba(20, 231, 197, 0.07);
     display: flex;
     flex-direction: column;
     gap: 6px;
+    justify-content: center;
+    min-width: 0;
 }
 
 .info-block:last-child { border-bottom: none; }
@@ -544,6 +551,96 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: .4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.pm-relation-trigger {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(20, 231, 197, .28);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    cursor: help;
+    background: rgba(20, 231, 197, .08);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.pm-relation-tooltip {
+    position: absolute;
+    top: 22px;
+    left: 0;
+    width: min(420px, 80vw);
+    max-width: calc(100vw - 48px);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(20, 231, 197, .24);
+    background: rgba(5, 14, 38, .98);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity .16s ease, transform .16s ease;
+    z-index: 30;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.pm-fields-grid > div:last-child .pm-relation-tooltip {
+    left: auto;
+    right: 0;
+}
+
+.pm-relation-trigger:hover + .pm-relation-tooltip,
+.pm-relation-trigger:focus + .pm-relation-tooltip,
+.pm-relation-tooltip:hover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.pm-relation-title {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.pm-relation-row {
+    display: grid;
+    grid-template-columns: 52px minmax(82px, 1fr);
+    gap: 4px 8px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(20, 231, 197, .08);
+}
+
+.pm-relation-platform {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.pm-relation-path {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.pm-relation-value,
+.pm-relation-role {
+    grid-column: 2;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
 .info-value-wrapper {
@@ -552,6 +649,7 @@
     gap: 10px;
     flex-wrap: wrap;
     min-width: 0;
+    max-width: 100%;
 }
 
 .info-value {
@@ -605,9 +703,10 @@
 ========================================================= */
 .pm-general-layout {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 28px;
     align-items: start;
+    min-width: 0;
 }
 
 .pm-device-preview {
@@ -619,6 +718,7 @@
     flex-direction: column;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 }
 
 .pm-device-preview-label {
@@ -681,6 +781,7 @@
     flex-direction: column;
     gap: 8px;
     width: 100%;
+    min-width: 0;
 }
 
 .pm-device-info-row {
@@ -688,6 +789,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 
 .pm-device-info-key {
@@ -696,6 +798,7 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: .3px;
+    flex: 0 0 auto;
 }
 
 .pm-device-info-val {
@@ -703,6 +806,10 @@
     font-weight: 700;
     color: #fff;
     text-align: right;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* =========================================================
@@ -1206,6 +1313,15 @@
 }
 
 .pm-action-btn.orange:hover { background: rgba(245, 158, 11, .1); }
+
+.pm-action-btn:disabled {
+    opacity: .42;
+    cursor: not-allowed;
+}
+
+.pm-action-btn:disabled:hover {
+    background: rgba(20, 231, 197, .04);
+}
 
 /* =========================================================
    ABA HISTÓRICO (TIMELINE)
