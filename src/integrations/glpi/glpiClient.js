@@ -55,7 +55,7 @@ class GlpiClient {
     }
   }
 
-  async glpiRequestData(endPoint, method = "GET", body, id = null) {
+  async glpiRequestData(endPoint, method = "GET", body, id = null, options = {}) {
     const baseUrl = `${glpiUrlBuilder.glpiBaseUrl()}/${endPoint}`;
     const url = id === null ? baseUrl : `${baseUrl}/${id}`;
 
@@ -74,7 +74,9 @@ class GlpiClient {
     const response = await this.request(url, method, validHeader, body);
 
     if (!response || response.data === undefined) {
-      console.error(`Erro na requisição GLPI: ${endPoint}`);
+      if (!options.suppressErrorLog) {
+        console.error(`Erro na requisição GLPI: ${endPoint}`);
+      }
       return null;
     }
 

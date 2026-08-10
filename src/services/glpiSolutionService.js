@@ -47,13 +47,25 @@ class GlpiSolutionService {
   async getSolutionTypeName(solutionTypeId) {
     if (!solutionTypeId) return null;
     const cacheKey = String(solutionTypeId);
+    const numericId = Number(cacheKey);
+
+    if (!Number.isFinite(numericId) || numericId <= 0) {
+      this.solutionTypeCache.set(cacheKey, null);
+      return null;
+    }
 
     if (this.solutionTypeCache.has(cacheKey)) {
       return this.solutionTypeCache.get(cacheKey);
     }
 
     try {
-      const result = await glpi_client.glpiRequestData("SolutionType", "GET", null, solutionTypeId);
+      const result = await glpi_client.glpiRequestData(
+        "SolutionType",
+        "GET",
+        null,
+        solutionTypeId,
+        { suppressErrorLog: true }
+      );
       const name = result?.data?.name || null;
       this.solutionTypeCache.set(cacheKey, name);
       return name;
