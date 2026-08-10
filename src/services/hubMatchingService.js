@@ -230,6 +230,40 @@ class HubMatchingService {
       };
     }
 
+    const strongNameFallbacks = scoredNameCandidates.filter(candidate => candidate.score >= minScore);
+    if (strongNameFallbacks.length > 1) {
+      return {
+        glpiDeviceId: null,
+        glpiName: null,
+        matchOrigin: "name_fallback_no_glpi_auvo_id",
+        score: strongNameFallbacks[0].score,
+        status: "ambiguo",
+        canAutoConfirm: false,
+        requiresManualReview: true,
+        candidates: strongNameFallbacks.slice(0, 10).map(candidate => ({
+          ...candidate,
+          matchOrigin: "name_fallback_no_glpi_auvo_id"
+        }))
+      };
+    }
+
+    if (strongNameFallbacks.length === 1) {
+      const candidate = {
+        ...strongNameFallbacks[0],
+        matchOrigin: "name_fallback_no_glpi_auvo_id"
+      };
+      return {
+        glpiDeviceId: candidate.glpiDeviceId,
+        glpiName: candidate.glpiName,
+        matchOrigin: candidate.matchOrigin,
+        score: candidate.score,
+        status: "match_nome",
+        canAutoConfirm: true,
+        requiresManualReview: false,
+        candidates: [candidate]
+      };
+    }
+
     return this.emptyPreview("sem_vinculo");
   }
 

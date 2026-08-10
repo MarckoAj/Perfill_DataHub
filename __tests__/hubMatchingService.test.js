@@ -19,6 +19,7 @@ jest.unstable_mockModule("../src/services/hubOperationalTagService.js", () => ({
     ]),
     normalizeNameForComparison: jest.fn((value, tags = []) => {
       let text = String(value || "").trim();
+      text = text.replace(/^([*_`~]{1,3})([^*_`~]{2,80})\1\s*/i, "");
       for (const tag of tags) {
         const label = tag.label || tag;
         text = text.replace(new RegExp(`^\\*\\*${label}\\*\\*\\s*`, "i"), "");
@@ -263,6 +264,36 @@ describe("HubMatchingService", () => {
       glpiDeviceId: "30",
       status: "match_ambos",
       score: 100
+    });
+  });
+
+  it("usa fallback por nome no modo ambos quando GLPI nao tem ID AUVO", async () => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([
+      {
+        entityId: 14544,
+        hubName: "*CÂMERA-DESINSTALADA*41-064_RF_TP_IV_RUA PEDRO GAMA",
+        auvoCustomerId: "15279269",
+        auvoName: "*CÂMERA-DESINSTALADA*41-064_RF_TP_IV_RUA PEDRO GAMA",
+        alreadyLinked: false
+      }
+    ]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([
+      {
+        deviceId: "10345",
+        name: "41-064_RF_TP_IV_RUA PEDRO GAMA",
+        auvoCustomerId: null
+      }
+    ]);
+
+    const result = await hubMatchingService.previewGlpiMatching({ mode: "both" });
+
+    expect(result.data[0]).toMatchObject({
+      entityId: 14544,
+      glpiDeviceId: "10345",
+      status: "match_nome",
+      matchOrigin: "name_fallback_no_glpi_auvo_id",
+      score: 100,
+      canAutoConfirm: true
     });
   });
 });
