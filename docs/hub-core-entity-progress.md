@@ -56,6 +56,8 @@ A entidade operacional principal passa a ser o dispositivo/ponto. A carga inicia
 - [x] Popular `glpi_devices` com 6501 devices GLPI; 24 possuem `auvoCustomerId` preenchido.
 - [x] Validar visualmente em `/admin/sync` a confirmacao de vinculo real HUB x GLPI.
 - [x] Criar fila dedicada inicial em `/admin/sync` para tratar matches ambiguos e baixo score.
+- [x] Criar tags operacionais de nome, exibidas na aba Estado do Ponto e ignoradas na comparacao quando aparecem no inicio do nome.
+- [x] Sanear o nome exibido na aba HUB removendo tags operacionais vindas do AUVO, mantendo o nome completo na aba AUVO.
 
 ## Modelo Inicial
 
@@ -118,6 +120,22 @@ Campos importantes mapeados no teste:
 ### `hub_entity_history`
 
 Guarda eventos de rastreabilidade do HUB, incluindo preenchimentos automaticos de campo vazio e futuras sincronizacoes manuais.
+
+### `hub_operational_tags`
+
+Lista tags operacionais que podem aparecer como prefixo no nome das fontes externas.
+
+Exemplo:
+
+- `**Desinstalado** 4B-010 CAMERA`
+
+Nesse caso, `Desinstalado` e exibido como tag no Estado do Ponto, mas o nome comparavel passa a ser `4B-010 CAMERA` para evitar divergencia falsa ou queda de score no matching.
+
+Outro exemplo:
+
+- `**CAM-NÃO ENCONTRADA**15-075_PTZ`
+
+Na aba HUB, o nome exibido passa a ser `15-075_PTZ`. Na aba AUVO, a nomenclatura original permanece completa para preservar o estado real da fonte.
 
 ## Descobertas De Associacao GLPI/AUVO
 

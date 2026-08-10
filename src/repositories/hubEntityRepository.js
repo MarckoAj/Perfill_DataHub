@@ -1,4 +1,5 @@
 import pool from "../database/connection.js";
+import hubOperationalTagService from "../services/hubOperationalTagService.js";
 
 class HubEntityRepository {
   parseNumber(value) {
@@ -1009,7 +1010,7 @@ class HubEntityRepository {
     return history;
   }
 
-  buildPlatformFields({ entityId, fieldValues, auvoCustomer, glpiDevice }) {
+  buildPlatformFields({ entityId, fieldValues, auvoCustomer, glpiDevice, operationalTags = [] }) {
     const getHubValue = (fieldKey) => {
       const row = fieldValues.find(field => field.fieldKey === fieldKey && field.sourceSystem === "HUB" && field.isCanonical);
       if (!row) return null;
@@ -1020,9 +1021,13 @@ class HubEntityRepository {
       Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== "")
     );
 
+    const auvoNameTags = hubOperationalTagService.extractTags(auvoCustomer?.description, operationalTags);
+    const glpiNameTags = hubOperationalTagService.extractTags(glpiDevice?.name, operationalTags);
+
     const auvo = omitEmpty({
       id: auvoCustomer?.customerId,
       name: auvoCustomer?.description,
+      normalizedName: auvoNameTags.cleanName,
       address: auvoCustomer?.address,
       latitude: auvoCustomer?.latitude,
       longitude: auvoCustomer?.longitude,
@@ -1033,6 +1038,7 @@ class HubEntityRepository {
     const glpi = omitEmpty({
       id: glpiDevice?.deviceId,
       name: glpiDevice?.name,
+      normalizedName: glpiNameTags.cleanName,
       locationId: glpiDevice?.locationId,
       locationName: glpiDevice?.locationName,
       status: glpiDevice?.status,
@@ -1051,9 +1057,13 @@ class HubEntityRepository {
       auvoCustomerId: glpiDevice?.auvoCustomerId
     });
 
+    const rawHubName = getHubValue("name") || auvo.name || glpi.name;
+    const cleanHubName = hubOperationalTagService.extractTags(rawHubName, operationalTags).cleanName || rawHubName;
+
     const hub = omitEmpty({
       id: entityId,
-      name: getHubValue("name") || auvo.name || glpi.name,
+      name: cleanHubName,
+      normalizedName: cleanHubName,
       address: getHubValue("address") || auvo.address,
       locationId: getHubValue("locationId") || glpi.locationId,
       locationName: getHubValue("locationName") || glpi.locationName,
@@ -1205,7 +1215,20 @@ class HubEntityRepository {
     const fieldValues = hydrationHistory.length > 0
       ? await this.getCanonicalFieldValues(entityId)
       : initialFieldValues;
-    const platformFields = this.buildPlatformFields({ entityId, fieldValues, auvoCustomer, glpiDevice });
+    const operationalTagDefinitions = await hubOperationalTagService.listTags();
+    const auvoNameTags = hubOperationalTagService.extractTags(auvoCustomer?.description || first.displayName, operationalTagDefinitions);
+    const glpiNameTags = hubOperationalTagService.extractTags(glpiDevice?.name, operationalTagDefinitions);
+    const operationalTags = [...new Map([
+      ...auvoNameTags.tags,
+      ...glpiNameTags.tags
+    ].map(tag => [tag.normalizedLabel, tag])).values()];
+    const platformFields = this.buildPlatformFields({
+      entityId,
+      fieldValues,
+      auvoCustomer,
+      glpiDevice,
+      operationalTags: operationalTagDefinitions
+    });
     const persistedHistory = hydrationHistory.length > 0 ? [] : await this.getHubHistory(entityId);
 
     return {
@@ -1215,6 +1238,9 @@ class HubEntityRepository {
       originalEntityType: first.entityType,
       canonicalName: first.canonicalName,
       displayName: first.displayName,
+      normalizedDisplayName: auvoNameTags.cleanName || first.displayName,
+      operationalTags,
+      operationalTagDefinitions,
       status: first.status,
       isActive: Boolean(first.isActive),
       deviceCode,

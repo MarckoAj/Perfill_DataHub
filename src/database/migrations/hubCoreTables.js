@@ -68,6 +68,23 @@ export async function createHubCoreTables() {
           CONSTRAINT fk_hub_field_values_entities FOREIGN KEY (entityId) REFERENCES hub_entities (entityId)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
       `
+    },
+    {
+      name: "hub_operational_tags",
+      query: `
+        CREATE TABLE IF NOT EXISTS hub_operational_tags (
+          tagId BIGINT AUTO_INCREMENT PRIMARY KEY,
+          label VARCHAR(80) NOT NULL,
+          normalizedLabel VARCHAR(100) NOT NULL,
+          description VARCHAR(255) NULL,
+          isActive BOOLEAN DEFAULT 1,
+          createdBy VARCHAR(100) NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_hub_operational_tags_normalized (normalizedLabel),
+          KEY idx_hub_operational_tags_active (isActive)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `
     }
   ];
 
@@ -103,5 +120,17 @@ export async function createHubCoreTables() {
       console.error("Erro ao adicionar indice uniq_hub_entities_canonical_key:", error.message);
       throw error;
     }
+  }
+
+  try {
+    await pool.query(`
+      INSERT INTO hub_operational_tags (label, normalizedLabel, description, isActive, createdBy)
+      VALUES ('Desinstalado', 'DESINSTALADO', 'Tag operacional extraida de prefixos como **Desinstalado** no AUVO.', 1, 'migration')
+      ON DUPLICATE KEY UPDATE isActive = 1
+    `);
+    console.log("Migration HUB: Tag operacional padrao 'Desinstalado' garantida.");
+  } catch (error) {
+    console.error("Erro ao semear tag operacional padrao:", error.message);
+    throw error;
   }
 }

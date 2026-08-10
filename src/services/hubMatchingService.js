@@ -1,4 +1,5 @@
 import hubMatchingRepository from "../repositories/hubMatchingRepository.js";
+import hubOperationalTagService from "./hubOperationalTagService.js";
 
 const VALID_MODES = new Set(["id", "name", "both"]);
 const VALID_STATUSES = new Set([
@@ -61,9 +62,11 @@ class HubMatchingService {
     return Math.round((intersection / union) * 100);
   }
 
-  nameScore(leftName, rightName) {
-    const left = this.normalizeText(leftName);
-    const right = this.normalizeText(rightName);
+  nameScore(leftName, rightName, operationalTags = []) {
+    const leftComparable = hubOperationalTagService.normalizeNameForComparison(leftName, operationalTags);
+    const rightComparable = hubOperationalTagService.normalizeNameForComparison(rightName, operationalTags);
+    const left = this.normalizeText(leftComparable);
+    const right = this.normalizeText(rightComparable);
     if (!left || !right) return 0;
     if (left === right) return 100;
 
@@ -91,7 +94,7 @@ class HubMatchingService {
     };
   }
 
-  resolvePreview({ entity, devicesByAuvoId, devices, mode, minScore }) {
+  resolvePreview({ entity, devicesByAuvoId, devices, mode, minScore, operationalTags = [] }) {
     if (entity.alreadyLinked) {
       const linkedDevice = devices.find(device => device.deviceId === entity.linkedGlpiDeviceId);
       return {
@@ -114,7 +117,7 @@ class HubMatchingService {
       ? devices.filter(device => device.deviceCode === baseDeviceCode)
       : [];
     const scoredNameCandidates = nameCandidateDevices
-      .map(device => this.buildCandidate(device, this.nameScore(baseName, device.name), "name"))
+      .map(device => this.buildCandidate(device, this.nameScore(baseName, device.name, operationalTags), "name"))
       .filter(candidate => candidate.score > 0)
       .sort((a, b) => b.score - a.score || String(a.glpiDeviceId).localeCompare(String(b.glpiDeviceId)));
 
@@ -196,7 +199,7 @@ class HubMatchingService {
     }
 
     const bothCandidates = idCandidates
-      .map(device => this.buildCandidate(device, this.nameScore(baseName, device.name), "id_and_name"))
+      .map(device => this.buildCandidate(device, this.nameScore(baseName, device.name, operationalTags), "id_and_name"))
       .sort((a, b) => b.score - a.score || String(a.glpiDeviceId).localeCompare(String(b.glpiDeviceId)));
 
     if (bothCandidates.length > 1) {
@@ -298,6 +301,7 @@ class HubMatchingService {
       hubMatchingRepository.listHubAuvoEntities({ search }),
       hubMatchingRepository.listGlpiDevices()
     ]);
+    const operationalTags = await hubOperationalTagService.listTags();
     const devices = rawDevices.map(device => ({
       ...device,
       deviceCode: this.extractDeviceCode(device.name)
@@ -330,7 +334,8 @@ class HubMatchingService {
           devicesByAuvoId,
           devices,
           mode: safeMode,
-          minScore: safeMinScore
+          minScore: safeMinScore,
+          operationalTags
         });
 
         return {

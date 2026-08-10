@@ -1,6 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import hubEntityService from "../services/hubEntityService.js";
 import hubMatchingService from "../services/hubMatchingService.js";
+import hubOperationalTagService from "../services/hubOperationalTagService.js";
 
 export const listHubEntities = asyncHandler(async (req, res) => {
   const refresh = req.query.refresh === "true"
@@ -52,6 +53,42 @@ export const getHubEntityDetails = asyncHandler(async (req, res) => {
     success: true,
     data: entity
   });
+});
+
+export const listHubOperationalTags = asyncHandler(async (req, res) => {
+  const tags = await hubOperationalTagService.listTags({
+    activeOnly: req.query.includeInactive !== "true"
+  });
+
+  res.status(200).json({
+    success: true,
+    data: tags
+  });
+});
+
+export const createHubOperationalTag = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.createTag({
+    label: req.body?.label,
+    description: req.body?.description,
+    createdBy: req.user?.username || "admin_panel",
+    entityId: req.body?.entityId,
+    addToHistory: req.body?.addToHistory === true,
+    comment: req.body?.comment
+  });
+
+  res.status(result.success ? 201 : 400).json(result);
+});
+
+export const removeHubOperationalTag = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.removeTag({
+    tagId: req.params.tagId,
+    createdBy: req.user?.username || "admin_panel",
+    entityId: req.body?.entityId,
+    addToHistory: req.body?.addToHistory === true,
+    comment: req.body?.comment
+  });
+
+  res.status(result.success ? 200 : 400).json(result);
 });
 
 const parseBooleanQuery = (value, defaultValue = false) => {

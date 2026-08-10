@@ -12,6 +12,23 @@ jest.unstable_mockModule("../src/repositories/hubMatchingRepository.js", () => (
   default: repositoryMock
 }));
 
+jest.unstable_mockModule("../src/services/hubOperationalTagService.js", () => ({
+  default: {
+    listTags: jest.fn().mockResolvedValue([
+      { label: "Desinstalado", normalizedLabel: "DESINSTALADO" }
+    ]),
+    normalizeNameForComparison: jest.fn((value, tags = []) => {
+      let text = String(value || "").trim();
+      for (const tag of tags) {
+        const label = tag.label || tag;
+        text = text.replace(new RegExp(`^\\*\\*${label}\\*\\*\\s*`, "i"), "");
+        text = text.replace(new RegExp(`^${label}\\s*[-_:|]*\\s*`, "i"), "");
+      }
+      return text.trim();
+    })
+  }
+}));
+
 const { default: hubMatchingService } = await import("../src/services/hubMatchingService.js");
 
 describe("HubMatchingService", () => {
@@ -223,5 +240,29 @@ describe("HubMatchingService", () => {
     });
     expect(repositoryMock.upsertGlpiLink).toHaveBeenCalledTimes(1);
     expect(repositoryMock.insertLinkHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignora tag operacional no inicio do nome ao calcular score", async () => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([
+      {
+        entityId: 3,
+        hubName: "**Desinstalado** 64-097 CAMERA",
+        auvoCustomerId: "333",
+        auvoName: "**Desinstalado** 64-097 CAMERA",
+        alreadyLinked: false
+      }
+    ]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([
+      { deviceId: "30", name: "64-097 CAMERA", auvoCustomerId: "333" }
+    ]);
+
+    const result = await hubMatchingService.previewGlpiMatching({ mode: "both" });
+
+    expect(result.data[0]).toMatchObject({
+      entityId: 3,
+      glpiDeviceId: "30",
+      status: "match_ambos",
+      score: 100
+    });
   });
 });

@@ -346,6 +346,139 @@ function requestHubSync(platform) {
   _renderBody(client);
 }
 
+async function fetchHubOperationalTags() {
+  const token = localStorage.getItem("authToken");
+  const response = await fetch("/api/hub/tags", {
+    headers: token ? { authorization: `Bearer ${token}` } : {}
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload = await response.json();
+  return payload.data || [];
+}
+
+function openHubOperationalTagDialog(action, label) {
+  return new Promise(resolve => {
+    const existing = document.getElementById("pmOperationalTagDialog");
+    existing?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "pmOperationalTagDialog";
+    overlay.className = "pm-tag-dialog-overlay active";
+    overlay.innerHTML = `
+      <div class="pm-tag-dialog">
+        <div class="pm-tag-dialog-head">
+          <strong>${action === "remove" ? "Remover tag operacional" : "Adicionar tag operacional"}</strong>
+          <button type="button" onclick="closeHubOperationalTagDialog(false)">x</button>
+        </div>
+        <div class="pm-tag-dialog-body">
+          <div class="pm-tag-dialog-label">${_escapeHtml(label)}</div>
+          <label class="pm-tag-dialog-check">
+            <input id="pmTagDialogHistory" type="checkbox" checked>
+            Adicionar ao historico do ponto
+          </label>
+          <textarea id="pmTagDialogComment" class="pm-tag-dialog-comment" placeholder="Comentario opcional"></textarea>
+        </div>
+        <div class="pm-tag-dialog-foot">
+          <button type="button" class="pm-match-secondary" onclick="closeHubOperationalTagDialog(false)">Cancelar</button>
+          <button type="button" class="pm-match-primary" onclick="closeHubOperationalTagDialog(true)">Confirmar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    window.__pmTagDialogResolve = resolve;
+  });
+}
+
+function closeHubOperationalTagDialog(confirmed) {
+  const overlay = document.getElementById("pmOperationalTagDialog");
+  const resolve = window.__pmTagDialogResolve;
+  const result = confirmed ? {
+    confirmed: true,
+    addToHistory: document.getElementById("pmTagDialogHistory")?.checked === true,
+    comment: document.getElementById("pmTagDialogComment")?.value?.trim() || ""
+  } : { confirmed: false };
+  overlay?.remove();
+  window.__pmTagDialogResolve = null;
+  resolve?.(result);
+}
+
+async function refreshCurrentHubClientAfterTagChange() {
+  const client = _getCurrentClient();
+  if (!client) return;
+
+  if (client.entityId && typeof fetchHubEntityDetails === "function" && typeof mapHubEntityDetailsToModalClient === "function") {
+    const details = await fetchHubEntityDetails(client.entityId);
+    window.__currentPointModalClient = mapHubEntityDetailsToModalClient(details, client);
+  } else {
+    client.operationalTagDefinitions = await fetchHubOperationalTags();
+    window.__currentPointModalClient = client;
+  }
+
+  _renderBody(window.__currentPointModalClient);
+}
+
+async function addHubOperationalTag() {
+  const input = document.getElementById("pmOperationalTagInput");
+  const label = input?.value?.trim();
+  if (!label) return;
+  const dialog = await openHubOperationalTagDialog("add", label);
+  if (!dialog.confirmed) return;
+
+  const token = localStorage.getItem("authToken");
+  const client = _getCurrentClient();
+  try {
+    const response = await fetch("/api/hub/tags", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        label,
+        entityId: client?.entityId,
+        addToHistory: dialog.addToHistory,
+        comment: dialog.comment
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || `HTTP ${response.status}`);
+
+    if (input) input.value = "";
+    await refreshCurrentHubClientAfterTagChange();
+  } catch (error) {
+    alert(`Falha ao adicionar tag operacional: ${error.message}`);
+  }
+}
+
+async function removeHubOperationalTag(tagId) {
+  const currentClient = _getCurrentClient();
+  const label = (currentClient?.operationalTagDefinitions || []).find(tag => Number(tag.tagId) === Number(tagId))?.label || `Tag ${tagId}`;
+  const dialog = await openHubOperationalTagDialog("remove", label);
+  if (!dialog.confirmed) return;
+
+  const token = localStorage.getItem("authToken");
+  try {
+    const response = await fetch(`/api/hub/tags/${encodeURIComponent(tagId)}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        entityId: currentClient?.entityId,
+        addToHistory: dialog.addToHistory,
+        comment: dialog.comment
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || `HTTP ${response.status}`);
+
+    await refreshCurrentHubClientAfterTagChange();
+  } catch (error) {
+    alert(`Falha ao remover tag operacional: ${error.message}`);
+  }
+}
+
 async function fetchHubGlpiMatchPreview(entityId, mode = "both") {
   const token = localStorage.getItem("authToken");
   const response = await fetch(`/api/hub/entities/${entityId}/matching/glpi/preview?mode=${encodeURIComponent(mode)}`, {
@@ -902,6 +1035,16 @@ function _subTabContent(client) {
 
   /* ── ESTADO DO PONTO ── */
   if (currentPointTab === "status") {
+    const tagDefinitions = client.operationalTagDefinitions || [];
+    const definitionsHtml = tagDefinitions.length
+      ? tagDefinitions.map(tag => `
+          <span class="pm-op-tag">
+            ${_escapeHtml(tag.label)}
+            <button type="button" onclick="removeHubOperationalTag(${Number(tag.tagId)})" aria-label="Remover tag ${_escapeHtml(tag.label)}">x</button>
+          </span>
+        `).join("")
+      : `<span class="pm-op-tag empty">Nenhuma tag cadastrada</span>`;
+
     return `
       <div class="pm-split-layout">
         <!-- Campos à esquerda — grade 2 colunas horizontal -->
@@ -945,6 +1088,16 @@ function _subTabContent(client) {
                 </div>
                 <div class="pm-split-history-date">${item.date}</div>
               </div>`).join("")}
+          </div>
+          <div class="pm-op-tags-compact">
+            <div class="pm-op-tags-compact-head">
+              <span>Tags operacionais</span>
+              <button type="button" onclick="addHubOperationalTag()">Adicionar</button>
+            </div>
+            <div class="pm-op-tags-form">
+              <input id="pmOperationalTagInput" class="pm-op-tag-input" type="text" placeholder="Nova tag">
+            </div>
+            <div class="pm-op-tags-list">${definitionsHtml}</div>
           </div>
         </div>
       </div>`;

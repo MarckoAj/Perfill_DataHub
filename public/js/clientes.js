@@ -261,7 +261,7 @@ function mapHubEntityDetailsToModalClient(details, fallbackClient) {
     const auvoTasks = details.sources?.auvo?.recentTasks || [];
     const glpiTickets = details.sources?.glpi?.tickets || [];
     const glpiDevice = details.sources?.glpi?.device || null;
-    const name = details.displayName || auvoCustomer?.description || fallbackClient?.assetName || `HUB ${details.entityId}`;
+    const name = details.normalizedDisplayName || details.displayName || auvoCustomer?.description || fallbackClient?.assetName || `HUB ${details.entityId}`;
     const address = auvoCustomer?.address || fallbackClient?.address || name;
     const city = inferCityFromAddress(address);
     const locationId = glpiTickets.find(ticket => ticket.idLocalizacaoPonto)?.idLocalizacaoPonto || null;
@@ -304,6 +304,9 @@ function mapHubEntityDetailsToModalClient(details, fallbackClient) {
         fieldValues: details.fieldValues || [],
         platformFields: details.platformFields || {},
         fieldRelations: details.fieldRelations || {},
+        operationalTags: details.operationalTags || [],
+        operationalTagDefinitions: details.operationalTagDefinitions || [],
+        normalizedDisplayName: details.normalizedDisplayName || name,
         syncHistory: details.syncHistory || [],
         network: fallbackClient?.network || {
             ip: 'N/A',

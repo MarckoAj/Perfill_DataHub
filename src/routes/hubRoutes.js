@@ -2,8 +2,11 @@ import express from "express";
 import {
   getHubEntityDetails,
   listHubEntities,
+  createHubOperationalTag,
   confirmGlpiHubMatching,
   confirmSingleGlpiHubMatching,
+  listHubOperationalTags,
+  removeHubOperationalTag,
   previewGlpiHubMatching,
   previewSingleGlpiHubMatching
 } from "../controllers/hubEntityController.js";
@@ -14,6 +17,9 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get("/entities", listHubEntities);
+router.get("/tags", listHubOperationalTags);
+router.post("/tags", createHubOperationalTag);
+router.delete("/tags/:tagId", removeHubOperationalTag);
 router.get("/matching/glpi/preview", previewGlpiHubMatching);
 router.post("/matching/glpi/confirm", confirmGlpiHubMatching);
 router.get("/entities/:entityId/matching/glpi/preview", previewSingleGlpiHubMatching);
