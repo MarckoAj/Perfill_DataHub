@@ -244,11 +244,33 @@ class HubMatchingService {
   }
 
   passesFilters(item, filters) {
+    if (filters.reviewQueueOnly && !item.requiresManualReview) return false;
     if (filters.status && item.status !== filters.status) return false;
     if (!filters.includeLinked && item.status === "ja_vinculado") return false;
     if (!filters.includeAmbiguous && item.status === "ambiguo") return false;
     if (!filters.includeLowScore && item.status === "baixo_score") return false;
     return true;
+  }
+
+  buildStatusCounts(items) {
+    return items.reduce((acc, item) => {
+      acc.total += 1;
+      acc[item.status] = (acc[item.status] || 0) + 1;
+      if (item.requiresManualReview) acc.reviewQueue += 1;
+      if (item.canAutoConfirm && !item.alreadyLinked) acc.autoConfirmable += 1;
+      return acc;
+    }, {
+      total: 0,
+      reviewQueue: 0,
+      autoConfirmable: 0,
+      sem_vinculo: 0,
+      match_id: 0,
+      match_nome: 0,
+      match_ambos: 0,
+      ambiguo: 0,
+      baixo_score: 0,
+      ja_vinculado: 0
+    });
   }
 
   async previewGlpiMatching({
@@ -260,6 +282,7 @@ class HubMatchingService {
     includeLinked = false,
     includeAmbiguous = true,
     includeLowScore = true,
+    reviewQueueOnly = false,
     limit = 50,
     offset = 0,
     entityId = null
@@ -296,10 +319,11 @@ class HubMatchingService {
       status: safeStatus,
       includeLinked,
       includeAmbiguous,
-      includeLowScore
+      includeLowScore,
+      reviewQueueOnly: reviewQueueOnly === true || reviewQueueOnly === "true" || reviewQueueOnly === "1"
     };
 
-    const allItems = targetEntities
+    const baseItems = targetEntities
       .map(entity => {
         const resolved = this.resolvePreview({
           entity,
@@ -327,7 +351,9 @@ class HubMatchingService {
           propagationBlocked: true,
           candidates: resolved.candidates
         };
-      })
+      });
+    const statusCounts = this.buildStatusCounts(baseItems);
+    const allItems = baseItems
       .filter(item => this.passesFilters(item, filters))
       .sort((left, right) => {
         if (safeSort === "score_asc") {
@@ -356,6 +382,7 @@ class HubMatchingService {
         offset: safeOffset,
         total: allItems.length,
         hasMore: safeOffset + pagedItems.length < allItems.length,
+        statusCounts,
         sourceStats: {
           hubAuvoEntities: targetEntities.length,
           glpiDevices: devices.length,
@@ -372,7 +399,8 @@ class HubMatchingService {
     matchMode = "both",
     score = null,
     confirmedBy = "admin",
-    allowManualReview = true
+    allowManualReview = true,
+    allowLowScoreManual = false
   }) {
     const safeEntityId = Number(entityId);
     const safeGlpiDeviceId = glpiDeviceId ? String(glpiDeviceId) : "";
@@ -449,7 +477,8 @@ class HubMatchingService {
       : candidate.score;
     const canConfirm = item.canAutoConfirm || (allowManualReview && item.requiresManualReview);
 
-    if (!canConfirm || item.status === "baixo_score" || item.status === "sem_vinculo") {
+    const lowScoreBlocked = item.status === "baixo_score" && !allowLowScoreManual;
+    if (!canConfirm || lowScoreBlocked || item.status === "sem_vinculo") {
       return {
         success: false,
         status: "not_confirmable",

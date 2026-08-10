@@ -158,6 +158,9 @@
         <p class="hub-match-subtitle">Pre-visualizacao local de vinculos. A propagacao para outras plataformas permanece bloqueada.</p>
       </div>
       <div class="hub-match-actions">
+        <button class="btn-resume" type="button" onclick="showHubMatchingReviewQueue()">Fila de revisao</button>
+        <button class="btn-resume" type="button" onclick="showHubMatchingAll()">Todos</button>
+        <button class="btn-resume" type="button" onclick="resetHubMatchingFilters()">Limpar filtros</button>
         <button class="btn-resume" type="button" onclick="loadHubMatchingPreview(1)">Atualizar preview</button>
         <button class="btn-start" type="button" onclick="openHubMatchingBatchPreview()" id="hubMatchBatchBtn" disabled>Pre-visualizar selecionados</button>
       </div>
@@ -206,6 +209,7 @@
       <label class="hub-match-check"><input id="hubMatchIncludeLowScore" type="checkbox" checked> Baixo score</label>
     </div>
 
+    <div class="hub-match-queue-summary" id="hubMatchQueueSummary"></div>
     <div class="hub-match-meta" id="hubMatchMeta">Aguardando preview...</div>
 
     <div class="hub-match-table-wrap">
@@ -344,11 +348,13 @@
     let hubMatchingState = {
       page: 1,
       limit: 50,
-        total: 0,
-        hasMore: false,
-        sourceStats: null,
-        items: [],
-        selected: new Map()
+      total: 0,
+      hasMore: false,
+      sourceStats: null,
+      statusCounts: null,
+      reviewQueueOnly: false,
+      items: [],
+      selected: new Map()
     };
 
     // Variaveis Dinâmicas do DOM
@@ -886,10 +892,51 @@
         includeLinked: document.getElementById('hubMatchIncludeLinked')?.checked ? 'true' : 'false',
         includeAmbiguous: document.getElementById('hubMatchIncludeAmbiguous')?.checked ? 'true' : 'false',
         includeLowScore: document.getElementById('hubMatchIncludeLowScore')?.checked ? 'true' : 'false',
+        reviewQueueOnly: hubMatchingState.reviewQueueOnly ? 'true' : 'false',
         limit: String(limit),
         offset: String(offset)
       });
       return params.toString();
+    }
+
+    function showHubMatchingReviewQueue() {
+      hubMatchingState.reviewQueueOnly = true;
+      clearHubMatchingSearchAndStatus();
+      hubMatchingState.selected.clear();
+      loadHubMatchingPreview(1);
+    }
+
+    function showHubMatchingAll() {
+      hubMatchingState.reviewQueueOnly = false;
+      clearHubMatchingSearchAndStatus();
+      hubMatchingState.selected.clear();
+      loadHubMatchingPreview(1);
+    }
+
+    function clearHubMatchingSearchAndStatus() {
+      const search = document.getElementById('hubMatchSearch');
+      const status = document.getElementById('hubMatchStatus');
+      if (search) search.value = '';
+      if (status) status.value = '';
+    }
+
+    function resetHubMatchingFilters() {
+      clearHubMatchingSearchAndStatus();
+      const mode = document.getElementById('hubMatchMode');
+      const sort = document.getElementById('hubMatchSort');
+      const minScore = document.getElementById('hubMatchMinScore');
+      const includeLinked = document.getElementById('hubMatchIncludeLinked');
+      const includeAmbiguous = document.getElementById('hubMatchIncludeAmbiguous');
+      const includeLowScore = document.getElementById('hubMatchIncludeLowScore');
+      if (mode) mode.value = 'both';
+      if (sort) sort.value = 'score_desc';
+      if (minScore) minScore.value = '90';
+      if (includeLinked) includeLinked.checked = true;
+      if (includeAmbiguous) includeAmbiguous.checked = true;
+      if (includeLowScore) includeLowScore.checked = true;
+      hubMatchingState.reviewQueueOnly = false;
+      hubMatchingState.selected.clear();
+      loadHubMatchingPreview(1);
     }
 
     async function loadHubMatchingPreview(page = 1) {
@@ -910,6 +957,7 @@
         hubMatchingState.total = payload.meta?.total || 0;
         hubMatchingState.hasMore = Boolean(payload.meta?.hasMore);
         hubMatchingState.sourceStats = payload.meta?.sourceStats || null;
+        hubMatchingState.statusCounts = payload.meta?.statusCounts || null;
         renderHubMatchingTable();
       } catch (error) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="hub-match-empty danger">Falha ao carregar preview: ${syncEscapeHtml(error.message)}</td></tr>`;
@@ -925,7 +973,30 @@
       const pageInfo = document.getElementById('hubMatchPageInfo');
       const selectAll = document.getElementById('hubMatchSelectAll');
       const batchBtn = document.getElementById('hubMatchBatchBtn');
+      const queueSummary = document.getElementById('hubMatchQueueSummary');
       if (!tbody) return;
+
+      if (queueSummary) {
+        const counts = hubMatchingState.statusCounts || {};
+        queueSummary.innerHTML = `
+          <button class="hub-match-summary-card ${hubMatchingState.reviewQueueOnly ? 'active' : ''}" type="button" onclick="showHubMatchingReviewQueue()">
+            <span>Fila de revisao</span>
+            <strong>${Number(counts.reviewQueue || 0).toLocaleString('pt-BR')}</strong>
+          </button>
+          <button class="hub-match-summary-card" type="button" onclick="document.getElementById('hubMatchStatus').value='ambiguo'; hubMatchingState.reviewQueueOnly=false; loadHubMatchingPreview(1);">
+            <span>Ambiguos</span>
+            <strong>${Number(counts.ambiguo || 0).toLocaleString('pt-BR')}</strong>
+          </button>
+          <button class="hub-match-summary-card" type="button" onclick="document.getElementById('hubMatchStatus').value='baixo_score'; hubMatchingState.reviewQueueOnly=false; loadHubMatchingPreview(1);">
+            <span>Baixo score</span>
+            <strong>${Number(counts.baixo_score || 0).toLocaleString('pt-BR')}</strong>
+          </button>
+          <button class="hub-match-summary-card" type="button" onclick="showHubMatchingAll()">
+            <span>Preview geral</span>
+            <strong>${Number(counts.total || 0).toLocaleString('pt-BR')}</strong>
+          </button>
+        `;
+      }
 
       if (hubMatchingState.items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="hub-match-empty">Nenhum candidato encontrado com os filtros atuais.</td></tr>';
@@ -933,21 +1004,24 @@
         tbody.innerHTML = hubMatchingState.items.map(item => {
           const isSelected = hubMatchingState.selected.has(item.previewId);
           const canSelect = item.canAutoConfirm && !item.alreadyLinked;
+          const candidateCount = (item.candidates || []).length;
+          const candidateLabel = item.glpiName || (candidateCount > 0 ? `${candidateCount} candidato(s) para revisar` : '-');
+          const actionLabel = item.requiresManualReview ? 'Tratar' : 'Revisar';
           return `
-            <tr class="${isSelected ? 'selected' : ''}">
+            <tr class="${isSelected ? 'selected' : ''} ${item.requiresManualReview ? 'manual-review' : ''}">
               <td><input type="checkbox" ${isSelected ? 'checked' : ''} ${canSelect ? '' : 'disabled'} onchange="toggleHubMatchingSelection('${syncEscapeHtml(item.previewId)}', this.checked)"></td>
               <td>
                 <strong>${syncEscapeHtml(item.hubName || '-')}</strong>
                 <span>HUB ${syncEscapeHtml(item.entityId)} | AUVO ${syncEscapeHtml(item.auvoCustomerId || '-')}</span>
               </td>
               <td>
-                <strong>${syncEscapeHtml(item.glpiName || '-')}</strong>
+                <strong>${syncEscapeHtml(candidateLabel)}</strong>
                 <span>GLPI ${syncEscapeHtml(item.glpiDeviceId || '-')}</span>
               </td>
               <td>${syncEscapeHtml(item.matchOrigin || '-')}</td>
               <td><span class="hub-match-score">${Number(item.score || 0).toFixed(0)}%</span></td>
               <td><span class="hub-match-badge ${hubMatchStatusClass(item.status)}">${hubMatchStatusLabel(item.status)}</span></td>
-              <td><button class="btn-sm-del hub-match-review-btn" type="button" onclick="openHubMatchingItemPreview('${syncEscapeHtml(item.previewId)}')">Revisar</button></td>
+              <td><button class="btn-sm-del hub-match-review-btn" type="button" onclick="openHubMatchingItemPreview('${syncEscapeHtml(item.previewId)}')">${actionLabel}</button></td>
             </tr>
           `;
         }).join('');
@@ -961,7 +1035,10 @@
         const coverage = stats
           ? ` | GLPI cache: ${stats.glpiDevices} device(s), ${stats.glpiDevicesWithAuvoId} com ID AUVO`
           : '';
-        meta.textContent = `${from}-${to} de ${hubMatchingState.total} matches | ${selectedCount} selecionado(s)${coverage}`;
+        const scope = hubMatchingState.reviewQueueOnly ? 'fila de revisao' : 'preview geral';
+        const activeSearch = document.getElementById('hubMatchSearch')?.value?.trim();
+        const searchInfo = activeSearch ? ` | busca: ${activeSearch}` : '';
+        meta.textContent = `${from}-${to} de ${hubMatchingState.total} itens na ${scope}${searchInfo} | ${selectedCount} selecionado(s)${coverage}`;
       }
       if (prevBtn) prevBtn.disabled = hubMatchingState.page <= 1;
       if (nextBtn) nextBtn.disabled = !hubMatchingState.hasMore;
@@ -1006,10 +1083,48 @@
       `).join('');
     }
 
+    function getHubMatchingManualReviewHtml(item) {
+      const candidates = item.candidates || [];
+      const candidateRows = candidates.length
+        ? candidates.map(candidate => `
+          <label class="hub-match-candidate-row">
+            <input type="radio" name="hubMatchManualCandidate" value="${syncEscapeHtml(candidate.glpiDeviceId || '')}" ${candidate.glpiDeviceId === item.glpiDeviceId ? 'checked' : ''}>
+            <span>
+              <strong>${syncEscapeHtml(candidate.glpiName || 'GLPI sem nome')}</strong>
+              <small>GLPI ${syncEscapeHtml(candidate.glpiDeviceId || '-')} | AUVO ${syncEscapeHtml(candidate.glpiAuvoCustomerId || '-')} | ${syncEscapeHtml(candidate.matchOrigin || item.matchOrigin || '-')}</small>
+            </span>
+            <b>${Number(candidate.score || 0).toFixed(0)}%</b>
+          </label>
+        `).join('')
+        : '<div class="hub-match-empty">Nenhum candidato disponivel para revisao manual.</div>';
+
+      return `
+        <div class="hub-match-review-panel">
+          <div class="hub-match-review-head">
+            <div>
+              <span>HUB</span>
+              <strong>${syncEscapeHtml(item.hubName || '-')}</strong>
+              <small>HUB ${syncEscapeHtml(item.entityId)} | AUVO ${syncEscapeHtml(item.auvoCustomerId || '-')}</small>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>${hubMatchStatusLabel(item.status)} - ${Number(item.score || 0).toFixed(0)}%</strong>
+              <small>Propagacao externa bloqueada</small>
+            </div>
+          </div>
+          <div class="hub-match-candidates">${candidateRows}</div>
+        </div>
+      `;
+    }
+
     function openHubMatchingItemPreview(previewId) {
       const item = hubMatchingState.items.find(row => row.previewId === previewId) || hubMatchingState.selected.get(previewId);
       if (!item) return;
-      openHubMatchingPreviewModal([item], 'Preview individual');
+      if (item.requiresManualReview) {
+        openHubMatchingPreviewModal([item], 'Tratamento da fila', { manualReview: true });
+      } else {
+        openHubMatchingPreviewModal([item], 'Preview individual');
+      }
     }
 
     function openHubMatchingBatchPreview() {
@@ -1018,16 +1133,33 @@
       openHubMatchingPreviewModal(items, 'Preview em lote');
     }
 
-    function openHubMatchingPreviewModal(items, title) {
+    function openHubMatchingPreviewModal(items, title, options = {}) {
       const overlay = document.getElementById('hubMatchPreviewModal');
       const count = document.getElementById('hubMatchPreviewCount');
       const tbody = document.getElementById('hubMatchPreviewBody');
       const titleEl = document.getElementById('hubMatchPreviewTitle');
+      const confirmBtn = document.getElementById('hubMatchPreviewConfirmBtn');
       if (!overlay || !tbody) return;
       if (titleEl) titleEl.textContent = title;
-      if (count) count.textContent = `${items.length} vinculo(s) seriam gravados em hub_entity_links. Propagacao bloqueada.`;
-      tbody.innerHTML = getHubMatchingPreviewRows(items);
+      if (options.manualReview) {
+        if (count) count.textContent = 'Escolha um candidato para resolver este item da fila. A propagacao externa permanece bloqueada.';
+        tbody.innerHTML = `<tr><td colspan="7">${getHubMatchingManualReviewHtml(items[0])}</td></tr>`;
+        if (confirmBtn) {
+          confirmBtn.textContent = 'Confirmar revisao manual';
+          confirmBtn.onclick = confirmHubMatchingManualReview;
+          confirmBtn.disabled = !(items[0]?.candidates || []).length;
+        }
+      } else {
+        if (count) count.textContent = `${items.length} vinculo(s) seriam gravados em hub_entity_links. Propagacao bloqueada.`;
+        tbody.innerHTML = getHubMatchingPreviewRows(items);
+        if (confirmBtn) {
+          confirmBtn.textContent = 'Confirmar associacao';
+          confirmBtn.onclick = confirmHubMatchingBatch;
+          confirmBtn.disabled = false;
+        }
+      }
       overlay.__hubMatchPreviewItems = items;
+      overlay.__hubMatchManualReview = Boolean(options.manualReview);
       overlay.style.display = 'flex';
     }
 
@@ -1082,11 +1214,49 @@
       }
     }
 
+    async function confirmHubMatchingManualReview() {
+      const overlay = document.getElementById('hubMatchPreviewModal');
+      const item = (overlay?.__hubMatchPreviewItems || [])[0];
+      const glpiDeviceId = document.querySelector('input[name="hubMatchManualCandidate"]:checked')?.value;
+      if (!item || !glpiDeviceId) return alert('Selecione um candidato GLPI.');
+      const candidate = (item.candidates || []).find(row => String(row.glpiDeviceId) === String(glpiDeviceId));
+
+      if (!confirm(`Confirmar revisao manual HUB ${item.entityId} com GLPI ${glpiDeviceId}?`)) return;
+
+      try {
+        const response = await fetch(`/api/hub/entities/${item.entityId}/matching/glpi/confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getHubMatchTokenHeaders()
+          },
+          body: JSON.stringify({
+            glpiDeviceId,
+            matchMode: item.matchMode,
+            score: candidate?.score ?? item.score,
+            reviewDecision: 'manual_confirm',
+            propagate: false
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || result.error || `HTTP ${response.status}`);
+
+        closeHubMatchingPreviewModal();
+        await loadHubMatchingPreview(hubMatchingState.page);
+        alert(result.message || 'Revisao manual confirmada.');
+      } catch (error) {
+        alert(`Falha ao confirmar revisao manual: ${error.message}`);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       ['hubMatchMode', 'hubMatchStatus', 'hubMatchSort', 'hubMatchMinScore', 'hubMatchIncludeLinked', 'hubMatchIncludeAmbiguous', 'hubMatchIncludeLowScore']
         .forEach(id => document.getElementById(id)?.addEventListener('change', () => loadHubMatchingPreview(1)));
       document.getElementById('hubMatchSearch')?.addEventListener('keydown', event => {
         if (event.key === 'Enter') loadHubMatchingPreview(1);
+      });
+      document.getElementById('hubMatchSearch')?.addEventListener('input', event => {
+        if (event.target.value === '') loadHubMatchingPreview(1);
       });
     });
 
@@ -1146,7 +1316,7 @@
       </div>
       <div class="hub-match-preview-footer">
         <button class="btn-sm-del" type="button" onclick="closeHubMatchingPreviewModal()">Fechar</button>
-        <button class="btn-resume" type="button" onclick="confirmHubMatchingBatch()">Confirmar associacao</button>
+        <button class="btn-resume" id="hubMatchPreviewConfirmBtn" type="button" onclick="confirmHubMatchingBatch()">Confirmar associacao</button>
       </div>
     </div>
   </div>

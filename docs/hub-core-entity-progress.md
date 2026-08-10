@@ -55,6 +55,7 @@ A entidade operacional principal passa a ser o dispositivo/ponto. A carga inicia
 - [x] Adicionar sync de `GLPI Peripheral` como entidade `devices` do sync GLPI.
 - [x] Popular `glpi_devices` com 6501 devices GLPI; 24 possuem `auvoCustomerId` preenchido.
 - [x] Validar visualmente em `/admin/sync` a confirmacao de vinculo real HUB x GLPI.
+- [x] Criar fila dedicada inicial em `/admin/sync` para tratar matches ambiguos e baixo score.
 
 ## Modelo Inicial
 
@@ -146,7 +147,7 @@ Teste por lote:
   4. Se houver multiplos candidatos ou score baixo, manter revisao manual.
 - Garantir refresh/inclusao do Hub a partir de `customers_auvo` antes ou durante a carga GLPI.
 - Refinar enriquecimento de `glpi_devices` com campos adicionais de `Peripheral` e `Location`, se necessario.
-- Evoluir painel de revisao/configuracao de vinculos pendentes para tratar fila de ambiguidades.
+- Persistir decisoes de fila de revisao alem do vinculo confirmado, se for necessario auditar recusas/adiamentos.
 - Adicionar Zabbix como fonte para host/IP/status.
 - Criar motor de divergencias por campo critico.
 - Permitir escolha manual da fonte canonica por campo.
@@ -154,4 +155,4 @@ Teste por lote:
 
 ## Observacao Para Continuidade Em Novo Chat
 
-Retomar daqui: o painel de associacao HUB x GLPI foi validado visualmente em `/admin/sync` com confirmacao de vinculo real em `hub_entity_links` e historico em `hub_entity_history`. A propagacao para AUVO/GLPI externo/Zabbix segue bloqueada. `glpi_devices` foi populada com 6501 `Peripheral`; 24 possuem ID AUVO e ja geram matches `ID + Nome`. O proximo passo e evoluir a fila de revisao de ambiguidades e baixo score.
+Retomar daqui: o painel de associacao HUB x GLPI foi validado visualmente em `/admin/sync` com confirmacao de vinculo real em `hub_entity_links` e historico em `hub_entity_history`. A propagacao para AUVO/GLPI externo/Zabbix segue bloqueada. `glpi_devices` foi populada com 6501 `Peripheral`; 24 possuem ID AUVO e ja geram matches `ID + Nome`. A fila inicial de revisao de ambiguidades e baixo score ja existe no painel. O proximo passo e avaliar persistencia de decisoes pendentes/recusadas ou iniciar a inclusao de Zabbix.

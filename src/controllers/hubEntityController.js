@@ -69,6 +69,7 @@ export const previewGlpiHubMatching = asyncHandler(async (req, res) => {
     includeLinked: parseBooleanQuery(req.query.includeLinked, false),
     includeAmbiguous: parseBooleanQuery(req.query.includeAmbiguous, true),
     includeLowScore: parseBooleanQuery(req.query.includeLowScore, true),
+    reviewQueueOnly: parseBooleanQuery(req.query.reviewQueueOnly, false),
     limit: req.query.limit,
     offset: req.query.offset
   });
@@ -148,7 +149,8 @@ export const confirmSingleGlpiHubMatching = asyncHandler(async (req, res) => {
     glpiDeviceId: req.body?.glpiDeviceId,
     matchMode: req.body?.matchMode,
     score: req.body?.score,
-    confirmedBy: req.user?.username || "admin_panel"
+    confirmedBy: req.user?.username || "admin_panel",
+    allowLowScoreManual: req.body?.reviewDecision === "manual_confirm"
   });
 
   res.status(result.success ? 200 : 400).json(result);

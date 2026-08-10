@@ -779,6 +779,46 @@ header strong {
   white-space: nowrap;
 }
 
+.hub-match-queue-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.hub-match-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.hub-match-summary-card.active,
+.hub-match-summary-card:hover {
+  border-color: rgba(20, 231, 197, 0.34);
+  background: rgba(20, 231, 197, 0.055);
+}
+
+.hub-match-summary-card span {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.hub-match-summary-card strong {
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 900;
+}
+
 .hub-match-meta {
   color: var(--text-muted);
   font-size: 12px;
@@ -825,6 +865,10 @@ header strong {
 
 .hub-match-table tr.selected td {
   background: rgba(20, 231, 197, 0.055);
+}
+
+.hub-match-table tr.manual-review td {
+  background: rgba(245, 158, 11, 0.035);
 }
 
 .hub-match-table td strong {
@@ -938,6 +982,69 @@ header strong {
   border-top: 1px solid var(--border-color);
 }
 
+.hub-match-review-panel {
+  padding: 16px;
+}
+
+.hub-match-review-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.hub-match-review-head div,
+.hub-match-candidate-row {
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+}
+
+.hub-match-review-head span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.hub-match-review-head strong,
+.hub-match-candidate-row strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.hub-match-review-head small,
+.hub-match-candidate-row small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.hub-match-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-match-candidate-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 60px;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.hub-match-candidate-row b {
+  color: var(--accent);
+  font-size: 15px;
+  text-align: right;
+}
+
 @media (max-width: 1100px) {
   .hub-match-head {
     flex-direction: column;
@@ -950,10 +1057,19 @@ header strong {
   .hub-match-filters {
     grid-template-columns: 1fr 1fr;
   }
+
+  .hub-match-queue-summary {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 720px) {
   .hub-match-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-match-queue-summary,
+  .hub-match-review-head {
     grid-template-columns: 1fr;
   }
 }

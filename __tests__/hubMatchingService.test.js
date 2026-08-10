@@ -185,4 +185,43 @@ describe("HubMatchingService", () => {
     expect(repositoryMock.upsertGlpiLink).toHaveBeenCalledTimes(1);
     expect(repositoryMock.insertLinkHistory).toHaveBeenCalledTimes(1);
   });
+
+  it("permite confirmacao individual explicita de baixo score", async () => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([
+      {
+        entityId: 2,
+        hubName: "CAMERA NORTE",
+        auvoCustomerId: "222",
+        auvoName: "CAMERA NORTE",
+        alreadyLinked: false
+      }
+    ]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([
+      { deviceId: "20", name: "PONTO DIVERGENTE", auvoCustomerId: "222" }
+    ]);
+    repositoryMock.getGlpiDevice.mockResolvedValue({
+      deviceId: "20",
+      name: "PONTO DIVERGENTE",
+      auvoCustomerId: "222"
+    });
+
+    const result = await hubMatchingService.confirmSingleGlpiMatch({
+      entityId: 2,
+      glpiDeviceId: "20",
+      matchMode: "both",
+      score: 50,
+      confirmedBy: "test",
+      allowLowScoreManual: true
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      status: "confirmed",
+      entityId: 2,
+      glpiDeviceId: "20",
+      propagationBlocked: true
+    });
+    expect(repositoryMock.upsertGlpiLink).toHaveBeenCalledTimes(1);
+    expect(repositoryMock.insertLinkHistory).toHaveBeenCalledTimes(1);
+  });
 });

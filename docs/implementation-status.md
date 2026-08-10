@@ -56,7 +56,7 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Revisao individual de associacao GLPI no modal do cliente.
 - [x] Bloqueio explicito de propagacao para outras plataformas durante confirmacao HUB x GLPI.
 - [x] Validacao visual de confirmacao real HUB x GLPI em `/admin/sync`.
-- [ ] Fila dedicada para tratamento de matches ambiguos e baixo score.
+- [x] Fila dedicada inicial para tratamento de matches ambiguos e baixo score.
 - [ ] Inclusao de Zabbix como fonte canonica.
 - [ ] Motor de divergencias por campo.
 
