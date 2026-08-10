@@ -981,19 +981,19 @@
         queueSummary.innerHTML = `
           <button class="hub-match-summary-card ${hubMatchingState.reviewQueueOnly ? 'active' : ''}" type="button" onclick="showHubMatchingReviewQueue()">
             <span>Fila de revisao</span>
-            <strong>${Number(counts.reviewQueue || 0).toLocaleString('pt-BR')}</strong>
+            <strong>${Number(counts.pendingReviewQueue ?? counts.reviewQueue ?? 0).toLocaleString('pt-BR')}</strong>
           </button>
           <button class="hub-match-summary-card" type="button" onclick="document.getElementById('hubMatchStatus').value='ambiguo'; hubMatchingState.reviewQueueOnly=false; loadHubMatchingPreview(1);">
             <span>Ambiguos</span>
-            <strong>${Number(counts.ambiguo || 0).toLocaleString('pt-BR')}</strong>
+            <strong>${Number(counts.pendingAmbiguo ?? counts.ambiguo ?? 0).toLocaleString('pt-BR')}</strong>
           </button>
           <button class="hub-match-summary-card" type="button" onclick="document.getElementById('hubMatchStatus').value='baixo_score'; hubMatchingState.reviewQueueOnly=false; loadHubMatchingPreview(1);">
             <span>Baixo score</span>
-            <strong>${Number(counts.baixo_score || 0).toLocaleString('pt-BR')}</strong>
+            <strong>${Number(counts.pendingBaixoScore ?? counts.baixo_score ?? 0).toLocaleString('pt-BR')}</strong>
           </button>
           <button class="hub-match-summary-card" type="button" onclick="showHubMatchingAll()">
             <span>Preview geral</span>
-            <strong>${Number(counts.total || 0).toLocaleString('pt-BR')}</strong>
+            <strong>${Number(hubMatchingState.total || 0).toLocaleString('pt-BR')}</strong>
           </button>
         `;
       }

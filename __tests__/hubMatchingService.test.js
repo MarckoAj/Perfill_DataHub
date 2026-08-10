@@ -136,6 +136,49 @@ describe("HubMatchingService", () => {
     expect(repositoryMock.upsertGlpiLink).not.toHaveBeenCalled();
   });
 
+  it("resume fila operacional sem contar itens ja vinculados como pendencia", async () => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([
+      {
+        entityId: 1,
+        hubName: "CAMERA TESTE",
+        auvoCustomerId: "999",
+        auvoName: "CAMERA TESTE",
+        alreadyLinked: false
+      },
+      {
+        entityId: 2,
+        hubName: "CAMERA JA VINCULADA",
+        auvoCustomerId: "888",
+        auvoName: "CAMERA JA VINCULADA",
+        alreadyLinked: true,
+        linkedGlpiDeviceId: "20",
+        linkedConfidenceScore: 100,
+        linkedMatchStrategy: "manual"
+      }
+    ]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([
+      { deviceId: "10", name: "CAMERA TESTE A", auvoCustomerId: "999" },
+      { deviceId: "11", name: "CAMERA TESTE B", auvoCustomerId: "999" },
+      { deviceId: "20", name: "CAMERA JA VINCULADA", auvoCustomerId: "888" }
+    ]);
+
+    const result = await hubMatchingService.previewGlpiMatching({
+      mode: "id",
+      includeLinked: true
+    });
+
+    expect(result.meta.statusCounts).toMatchObject({
+      total: 2,
+      ja_vinculado: 1,
+      ambiguo: 1,
+      reviewQueue: 1,
+      pending: 1,
+      pendingAmbiguo: 1,
+      pendingReviewQueue: 1,
+      pendingBaixoScore: 0
+    });
+  });
+
   it("bloqueia confirmacao em lote para caso ambiguo de revisao manual", async () => {
     repositoryMock.listHubAuvoEntities.mockResolvedValue([
       {

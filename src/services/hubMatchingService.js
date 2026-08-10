@@ -290,7 +290,7 @@ class HubMatchingService {
   }
 
   buildStatusCounts(items) {
-    return items.reduce((acc, item) => {
+    const counts = items.reduce((acc, item) => {
       acc.total += 1;
       acc[item.status] = (acc[item.status] || 0) + 1;
       if (item.requiresManualReview) acc.reviewQueue += 1;
@@ -308,6 +308,13 @@ class HubMatchingService {
       baixo_score: 0,
       ja_vinculado: 0
     });
+
+    const pendingItems = items.filter(item => item.status !== "ja_vinculado" && !item.alreadyLinked);
+    counts.pending = pendingItems.length;
+    counts.pendingReviewQueue = pendingItems.filter(item => item.requiresManualReview).length;
+    counts.pendingAmbiguo = pendingItems.filter(item => item.status === "ambiguo").length;
+    counts.pendingBaixoScore = pendingItems.filter(item => item.status === "baixo_score").length;
+    return counts;
   }
 
   async previewGlpiMatching({
