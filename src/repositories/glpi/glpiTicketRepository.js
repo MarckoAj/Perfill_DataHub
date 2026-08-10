@@ -238,6 +238,7 @@ class GlpiTicketRepository {
       { id: 'atrasado', label: 'Tickets atrasados', color: '#ef4444' },
       { id: 'pendente', label: 'Tickets pendentes', color: '#f59e0b' },
       { id: 'fechado', label: 'Tickets fechados', color: '#ffffff' },
+      { id: 'devices', label: 'Dispositivos GLPI', color: '#14e7c5' },
       { id: 'tarefas', label: 'Tarefas de chamados', color: '#22c55e' },
       { id: 'solucoes', label: 'Solucoes de chamados', color: '#06b6d4' }
     ];
@@ -252,6 +253,9 @@ class GlpiTicketRepository {
                 count = countRows[0].count;
             } else if (t.id === 'tarefas') {
                 const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM glpi_tickettasks`);
+                count = countRows[0].count;
+            } else if (t.id === 'devices') {
+                const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM glpi_devices`);
                 count = countRows[0].count;
             } else if (t.id === 'solucoes') {
                 const [countRows] = await pool.query(`SELECT COUNT(*) as count FROM glpi_itilsolutions`);

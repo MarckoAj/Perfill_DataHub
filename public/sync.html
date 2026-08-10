@@ -86,6 +86,9 @@
       <img src="/images/glpi_logo.png" alt="GLPI" onerror="this.style.display='none'">
       API GLPI
     </button>
+    <button class="tab-btn" id="tabBtn_hubMatching" onclick="switchTab('hubMatching')">
+      HUB x GLPI
+    </button>
   </div>
 
   <!-- ABA AUVO -->
@@ -144,6 +147,90 @@
         <div style="color: var(--text-muted); padding: 10px;">Aguardando início... Selecione as entidades acima e clique
           em Iniciar.</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ABA HUB MATCHING -->
+  <div class="container" id="hubMatchingApp" style="display: none;">
+    <div class="hub-match-head">
+      <div>
+        <div class="cards-title">Associacao HUB x GLPI</div>
+        <p class="hub-match-subtitle">Pre-visualizacao local de vinculos. A propagacao para outras plataformas permanece bloqueada.</p>
+      </div>
+      <div class="hub-match-actions">
+        <button class="btn-resume" type="button" onclick="loadHubMatchingPreview(1)">Atualizar preview</button>
+        <button class="btn-start" type="button" onclick="openHubMatchingBatchPreview()" id="hubMatchBatchBtn" disabled>Pre-visualizar selecionados</button>
+      </div>
+    </div>
+
+    <div class="hub-match-filters">
+      <div class="form-group">
+        <label>Busca</label>
+        <input class="form-input" id="hubMatchSearch" type="text" placeholder="Nome, HUB ID, AUVO ID ou GLPI ID">
+      </div>
+      <div class="form-group">
+        <label>Modo</label>
+        <select class="form-input" id="hubMatchMode">
+          <option value="both">ID + Nome</option>
+          <option value="id">ID</option>
+          <option value="name">Nome</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="form-input" id="hubMatchStatus">
+          <option value="">Todos</option>
+          <option value="sem_vinculo">Sem vinculo</option>
+          <option value="match_id">Match por ID</option>
+          <option value="match_nome">Match por nome</option>
+          <option value="match_ambos">Match por ambos</option>
+          <option value="ambiguo">Revisao manual</option>
+          <option value="baixo_score">Baixo score</option>
+          <option value="ja_vinculado">Ja vinculado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Ordenar</label>
+        <select class="form-input" id="hubMatchSort">
+          <option value="score_desc">Maior score</option>
+          <option value="score_asc">Menor score</option>
+          <option value="name_asc">Nome HUB</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Score minimo</label>
+        <input class="form-input" id="hubMatchMinScore" type="number" min="0" max="100" value="90">
+      </div>
+      <label class="hub-match-check"><input id="hubMatchIncludeLinked" type="checkbox" checked> Ja vinculados</label>
+      <label class="hub-match-check"><input id="hubMatchIncludeAmbiguous" type="checkbox" checked> Ambiguos</label>
+      <label class="hub-match-check"><input id="hubMatchIncludeLowScore" type="checkbox" checked> Baixo score</label>
+    </div>
+
+    <div class="hub-match-meta" id="hubMatchMeta">Aguardando preview...</div>
+
+    <div class="hub-match-table-wrap">
+      <table class="hub-match-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="hubMatchSelectAll" onchange="toggleHubMatchingSelectAll(this.checked)"></th>
+            <th>HUB / AUVO</th>
+            <th>GLPI candidato</th>
+            <th>Origem</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="hubMatchTableBody">
+          <tr><td colspan="7" class="hub-match-empty">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hub-match-pagination">
+      <button class="hub-match-page-btn" type="button" onclick="loadHubMatchingPreview(hubMatchingState.page - 1)" id="hubMatchPrevBtn" disabled>Anterior</button>
+      <span id="hubMatchPageInfo">Pagina 1</span>
+      <button class="hub-match-page-btn" type="button" onclick="loadHubMatchingPreview(hubMatchingState.page + 1)" id="hubMatchNextBtn" disabled>Proxima</button>
     </div>
   </div>
 
@@ -254,6 +341,15 @@
     let selectedIds = { auvo: new Set(), glpi: new Set() };
     let availableEntities = { auvo: [], glpi: [] };
     let lastSyncStatus = { auvo: 'IDLE', glpi: 'IDLE' };
+    let hubMatchingState = {
+      page: 1,
+      limit: 50,
+        total: 0,
+        hasMore: false,
+        sourceStats: null,
+        items: [],
+        selected: new Map()
+    };
 
     // Variaveis Dinâmicas do DOM
     let uiGrid, uiChecklist, uiStatus;
@@ -277,6 +373,13 @@
       // Toggle UI
       document.getElementById('auvoApp').style.display = tabId === 'auvo' ? 'block' : 'none';
       document.getElementById('glpiApp').style.display = tabId === 'glpi' ? 'block' : 'none';
+      document.getElementById('hubMatchingApp').style.display = tabId === 'hubMatching' ? 'block' : 'none';
+
+      if (tabId === 'hubMatching') {
+        if (pollInterval) clearInterval(pollInterval);
+        loadHubMatchingPreview(1);
+        return;
+      }
 
       // Link DOM Elements to active tab
       uiGrid = document.getElementById(tabId + "CardsGrid");
@@ -607,6 +710,7 @@
       { id: 'novo', label: 'Novo' }, { id: 'planejado', label: 'Planejado' }, { id: 'atribuido', label: 'Atribuído' },
       { id: 'solucionado', label: 'Solucionado' }, { id: 'pendente', label: 'Pendente' }, { id: 'atrasado', label: 'Atrasado' },
       { id: 'fechado', label: 'Fechado' },
+      { id: 'devices', label: 'Dispositivos GLPI' },
       { id: 'tarefas', label: 'Tarefas de chamados' },
       { id: 'solucoes', label: 'Solucoes de chamados' }
     ];
@@ -735,6 +839,257 @@
       } catch (e) { alert("Falha ao deletar."); }
     }
 
+    function syncEscapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[char]));
+    }
+
+    function hubMatchStatusLabel(status) {
+      const labels = {
+        sem_vinculo: 'Sem vinculo',
+        match_id: 'Match por ID',
+        match_nome: 'Match por nome',
+        match_ambos: 'Match por ambos',
+        ambiguo: 'Revisao manual',
+        baixo_score: 'Baixo score',
+        ja_vinculado: 'Ja vinculado'
+      };
+      return labels[status] || status || '-';
+    }
+
+    function hubMatchStatusClass(status) {
+      if (status === 'match_id' || status === 'match_nome' || status === 'match_ambos') return 'success';
+      if (status === 'ja_vinculado') return 'linked';
+      if (status === 'ambiguo' || status === 'baixo_score') return 'warning';
+      return 'muted';
+    }
+
+    function getHubMatchTokenHeaders() {
+      const token = localStorage.getItem('authToken');
+      return token ? { authorization: `Bearer ${token}` } : {};
+    }
+
+    function getHubMatchingQuery(page = hubMatchingState.page) {
+      const limit = hubMatchingState.limit;
+      const offset = Math.max((page - 1) * limit, 0);
+      const params = new URLSearchParams({
+        mode: document.getElementById('hubMatchMode')?.value || 'both',
+        search: document.getElementById('hubMatchSearch')?.value || '',
+        status: document.getElementById('hubMatchStatus')?.value || '',
+        sort: document.getElementById('hubMatchSort')?.value || 'score_desc',
+        minScore: document.getElementById('hubMatchMinScore')?.value || '90',
+        includeLinked: document.getElementById('hubMatchIncludeLinked')?.checked ? 'true' : 'false',
+        includeAmbiguous: document.getElementById('hubMatchIncludeAmbiguous')?.checked ? 'true' : 'false',
+        includeLowScore: document.getElementById('hubMatchIncludeLowScore')?.checked ? 'true' : 'false',
+        limit: String(limit),
+        offset: String(offset)
+      });
+      return params.toString();
+    }
+
+    async function loadHubMatchingPreview(page = 1) {
+      const targetPage = Math.max(parseInt(page, 10) || 1, 1);
+      const tbody = document.getElementById('hubMatchTableBody');
+      const meta = document.getElementById('hubMatchMeta');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="hub-match-empty">Carregando preview...</td></tr>';
+      if (meta) meta.textContent = 'Consultando HUB/AUVO x GLPI...';
+
+      try {
+        const response = await fetch(`/api/hub/matching/glpi/preview?${getHubMatchingQuery(targetPage)}`, {
+          headers: getHubMatchTokenHeaders()
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        hubMatchingState.page = targetPage;
+        hubMatchingState.items = payload.data || [];
+        hubMatchingState.total = payload.meta?.total || 0;
+        hubMatchingState.hasMore = Boolean(payload.meta?.hasMore);
+        hubMatchingState.sourceStats = payload.meta?.sourceStats || null;
+        renderHubMatchingTable();
+      } catch (error) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="hub-match-empty danger">Falha ao carregar preview: ${syncEscapeHtml(error.message)}</td></tr>`;
+        if (meta) meta.textContent = 'Falha no preview.';
+      }
+    }
+
+    function renderHubMatchingTable() {
+      const tbody = document.getElementById('hubMatchTableBody');
+      const meta = document.getElementById('hubMatchMeta');
+      const prevBtn = document.getElementById('hubMatchPrevBtn');
+      const nextBtn = document.getElementById('hubMatchNextBtn');
+      const pageInfo = document.getElementById('hubMatchPageInfo');
+      const selectAll = document.getElementById('hubMatchSelectAll');
+      const batchBtn = document.getElementById('hubMatchBatchBtn');
+      if (!tbody) return;
+
+      if (hubMatchingState.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="hub-match-empty">Nenhum candidato encontrado com os filtros atuais.</td></tr>';
+      } else {
+        tbody.innerHTML = hubMatchingState.items.map(item => {
+          const isSelected = hubMatchingState.selected.has(item.previewId);
+          const canSelect = item.canAutoConfirm && !item.alreadyLinked;
+          return `
+            <tr class="${isSelected ? 'selected' : ''}">
+              <td><input type="checkbox" ${isSelected ? 'checked' : ''} ${canSelect ? '' : 'disabled'} onchange="toggleHubMatchingSelection('${syncEscapeHtml(item.previewId)}', this.checked)"></td>
+              <td>
+                <strong>${syncEscapeHtml(item.hubName || '-')}</strong>
+                <span>HUB ${syncEscapeHtml(item.entityId)} | AUVO ${syncEscapeHtml(item.auvoCustomerId || '-')}</span>
+              </td>
+              <td>
+                <strong>${syncEscapeHtml(item.glpiName || '-')}</strong>
+                <span>GLPI ${syncEscapeHtml(item.glpiDeviceId || '-')}</span>
+              </td>
+              <td>${syncEscapeHtml(item.matchOrigin || '-')}</td>
+              <td><span class="hub-match-score">${Number(item.score || 0).toFixed(0)}%</span></td>
+              <td><span class="hub-match-badge ${hubMatchStatusClass(item.status)}">${hubMatchStatusLabel(item.status)}</span></td>
+              <td><button class="btn-sm-del hub-match-review-btn" type="button" onclick="openHubMatchingItemPreview('${syncEscapeHtml(item.previewId)}')">Revisar</button></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      const selectedCount = hubMatchingState.selected.size;
+      if (meta) {
+        const from = hubMatchingState.total === 0 ? 0 : ((hubMatchingState.page - 1) * hubMatchingState.limit) + 1;
+        const to = Math.min(hubMatchingState.page * hubMatchingState.limit, hubMatchingState.total);
+        const stats = hubMatchingState.sourceStats;
+        const coverage = stats
+          ? ` | GLPI cache: ${stats.glpiDevices} device(s), ${stats.glpiDevicesWithAuvoId} com ID AUVO`
+          : '';
+        meta.textContent = `${from}-${to} de ${hubMatchingState.total} matches | ${selectedCount} selecionado(s)${coverage}`;
+      }
+      if (prevBtn) prevBtn.disabled = hubMatchingState.page <= 1;
+      if (nextBtn) nextBtn.disabled = !hubMatchingState.hasMore;
+      if (pageInfo) pageInfo.textContent = `Pagina ${hubMatchingState.page}`;
+      if (selectAll) {
+        const selectable = hubMatchingState.items.filter(item => item.canAutoConfirm && !item.alreadyLinked);
+        selectAll.checked = selectable.length > 0 && selectable.every(item => hubMatchingState.selected.has(item.previewId));
+        selectAll.disabled = selectable.length === 0;
+      }
+      if (batchBtn) batchBtn.disabled = selectedCount === 0;
+    }
+
+    function toggleHubMatchingSelection(previewId, checked) {
+      const item = hubMatchingState.items.find(row => row.previewId === previewId);
+      if (!item || !item.canAutoConfirm || item.alreadyLinked) return;
+      if (checked) hubMatchingState.selected.set(previewId, item);
+      else hubMatchingState.selected.delete(previewId);
+      renderHubMatchingTable();
+    }
+
+    function toggleHubMatchingSelectAll(checked) {
+      hubMatchingState.items.forEach(item => {
+        if (item.canAutoConfirm && !item.alreadyLinked) {
+          if (checked) hubMatchingState.selected.set(item.previewId, item);
+          else hubMatchingState.selected.delete(item.previewId);
+        }
+      });
+      renderHubMatchingTable();
+    }
+
+    function getHubMatchingPreviewRows(items) {
+      return items.map(item => `
+        <tr>
+          <td>${syncEscapeHtml(item.entityId)}</td>
+          <td>${syncEscapeHtml(item.hubName || '-')}</td>
+          <td>${syncEscapeHtml(item.auvoCustomerId || '-')}</td>
+          <td>${syncEscapeHtml(item.glpiDeviceId || '-')}</td>
+          <td>${syncEscapeHtml(item.glpiName || '-')}</td>
+          <td>${Number(item.score || 0).toFixed(0)}%</td>
+          <td>${hubMatchStatusLabel(item.status)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function openHubMatchingItemPreview(previewId) {
+      const item = hubMatchingState.items.find(row => row.previewId === previewId) || hubMatchingState.selected.get(previewId);
+      if (!item) return;
+      openHubMatchingPreviewModal([item], 'Preview individual');
+    }
+
+    function openHubMatchingBatchPreview() {
+      const items = Array.from(hubMatchingState.selected.values());
+      if (items.length === 0) return alert('Selecione pelo menos um match associavel.');
+      openHubMatchingPreviewModal(items, 'Preview em lote');
+    }
+
+    function openHubMatchingPreviewModal(items, title) {
+      const overlay = document.getElementById('hubMatchPreviewModal');
+      const count = document.getElementById('hubMatchPreviewCount');
+      const tbody = document.getElementById('hubMatchPreviewBody');
+      const titleEl = document.getElementById('hubMatchPreviewTitle');
+      if (!overlay || !tbody) return;
+      if (titleEl) titleEl.textContent = title;
+      if (count) count.textContent = `${items.length} vinculo(s) seriam gravados em hub_entity_links. Propagacao bloqueada.`;
+      tbody.innerHTML = getHubMatchingPreviewRows(items);
+      overlay.__hubMatchPreviewItems = items;
+      overlay.style.display = 'flex';
+    }
+
+    function closeHubMatchingPreviewModal() {
+      const overlay = document.getElementById('hubMatchPreviewModal');
+      if (overlay) overlay.style.display = 'none';
+    }
+
+    async function confirmHubMatchingBatch() {
+      const overlay = document.getElementById('hubMatchPreviewModal');
+      const items = overlay?.__hubMatchPreviewItems || [];
+      if (items.length === 0) return alert('Nenhum item para confirmar.');
+
+      if (!confirm(`Confirmar ${items.length} vinculo(s) HUB x GLPI? A propagacao para outras plataformas ficara bloqueada.`)) return;
+
+      const payload = {
+        items: items.map(item => ({
+          entityId: item.entityId,
+          glpiDeviceId: item.glpiDeviceId,
+          matchMode: item.matchMode,
+          score: item.score
+        })),
+        propagate: false
+      };
+
+      try {
+        const response = await fetch('/api/hub/matching/glpi/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getHubMatchTokenHeaders()
+          },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok && response.status !== 207) {
+          throw new Error(result.message || result.error || `HTTP ${response.status}`);
+        }
+
+        (result.results || []).forEach(row => {
+          if (row.success) {
+            const previewId = `hub-${row.entityId}-glpi-${row.glpiDeviceId}`;
+            hubMatchingState.selected.delete(previewId);
+          }
+        });
+
+        closeHubMatchingPreviewModal();
+        await loadHubMatchingPreview(hubMatchingState.page);
+        alert(`Confirmados: ${result.confirmed || 0}. Ja vinculados: ${result.alreadyLinked || 0}. Falhas: ${result.failed || 0}.`);
+      } catch (error) {
+        alert(`Falha ao confirmar associacao: ${error.message}`);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      ['hubMatchMode', 'hubMatchStatus', 'hubMatchSort', 'hubMatchMinScore', 'hubMatchIncludeLinked', 'hubMatchIncludeAmbiguous', 'hubMatchIncludeLowScore']
+        .forEach(id => document.getElementById(id)?.addEventListener('change', () => loadHubMatchingPreview(1)));
+      document.getElementById('hubMatchSearch')?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') loadHubMatchingPreview(1);
+      });
+    });
+
     // Boot Up
     switchTab('auvo');
     setTimeout(setInitialDates, 500); // Aguarda render async
@@ -761,6 +1116,37 @@
           <tbody id="errorTableBody">
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Preview HUB Matching -->
+  <div id="hubMatchPreviewModal" class="modal-overlay">
+    <div class="modal-body-glass" style="max-width: 980px;">
+      <div class="modal-header-glass">
+        <h3 id="hubMatchPreviewTitle">Preview em lote</h3>
+        <button class="close-btn" onclick="closeHubMatchingPreviewModal()">&times;</button>
+      </div>
+      <div class="hub-match-preview-note" id="hubMatchPreviewCount"></div>
+      <div style="padding: 0; overflow-y: auto; flex: 1; background: var(--bg-primary);">
+        <table class="hub-match-preview-table">
+          <thead>
+            <tr>
+              <th>HUB</th>
+              <th>Nome HUB</th>
+              <th>AUVO</th>
+              <th>GLPI</th>
+              <th>Nome GLPI</th>
+              <th>Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="hubMatchPreviewBody"></tbody>
+        </table>
+      </div>
+      <div class="hub-match-preview-footer">
+        <button class="btn-sm-del" type="button" onclick="closeHubMatchingPreviewModal()">Fechar</button>
+        <button class="btn-resume" type="button" onclick="confirmHubMatchingBatch()">Confirmar associacao</button>
       </div>
     </div>
   </div>

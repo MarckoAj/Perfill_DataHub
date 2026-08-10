@@ -22,11 +22,12 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Persistencia de tickets e tarefas.
 - [x] Cache local inicial para `Peripheral` em `glpi_devices`.
 - [x] Campo `Peripheral.contact_num` identificado como "ID do Auvo" para associacao com AUVO.
+- [x] Sync de `Peripheral` como entidade `devices` do GLPI, populando `glpi_devices`.
 - [x] Sync manual e automatizado.
 - [x] Endpoint BI.
 - [x] Endpoints operacionais para tickets e alertas.
 - [x] Participacao no Alert Engine.
-- [ ] Associacao automatica em lote de `Peripheral` com Hub via `contact_num` e fallback por nome.
+- [x] Associacao configuravel em lote de `Peripheral` com Hub via `contact_num`, nome ou ambos, com preview, score, ordenacao e confirmacao.
 
 ## AUVO
 
@@ -51,7 +52,11 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Tabela `hub_entity_links` para vinculos com plataformas.
 - [x] Tabela `hub_entity_history` para rastreabilidade inicial.
 - [x] Inclusao piloto de GLPI como fonte canonica complementar para `64-097`.
-- [ ] Inclusao automatica de GLPI como fonte canonica complementar para todos os matches confiaveis.
+- [x] Painel `/admin/sync` para preview e confirmacao de GLPI como fonte canonica complementar para matches confiaveis.
+- [x] Revisao individual de associacao GLPI no modal do cliente.
+- [x] Bloqueio explicito de propagacao para outras plataformas durante confirmacao HUB x GLPI.
+- [x] Validacao visual de confirmacao real HUB x GLPI em `/admin/sync`.
+- [ ] Fila dedicada para tratamento de matches ambiguos e baixo score.
 - [ ] Inclusao de Zabbix como fonte canonica.
 - [ ] Motor de divergencias por campo.
 
@@ -114,6 +119,7 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 
 - [x] Suite Jest/Supertest configurada.
 - [x] Testes de autenticacao/BI/integracoes em fases anteriores.
-- [ ] Expandir cobertura para HUB canonico.
+- [x] Cobertura inicial para matching HUB x GLPI.
+- [ ] Expandir cobertura para HUB canonico alem do matching.
 - [ ] Expandir cobertura para scheduler dinamico.
 - [ ] Expandir cobertura para regras do Alert Engine.

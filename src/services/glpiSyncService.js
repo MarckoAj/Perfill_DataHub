@@ -3,6 +3,7 @@ import glpiTicketRepository from "../repositories/glpi/glpiTicketRepository.js";
 import glpiRawRepository from "../repositories/glpi/glpiRawRepository.js";
 import glpiTicketTaskService from "./glpiTicketTaskService.js";
 import glpiSolutionService from "./glpiSolutionService.js";
+import glpiDeviceSyncService from "./glpiDeviceSyncService.js";
 import glpiUrlBuilder from "../utils/glpiUrlBuilder.js";
 import glpiClient from "../integrations/glpi/glpiClient.js";
 import syncLogRepository from "../repositories/syncLogRepository.js";
@@ -158,6 +159,7 @@ class GlpiSyncService {
              { id: 'atrasado', label: 'Tickets atrasados' },
              { id: 'pendente', label: 'Tickets pendentes' },
              { id: 'fechado', label: 'Tickets fechados' },
+             { id: 'devices', label: 'Dispositivos GLPI (Peripheral)' },
              { id: 'tarefas', label: 'Tarefas de Chamados (Secundárias)' },
              { id: 'solucoes', label: 'Soluções de Chamados (Secundárias)' }
           ];
@@ -200,6 +202,33 @@ class GlpiSyncService {
                   await glpiTicketRepository.updateLastSyncDate(ent.id);
                   this._setEntityState(ent.id, {
                       status: 'DONE', count: tDeltas.inserts + tDeltas.updates, targetCount: tDeltas.inserts + tDeltas.updates, deltas: tDeltas
+                  });
+              } else if (ent.id === 'devices') {
+                  this._setEntityState(ent.id, { status: 'SYNCING' });
+                  const dDeltas = await glpiDeviceSyncService.syncAllDevices({
+                    onProgress: async (progress) => {
+                      this._setEntityState(ent.id, {
+                        status: 'SYNCING',
+                        count: progress.count,
+                        page: progress.page,
+                        targetCount: progress.targetCount,
+                        totalPages: progress.totalPages,
+                        deltas: {
+                          inserts: 0,
+                          updates: progress.count,
+                          skips: 0,
+                          errors: 0,
+                          deletes: 0
+                        }
+                      });
+                    }
+                  });
+                  await glpiTicketRepository.updateLastSyncDate(ent.id);
+                  this._setEntityState(ent.id, {
+                      status: 'DONE',
+                      count: dDeltas.processed,
+                      targetCount: dDeltas.targetCount,
+                      deltas: dDeltas
                   });
               } else if (ent.id === 'solucoes') {
                   this._setEntityState(ent.id, { status: 'SYNCING' });
@@ -274,7 +303,7 @@ class GlpiSyncService {
 
   async syncAll() {
       // Alias para legacy background jobs
-      return this.runQueue(["novo", "atribuido", "planejado", "pendente", "solucionado", "fechado", "atrasado", "tarefas", "solucoes"]);
+      return this.runQueue(["novo", "atribuido", "planejado", "pendente", "solucionado", "fechado", "atrasado", "devices", "tarefas", "solucoes"]);
   }
 }
 

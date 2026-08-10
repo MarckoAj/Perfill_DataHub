@@ -46,6 +46,15 @@ A entidade operacional principal passa a ser o dispositivo/ponto. A carga inicia
 - [x] Ajustar modal para campo unico `ID do ativo`, com hover exibindo equivalentes HUB/AUVO/GLPI.
 - [x] Separar `platformFields` por aba: `hub`, `auvo`, `glpi`, `zabbix`.
 - [x] Ajustar alinhamento dos campos gerais, incluindo latitude e longitude lado a lado.
+- [x] Criar preview backend de associacao HUB x GLPI por `ID`, `Nome` ou `ID + Nome`.
+- [x] Adicionar aba `HUB x GLPI` em `/admin/sync` com filtros, paginacao, score e selecao multipla.
+- [x] Adicionar revisao individual de associacao GLPI no modal do cliente.
+- [x] Confirmar associacoes selecionadas em `hub_entity_links` com historico em `hub_entity_history`.
+- [x] Bloquear propagacao para outras plataformas nesta fase.
+- [x] Adicionar testes unitarios do service de matching HUB x GLPI.
+- [x] Adicionar sync de `GLPI Peripheral` como entidade `devices` do sync GLPI.
+- [x] Popular `glpi_devices` com 6501 devices GLPI; 24 possuem `auvoCustomerId` preenchido.
+- [x] Validar visualmente em `/admin/sync` a confirmacao de vinculo real HUB x GLPI.
 
 ## Modelo Inicial
 
@@ -130,13 +139,14 @@ Teste por lote:
 
 ## Proximas Fases
 
-- Implementar associacao automatica GLPI/AUVO em camadas:
+- Refinar associacao HUB x GLPI em camadas:
   1. Match principal: `GLPI Peripheral.contact_num` = `customers_auvo.customerId`.
-  2. Fallback: nome normalizado entre `GLPI Peripheral.name` e `customers_auvo.description`.
-  3. Se houver multiplos candidatos ou score baixo, marcar como pendente de revisao, sem vincular automaticamente.
+  2. Match por nome normalizado entre `GLPI Peripheral.name` e `customers_auvo.description`.
+  3. Match combinado `ID + Nome`, exigindo os dois criterios ao mesmo tempo.
+  4. Se houver multiplos candidatos ou score baixo, manter revisao manual.
 - Garantir refresh/inclusao do Hub a partir de `customers_auvo` antes ou durante a carga GLPI.
-- Sincronizar/cachear `GLPI Peripheral` em `glpi_devices` para todos os matches confiaveis.
-- Criar painel de revisao/configuracao de vinculos pendentes.
+- Refinar enriquecimento de `glpi_devices` com campos adicionais de `Peripheral` e `Location`, se necessario.
+- Evoluir painel de revisao/configuracao de vinculos pendentes para tratar fila de ambiguidades.
 - Adicionar Zabbix como fonte para host/IP/status.
 - Criar motor de divergencias por campo critico.
 - Permitir escolha manual da fonte canonica por campo.
@@ -144,4 +154,4 @@ Teste por lote:
 
 ## Observacao Para Continuidade Em Novo Chat
 
-Retomar daqui: a base do modal e do Hub ja foi criada. O proximo passo e implementar uma rotina leve/segura de associacao automatica Hub -> GLPI device usando `Peripheral.contact_num` como chave primaria contra `customers_auvo.customerId`, com fallback por nome normalizado somente quando houver match unico e score alto. Evitar voltar ao vinculo hardcoded do piloto; usar `hub_entity_links` e `glpi_devices`.
+Retomar daqui: o painel de associacao HUB x GLPI foi validado visualmente em `/admin/sync` com confirmacao de vinculo real em `hub_entity_links` e historico em `hub_entity_history`. A propagacao para AUVO/GLPI externo/Zabbix segue bloqueada. `glpi_devices` foi populada com 6501 `Peripheral`; 24 possuem ID AUVO e ja geram matches `ID + Nome`. O proximo passo e evoluir a fila de revisao de ambiguidades e baixo score.

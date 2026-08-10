@@ -346,6 +346,229 @@ function requestHubSync(platform) {
   _renderBody(client);
 }
 
+async function fetchHubGlpiMatchPreview(entityId, mode = "both") {
+  const token = localStorage.getItem("authToken");
+  const response = await fetch(`/api/hub/entities/${entityId}/matching/glpi/preview?mode=${encodeURIComponent(mode)}`, {
+    headers: token ? { authorization: `Bearer ${token}` } : {}
+  });
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload = await response.json();
+  return payload.data;
+}
+
+function ensureHubGlpiMatchModal() {
+  let overlay = document.getElementById("hubGlpiMatchOverlay");
+  if (overlay) return overlay;
+
+  overlay = document.createElement("div");
+  overlay.id = "hubGlpiMatchOverlay";
+  overlay.className = "pm-match-overlay";
+  overlay.innerHTML = `
+    <div class="pm-match-modal">
+      <div class="pm-match-header">
+        <div>
+          <div class="pm-match-kicker">HUB x GLPI</div>
+          <h3>Associacao do ativo</h3>
+        </div>
+        <button class="pm-match-close" type="button" onclick="closeHubGlpiMatchModal()" aria-label="Fechar">x</button>
+      </div>
+      <div class="pm-match-controls">
+        <button class="pm-match-mode active" type="button" data-match-mode="both" onclick="changeHubGlpiMatchMode('both')">ID + Nome</button>
+        <button class="pm-match-mode" type="button" data-match-mode="id" onclick="changeHubGlpiMatchMode('id')">ID</button>
+        <button class="pm-match-mode" type="button" data-match-mode="name" onclick="changeHubGlpiMatchMode('name')">Nome</button>
+      </div>
+      <div class="pm-match-body" id="hubGlpiMatchBody"></div>
+      <div class="pm-match-footer">
+        <button class="pm-match-secondary" type="button" onclick="closeHubGlpiMatchModal()">Fechar</button>
+        <button class="pm-match-primary" id="hubGlpiMatchConfirmBtn" type="button" onclick="confirmHubGlpiMatchFromModal()" disabled>Confirmar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) closeHubGlpiMatchModal();
+  });
+  return overlay;
+}
+
+function getHubGlpiMatchStatusLabel(status) {
+  const labels = {
+    sem_vinculo: "Sem vinculo",
+    match_id: "Match por ID",
+    match_nome: "Match por nome",
+    match_ambos: "Match por ambos",
+    ambiguo: "Revisao manual",
+    baixo_score: "Baixo score",
+    ja_vinculado: "Ja vinculado"
+  };
+  return labels[status] || status || "Indefinido";
+}
+
+function getHubGlpiMatchStatusClass(status) {
+  if (status === "match_id" || status === "match_nome" || status === "match_ambos" || status === "ja_vinculado") return "success";
+  if (status === "ambiguo" || status === "baixo_score") return "warning";
+  return "muted";
+}
+
+function renderHubGlpiMatchLoading() {
+  const body = document.getElementById("hubGlpiMatchBody");
+  if (!body) return;
+  body.innerHTML = `<div class="pm-match-empty">Carregando preview...</div>`;
+}
+
+function renderHubGlpiMatchError(message) {
+  const body = document.getElementById("hubGlpiMatchBody");
+  if (!body) return;
+  body.innerHTML = `<div class="pm-match-empty danger">Falha ao carregar: ${_escapeHtml(message)}</div>`;
+}
+
+function renderHubGlpiMatchPreview(preview) {
+  const body = document.getElementById("hubGlpiMatchBody");
+  const confirmBtn = document.getElementById("hubGlpiMatchConfirmBtn");
+  if (!body) return;
+
+  if (!preview) {
+    body.innerHTML = `<div class="pm-match-empty">Nenhuma entidade HUB encontrada.</div>`;
+    if (confirmBtn) confirmBtn.disabled = true;
+    return;
+  }
+
+  window.__currentHubGlpiMatchPreview = preview;
+
+  const candidates = preview.candidates || [];
+  const statusClass = getHubGlpiMatchStatusClass(preview.status);
+  const candidateRows = candidates.length
+    ? candidates.map(candidate => `
+        <label class="pm-match-candidate">
+          <input type="radio" name="hubGlpiCandidate" value="${_escapeHtml(candidate.glpiDeviceId || "")}" ${candidate.glpiDeviceId === preview.glpiDeviceId ? "checked" : ""}>
+          <div class="pm-match-candidate-main">
+            <strong>${_escapeHtml(candidate.glpiName || "GLPI sem nome")}</strong>
+            <span>ID GLPI ${_escapeHtml(candidate.glpiDeviceId || "-")} | AUVO ${_escapeHtml(candidate.glpiAuvoCustomerId || "-")}</span>
+          </div>
+          <div class="pm-match-score">${Number(candidate.score || 0).toFixed(0)}%</div>
+        </label>
+      `).join("")
+    : `<div class="pm-match-empty">Nenhum candidato GLPI local encontrado.</div>`;
+
+  body.innerHTML = `
+    <div class="pm-match-summary">
+      <div>
+        <span>HUB</span>
+        <strong>${_escapeHtml(preview.hubName || "-")}</strong>
+        <small>ID ${_escapeHtml(String(preview.entityId || "-"))} | AUVO ${_escapeHtml(preview.auvoCustomerId || "-")}</small>
+      </div>
+      <div class="pm-match-result">
+        <span class="pm-match-badge ${statusClass}">${getHubGlpiMatchStatusLabel(preview.status)}</span>
+        <strong>${Number(preview.score || 0).toFixed(0)}%</strong>
+      </div>
+    </div>
+    <div class="pm-match-grid">
+      <div class="pm-match-field">
+        <span>Origem</span>
+        <strong>${_escapeHtml(preview.matchOrigin || "-")}</strong>
+      </div>
+      <div class="pm-match-field">
+        <span>Modo</span>
+        <strong>${_escapeHtml(preview.matchMode || "-")}</strong>
+      </div>
+      <div class="pm-match-field">
+        <span>Destino</span>
+        <strong>${_escapeHtml(preview.glpiDeviceId || "-")}</strong>
+      </div>
+    </div>
+    <div class="pm-match-candidates">
+      ${candidateRows}
+    </div>
+  `;
+
+  if (confirmBtn) {
+    confirmBtn.disabled = !preview.canAutoConfirm || preview.alreadyLinked || !preview.glpiDeviceId;
+    confirmBtn.title = preview.alreadyLinked
+      ? "Vinculo ja existente"
+      : (confirmBtn.disabled ? "Preview atual exige revisao ou nao possui candidato confirmavel" : "Confirmar vinculo HUB x GLPI");
+  }
+}
+
+async function loadHubGlpiMatchPreview(mode = "both") {
+  const client = _getCurrentClient();
+  const entityId = client?.entityId || client?.hubId || client?.clientId;
+  if (!entityId) {
+    renderHubGlpiMatchError("cliente sem entityId");
+    return;
+  }
+
+  renderHubGlpiMatchLoading();
+  try {
+    const preview = await fetchHubGlpiMatchPreview(entityId, mode);
+    renderHubGlpiMatchPreview(preview);
+  } catch (error) {
+    renderHubGlpiMatchError(error.message);
+  }
+}
+
+function openHubGlpiMatchModal(mode = "both") {
+  const overlay = ensureHubGlpiMatchModal();
+  overlay.classList.add("active");
+  document.body.style.overflow = "hidden";
+  changeHubGlpiMatchMode(mode);
+}
+
+function closeHubGlpiMatchModal() {
+  const overlay = document.getElementById("hubGlpiMatchOverlay");
+  if (!overlay) return;
+  overlay.classList.remove("active");
+  document.body.style.overflow = document.getElementById("pointModalOverlay")?.classList.contains("active") ? "hidden" : "auto";
+  window.__currentHubGlpiMatchPreview = null;
+}
+
+function changeHubGlpiMatchMode(mode) {
+  document.querySelectorAll(".pm-match-mode").forEach(button => {
+    button.classList.toggle("active", button.dataset.matchMode === mode);
+  });
+  loadHubGlpiMatchPreview(mode);
+}
+
+async function confirmHubGlpiMatchFromModal() {
+  const preview = window.__currentHubGlpiMatchPreview;
+  const selectedCandidate = document.querySelector('input[name="hubGlpiCandidate"]:checked')?.value;
+  const glpiDeviceId = selectedCandidate || preview?.glpiDeviceId;
+  if (!preview || !glpiDeviceId) return;
+
+  if (!confirm(`Confirmar vinculo HUB ${preview.entityId} com GLPI ${glpiDeviceId}? A propagacao ficara bloqueada.`)) return;
+
+  const token = localStorage.getItem("authToken");
+  try {
+    const response = await fetch(`/api/hub/entities/${preview.entityId}/matching/glpi/confirm`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        glpiDeviceId,
+        matchMode: preview.matchMode,
+        score: preview.score,
+        propagate: false
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || `HTTP ${response.status}`);
+
+    alert(result.message || "Vinculo confirmado.");
+    closeHubGlpiMatchModal();
+    const client = _getCurrentClient();
+    if (client?.entityId && typeof fetchHubEntityDetails === "function" && typeof mapHubEntityDetailsToModalClient === "function") {
+      const details = await fetchHubEntityDetails(client.entityId);
+      const refreshedClient = mapHubEntityDetailsToModalClient(details, client);
+      window.__currentPointModalClient = refreshedClient;
+      _renderBody(refreshedClient);
+    }
+  } catch (error) {
+    alert(`Falha ao confirmar vinculo: ${error.message}`);
+  }
+}
+
 /* =========================================================
    HEADER RENDER
 ========================================================= */
@@ -831,14 +1054,14 @@ function _sidebarSync() {
 function _sidebarHubSyncActions() {
   const client = _getCurrentClient() || {};
   const canSyncFromAuvo = Boolean(client.sources?.auvo?.customer);
-  const canSyncFromGlpi = Boolean(client.sources?.glpi?.device || client.sources?.glpi?.tickets?.length);
+  const canReviewGlpi = Boolean(client.entityId || client.hubId || client.clientId);
 
   return `
     <div class="pm-sidebar-card">
       <div class="pm-sidebar-title">Acoes rapidas</div>
       <div class="pm-actions">
         <button class="pm-action-btn cyan" onclick="requestHubSync('auvo')" ${canSyncFromAuvo ? "" : "disabled"}>${pmIcons.refresh} <span>Sincronizar HUB com AUVO</span></button>
-        <button class="pm-action-btn cyan" onclick="requestHubSync('glpi')" ${canSyncFromGlpi ? "" : "disabled"}>${pmIcons.refresh} <span>Sincronizar HUB com GLPI</span></button>
+        <button class="pm-action-btn cyan" onclick="openHubGlpiMatchModal('both')" ${canReviewGlpi ? "" : "disabled"}>${pmIcons.glpi} <span>Revisar associacao GLPI</span></button>
         <button class="pm-action-btn orange">${pmIcons.warn} <span>Resolver divergencias pendentes</span></button>
       </div>
     </div>`;
