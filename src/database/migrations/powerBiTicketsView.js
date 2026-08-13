@@ -47,10 +47,68 @@ async function addIndexIfMissing(tableName, indexName, columnsSql) {
 export async function createPowerBiTicketsView() {
   const viewQuery = `
     CREATE OR REPLACE VIEW vw_powerbi_tickets AS
+    WITH device_candidates AS (
+      SELECT
+        t.ticketId,
+        gd.deviceId,
+        1 AS matchPriority
+      FROM tickets t
+      JOIN glpi_devices gd
+        ON t.idLocalizacaoPonto IS NOT NULL
+        AND gd.locationId = t.idLocalizacaoPonto
+
+      UNION ALL
+
+      SELECT
+        t.ticketId,
+        CAST(glpiLink.sourceNativeId AS UNSIGNED) AS deviceId,
+        2 AS matchPriority
+      FROM tickets t
+      JOIN hub_entity_sources auvoSource
+        ON auvoSource.sourceSystem = 'AUVO'
+        AND auvoSource.sourceEntity = 'customer'
+        AND auvoSource.isActive = 1
+        AND auvoSource.sourceName COLLATE utf8mb4_unicode_ci = t.nomeCliente COLLATE utf8mb4_unicode_ci
+      JOIN hub_entity_links glpiLink
+        ON glpiLink.entityId = auvoSource.entityId
+        AND glpiLink.sourceSystem = 'GLPI'
+        AND glpiLink.sourceEntity = 'device'
+        AND glpiLink.isActive = 1
+
+      UNION ALL
+
+      SELECT
+        t.ticketId,
+        gd.deviceId,
+        3 AS matchPriority
+      FROM tickets t
+      JOIN customers_auvo auvoCustomer
+        ON auvoCustomer.description COLLATE utf8mb4_unicode_ci = t.nomeCliente COLLATE utf8mb4_unicode_ci
+      JOIN glpi_devices gd
+        ON gd.auvoCustomerId = auvoCustomer.customerId
+    ),
+    ticket_device_match AS (
+      SELECT
+        ticketId,
+        CAST(SUBSTRING_INDEX(GROUP_CONCAT(deviceId ORDER BY matchPriority ASC, deviceId ASC), ',', 1) AS UNSIGNED) AS glpiDeviceId,
+        GROUP_CONCAT(DISTINCT deviceId ORDER BY deviceId ASC SEPARATOR ',') AS glpiDeviceIds,
+        COUNT(DISTINCT deviceId) AS glpiDeviceCount
+      FROM device_candidates
+      WHERE deviceId IS NOT NULL
+      GROUP BY ticketId
+    )
     SELECT
       t.ticketId,
       t.nomeCliente,
       t.idLocalizacaoPonto,
+      tdm.glpiDeviceId,
+      tdm.glpiDeviceIds,
+      COALESCE(tdm.glpiDeviceCount, 0) AS glpiDeviceCount,
+      gd.name AS glpiDeviceName,
+      gd.auvoCustomerId AS glpiDeviceAuvoCustomerId,
+      gd.locationId AS glpiDeviceLocationId,
+      gd.locationName AS glpiDeviceLocationName,
+      gd.status AS glpiDeviceStatus,
       t.titulo,
       t.descricao,
       t.dataCriacao,
@@ -92,6 +150,8 @@ export async function createPowerBiTicketsView() {
       ORDER BY sol2.date_mod DESC, sol2.id DESC
       LIMIT 1
     )
+    LEFT JOIN ticket_device_match tdm ON tdm.ticketId = t.ticketId
+    LEFT JOIN glpi_devices gd ON gd.deviceId = tdm.glpiDeviceId
   `;
 
   await pool.query(viewQuery);
@@ -105,4 +165,6 @@ export async function createPowerBiTicketsView() {
   await addIndexIfMissing("tickets", "idx_tickets_status_created", "status, dataCriacao");
   await addIndexIfMissing("tickets", "idx_tickets_project_created", "projeto, dataCriacao");
   await addIndexIfMissing("glpi_tickettasks", "idx_glpi_tickettasks_ticket_mod", "tickets_id, date_mod, id");
+  await addIndexIfMissing("glpi_itilsolutions", "idx_glpi_solutions_ticket_mod", "tickets_id, date_mod, id");
+  await addIndexIfMissing("hub_entity_sources", "idx_hub_sources_entity_system", "entityId, sourceSystem, sourceEntity, isActive");
 }

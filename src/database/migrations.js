@@ -191,7 +191,6 @@ export async function runMigrations() {
         await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'glpi_tickettasks' verificada/criada com sucesso.");
         await createGlpiSolutionsTable();
-        await createPowerBiTicketsView();
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
 
@@ -237,6 +236,7 @@ export async function runMigrations() {
         // Tabelas canonicas do HUB
         await createHubCoreTables();
         await createHubOperationalLinksTables();
+        await createPowerBiTicketsView();
 
         // Garantir existência e senha do usuário administrador nativo (admin)
         console.log("Migration: Garantindo integridade do usuário 'admin'...");
