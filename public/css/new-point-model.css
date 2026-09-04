@@ -453,6 +453,9 @@
 }
 
 .pm-op-tags-compact .pm-op-tags-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 8px;
 }
 

@@ -17,8 +17,10 @@ export const listHubEntities = asyncHandler(async (req, res) => {
     : 0;
 
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+  const includeTags = typeof req.query.includeTags === "string" ? req.query.includeTags : "";
+  const excludeTags = typeof req.query.excludeTags === "string" ? req.query.excludeTags : undefined;
 
-  const result = await hubEntityService.listEntities({ refresh, limit, offset, search });
+  const result = await hubEntityService.listEntities({ refresh, limit, offset, search, includeTags, excludeTags });
 
   res.status(200).json({
     success: true,
@@ -53,6 +55,28 @@ export const getHubEntityDetails = asyncHandler(async (req, res) => {
     success: true,
     data: entity
   });
+});
+
+export const createManualHubPhysicalStatus = asyncHandler(async (req, res) => {
+  const entityId = parseInt(req.params.entityId, 10);
+
+  if (!Number.isInteger(entityId) || entityId <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "entityId invalido"
+    });
+  }
+
+  const result = await hubEntityService.createManualPhysicalStatusChange({
+    entityId,
+    fromStatus: req.body?.fromStatus,
+    toStatus: req.body?.toStatus,
+    comment: req.body?.comment,
+    referenceUrl: req.body?.referenceUrl,
+    createdBy: req.user?.username || "admin_panel"
+  });
+
+  res.status(result.success ? 201 : 400).json(result);
 });
 
 export const listHubOperationalTags = asyncHandler(async (req, res) => {

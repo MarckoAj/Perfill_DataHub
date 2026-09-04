@@ -450,6 +450,56 @@ async function addHubOperationalTag() {
   }
 }
 
+async function addManualPhysicalStatusChange() {
+  const client = _getCurrentClient();
+  const entityId = client?.entityId || client?.hubId || client?.clientId;
+  const toStatus = document.getElementById("pmManualPhysicalStatus")?.value || "";
+  const referenceUrl = document.getElementById("pmManualPhysicalLink")?.value?.trim() || "";
+  const comment = document.getElementById("pmManualPhysicalComment")?.value?.trim() || "";
+
+  if (!entityId || !toStatus) return;
+
+  const token = localStorage.getItem("authToken");
+  try {
+    const response = await fetch(`/api/hub/entities/${encodeURIComponent(entityId)}/physical-status/manual`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        fromStatus: client.pointStatus?.currentStatus || "N/A",
+        toStatus,
+        referenceUrl,
+        comment
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.error || `HTTP ${response.status}`);
+
+    await refreshCurrentHubClientAfterTagChange();
+  } catch (error) {
+    alert(`Falha ao registrar status manual: ${error.message}`);
+  }
+}
+
+async function openRelatedHubEntity(entityId) {
+  if (!entityId || typeof fetchHubEntityDetails !== "function" || typeof mapHubEntityDetailsToModalClient !== "function") return;
+
+  try {
+    const currentClient = _getCurrentClient();
+    const details = await fetchHubEntityDetails(entityId);
+    const nextClient = mapHubEntityDetailsToModalClient(details, currentClient);
+    window.__currentPointModalClient = nextClient;
+    currentPlatformTab = "hub";
+    currentPointTab = "status";
+    _renderHeader(nextClient, document.getElementById("pointModalOverlay"));
+    _renderBody(nextClient);
+  } catch (error) {
+    alert(`Falha ao abrir ponto novo: ${error.message}`);
+  }
+}
+
 async function removeHubOperationalTag(tagId) {
   const currentClient = _getCurrentClient();
   const label = (currentClient?.operationalTagDefinitions || []).find(tag => Number(tag.tagId) === Number(tagId))?.label || `Tag ${tagId}`;
@@ -1050,10 +1100,14 @@ function _subTabContent(client) {
         <!-- Campos à esquerda — grade 2 colunas horizontal -->
         <div class="pm-fields-grid">
           <div>
+            ${_field("Status físico atual",    client.pointStatus.currentStatus)}
+            ${_field("Originado de",           client.pointStatus.originatedFrom)}
+            ${_field("Alterado para",          client.pointStatus.changedTo)}
             ${_field("Data da vistoria",       client.pointStatus.inspectionDate)}
             ${_field("Instalação da câmera",   client.pointStatus.cameraInstallation)}
             ${_field("Substatus Câmera",       client.pointStatus.cameraSubstitution)}
             ${_field("Data Desinstalação",     client.pointStatus.uninstallDate)}
+            ${_field("Data Remanejamento",     client.pointStatus.remanejadoDate)}
             ${_field("Poste Dedicado",         client.pointStatus.dedicatedPole)}
           </div>
           <div>
@@ -1074,19 +1128,23 @@ function _subTabContent(client) {
           <div class="pm-split-history-list">
             ${(client.operationalHistory || []).map(item => `
               <div class="pm-split-history-item">
-                <div class="pm-split-history-item-title">${item.title}</div>
+                <div class="pm-split-history-item-title">${_escapeHtml(item.title || "Evento físico")}</div>
                 <div class="pm-split-history-item-row">
                   <div class="pm-split-history-kv">
                     <span class="pm-split-kv-key">DE</span>
-                    <span class="pm-split-kv-val">${item.from}</span>
+                    <span class="pm-split-kv-val">${_escapeHtml(item.from || "N/A")}</span>
                   </div>
                   <div class="pm-split-history-arrow">→</div>
                   <div class="pm-split-history-kv">
                     <span class="pm-split-kv-key">PARA</span>
-                    <span class="pm-split-kv-val">${item.to}</span>
+                    <span class="pm-split-kv-val">${_escapeHtml(item.to || "N/A")}</span>
                   </div>
                 </div>
-                <div class="pm-split-history-date">${item.date}</div>
+                <div class="pm-split-history-date">
+                  ${_escapeHtml(_formatDateTime(item.date || item.at))}
+                  ${item.linkUrl ? `<a href="${_escapeHtml(item.linkUrl)}" target="_blank" rel="noopener noreferrer">Abrir tarefa AUVO</a>` : ""}
+                  ${item.relatedEntityId ? `<button type="button" onclick="openRelatedHubEntity(${Number(item.relatedEntityId)})">${item.relationType === "originated_from" ? "Abrir ponto de origem" : "Abrir ponto novo"}</button>` : ""}
+                </div>
               </div>`).join("")}
           </div>
           <div class="pm-op-tags-compact">
@@ -1098,6 +1156,25 @@ function _subTabContent(client) {
               <input id="pmOperationalTagInput" class="pm-op-tag-input" type="text" placeholder="Nova tag">
             </div>
             <div class="pm-op-tags-list">${definitionsHtml}</div>
+          </div>
+          <div class="pm-op-tags-compact">
+            <div class="pm-op-tags-compact-head">
+              <span>Alteração manual de status</span>
+              <button type="button" onclick="addManualPhysicalStatusChange()">Salvar</button>
+            </div>
+            <div class="pm-op-tags-form">
+              <select id="pmManualPhysicalStatus" class="pm-op-tag-input">
+                <option value="">Selecionar status</option>
+                <option value="NOVO">NOVO</option>
+                <option value="VISTORIADO">VISTORIADO</option>
+                <option value="INSTALADO">INSTALADO</option>
+                <option value="REINSTALADO">REINSTALADO</option>
+                <option value="REMANEJADO">REMANEJADO</option>
+                <option value="DESINSTALADO">DESINSTALADO</option>
+              </select>
+              <input id="pmManualPhysicalLink" class="pm-op-tag-input" type="url" placeholder="Link relacionado">
+              <textarea id="pmManualPhysicalComment" class="pm-tag-dialog-comment" placeholder="Observação"></textarea>
+            </div>
           </div>
         </div>
       </div>`;

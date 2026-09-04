@@ -106,6 +106,11 @@ let hubPagination = {
 };
 let hubSearchText = '';
 let hubSearchTimer = null;
+let hubOperationalTags = [];
+let hubTagFilters = {
+    include: new Set(),
+    exclude: new Set(['DESINSTALADO'])
+};
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -130,6 +135,10 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         });
         const normalizedSearch = String(searchText || '').trim();
         if (normalizedSearch) params.set('search', normalizedSearch);
+        if (hubTagFilters.include.size > 0) {
+            params.set('includeTags', Array.from(hubTagFilters.include).join(','));
+        }
+        params.set('excludeTags', Array.from(hubTagFilters.exclude).join(','));
 
         const response = await fetch(`/api/hub/entities?${params.toString()}`, {
             headers: token ? { authorization: `Bearer ${token}` } : {}
@@ -174,7 +183,8 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
             point: entity.name || `Entidade HUB ${entity.entityId}`,
             city: entity.latitude ?? 'N/A',
             unit: entity.longitude ?? 'N/A',
-            responsible: entity.sourceSystem || 'HUB'
+            responsible: entity.sourceSystem || 'HUB',
+            operationalTags: entity.operationalTags || []
         }));
     } catch (error) {
         hubPagination = {
@@ -189,6 +199,78 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         };
         console.warn('[Clientes] Usando dados mockados. Falha ao carregar /api/hub/entities:', error.message);
     }
+}
+
+async function loadHubOperationalTags() {
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/api/hub/tags', {
+            headers: token ? { authorization: `Bearer ${token}` } : {}
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const payload = await response.json();
+        hubOperationalTags = Array.isArray(payload.data) ? payload.data : [];
+        renderHubTagFilters();
+    } catch (error) {
+        console.warn('[Clientes] Falha ao carregar tags operacionais:', error.message);
+        hubOperationalTags = [];
+        renderHubTagFilters();
+    }
+}
+
+function renderHubTagFilters() {
+    const container = document.getElementById('hubTagFilters');
+    if (!container) return;
+
+    if (hubOperationalTags.length === 0) {
+        container.innerHTML = '<div class="tag-filter-empty">Nenhuma tag cadastrada</div>';
+        return;
+    }
+
+    const renderGroup = (title, type) => `
+      <div class="tag-filter-group">
+        <span>${title}</span>
+        <div class="tag-filter-options">
+          ${hubOperationalTags.map(tag => {
+            const normalized = tag.normalizedLabel || tag.label;
+            const checked = hubTagFilters[type].has(normalized) ? 'checked' : '';
+            return `
+              <label class="tag-filter-option">
+                <input type="checkbox" data-tag-filter="${type}" value="${escapeHtml(normalized)}" ${checked}>
+                ${escapeHtml(tag.label)}
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = renderGroup('Incluir tags', 'include') + renderGroup('Ocultar tags', 'exclude');
+    container.querySelectorAll('input[data-tag-filter]').forEach(input => {
+        input.addEventListener('change', handleHubTagFilterChange);
+    });
+}
+
+function handleHubTagFilterChange(event) {
+    const type = event.target.dataset.tagFilter;
+    const value = event.target.value;
+    if (!hubTagFilters[type]) return;
+
+    if (event.target.checked) hubTagFilters[type].add(value);
+    else hubTagFilters[type].delete(value);
+
+    runHubSearch(hubSearchText).catch(error => {
+        console.warn('[Clientes] Falha ao aplicar filtro de tags:', error.message);
+    });
+}
+
+function renderOperationalTagChips(tags = []) {
+    if (!Array.isArray(tags) || tags.length === 0) return '<span class="hub-tag-chip empty">Sem tags</span>';
+
+    return tags
+        .map(tag => `<span class="hub-tag-chip">${escapeHtml(tag.label || tag.normalizedLabel || tag)}</span>`)
+        .join('');
 }
 
 function mapHubEntityToModalClient(entity) {
@@ -220,10 +302,15 @@ function mapHubEntityToModalClient(entity) {
             availabilityDate: 'N/A'
         },
         pointStatus: {
+            currentStatus: 'N/A',
+            originatedFrom: 'N/A',
+            changedTo: 'N/A',
+            relatedEntityId: null,
             inspectionDate: 'N/A',
             cameraInstallation: 'N/A',
             cameraSubstitution: 'N/A',
             uninstallDate: 'N/A',
+            remanejadoDate: 'N/A',
             dedicatedPole: 'N/A',
             installationDate: 'N/A',
             boxType: 'N/A',
@@ -232,6 +319,7 @@ function mapHubEntityToModalClient(entity) {
             armInstallation: 'N/A',
             poleStatus: 'N/A'
         },
+        operationalTags: entity.operationalTags || [],
         operationalHistory: [],
         attendances: []
     };
@@ -259,6 +347,10 @@ function mapTaskStatus(task) {
 function mapHubEntityDetailsToModalClient(details, fallbackClient) {
     const auvoCustomer = details.sources?.auvo?.customer || null;
     const auvoTasks = details.sources?.auvo?.recentTasks || [];
+    const physicalStatus = details.physicalStatus || {};
+    const physicalSummary = details.sources?.auvo?.physicalStatusSummary || physicalStatus.summary || {};
+    const physicalHistory = details.sources?.auvo?.physicalStatusHistory || physicalStatus.history || [];
+    const lineageLink = physicalStatus.lineageLink || {};
     const glpiTickets = details.sources?.glpi?.tickets || [];
     const glpiDevice = details.sources?.glpi?.device || null;
     const name = details.normalizedDisplayName || details.displayName || auvoCustomer?.description || fallbackClient?.assetName || `HUB ${details.entityId}`;
@@ -318,20 +410,31 @@ function mapHubEntityDetailsToModalClient(details, fallbackClient) {
             uptime: 'N/A',
             availabilityDate: 'N/A'
         },
-        pointStatus: fallbackClient?.pointStatus || {
-            inspectionDate: 'N/A',
-            cameraInstallation: 'N/A',
-            cameraSubstitution: 'N/A',
-            uninstallDate: 'N/A',
-            dedicatedPole: 'N/A',
-            installationDate: 'N/A',
-            boxType: 'N/A',
-            boxInstallation: 'N/A',
-            boxInstallationDate: 'N/A',
-            armInstallation: 'N/A',
-            poleStatus: 'N/A'
+        pointStatus: {
+            ...(fallbackClient?.pointStatus || {}),
+            currentStatus: physicalSummary.currentStatus || fallbackClient?.pointStatus?.currentStatus || 'N/A',
+            originatedFrom: lineageLink.relationType === 'originated_from'
+                ? (lineageLink.fromName || `AUVO ${lineageLink.fromCustomerId}`)
+                : fallbackClient?.pointStatus?.originatedFrom || 'N/A',
+            changedTo: lineageLink.relationType === 'changed_to'
+                ? (lineageLink.toName || `AUVO ${lineageLink.toCustomerId}`)
+                : fallbackClient?.pointStatus?.changedTo || 'N/A',
+            relatedEntityId: lineageLink.fromEntityId || lineageLink.toEntityId || null,
+            inspectionDate: formatDateTime(physicalSummary.inspectionDate) || fallbackClient?.pointStatus?.inspectionDate || 'N/A',
+            cameraInstallation: formatDateTime(physicalSummary.cameraInstallation) || fallbackClient?.pointStatus?.cameraInstallation || 'N/A',
+            cameraSubstitution: formatDateTime(physicalSummary.cameraSubstitution) || fallbackClient?.pointStatus?.cameraSubstitution || 'N/A',
+            uninstallDate: formatDateTime(physicalSummary.uninstallDate) || fallbackClient?.pointStatus?.uninstallDate || 'N/A',
+            remanejadoDate: formatDateTime(physicalSummary.remanejadoDate) || fallbackClient?.pointStatus?.remanejadoDate || 'N/A',
+            dedicatedPole: fallbackClient?.pointStatus?.dedicatedPole || 'N/A',
+            installationDate: formatDateTime(physicalSummary.cameraInstallation) || fallbackClient?.pointStatus?.installationDate || 'N/A',
+            boxType: fallbackClient?.pointStatus?.boxType || 'N/A',
+            boxInstallation: formatDateTime(physicalHistory.find(item => item.to === 'CAIXA INSTALADA')?.date) || fallbackClient?.pointStatus?.boxInstallation || 'N/A',
+            boxInstallationDate: formatDateTime(physicalHistory.find(item => item.to === 'CAIXA INSTALADA')?.date) || fallbackClient?.pointStatus?.boxInstallationDate || 'N/A',
+            armInstallation: formatDateTime(physicalHistory.find(item => item.to === 'BRACO INSTALADO')?.date) || fallbackClient?.pointStatus?.armInstallation || 'N/A',
+            poleStatus: physicalSummary.currentStatus || fallbackClient?.pointStatus?.poleStatus || 'N/A'
         },
-        operationalHistory: details.syncHistory || fallbackClient?.operationalHistory || [],
+        physicalStatus,
+        operationalHistory: physicalHistory.length > 0 ? physicalHistory : (fallbackClient?.operationalHistory || []),
         glpiTickets,
         attendances: auvoTasks.map(task => ({
             taskId: task.taskId,
@@ -436,6 +539,7 @@ let activeTab = 'visao-geral';
 
 // Inicializar e registrar os escutadores de eventos
 document.addEventListener('DOMContentLoaded', async () => {
+    await loadHubOperationalTags();
     await loadHubEntities();
     renderProjects();
     selectProject(0);
@@ -582,7 +686,7 @@ function applyFilters() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 24px;">
+                <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 24px;">
                     Nenhum ativo localizado com os filtros selecionados.
                 </td>
             </tr>
@@ -596,6 +700,7 @@ function applyFilters() {
             <td style="font-weight: 600; text-align: left; padding-left: 24px;">${escapeHtml(asset.point)}</td>
             <td style="text-align: center;">${escapeHtml(asset.city)}</td>
             <td style="text-align: center;">${escapeHtml(asset.unit)}</td>
+            <td style="text-align: center;"><div class="hub-tag-chip-list">${renderOperationalTagChips(asset.operationalTags)}</div></td>
             <td style="text-align: center; padding-right: 24px;">${escapeHtml(asset.responsible)}</td>
           </tr>
         `)
@@ -663,7 +768,7 @@ function setupTabs() {
                 if (tbody) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="4" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 32px;">
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 32px;">
                                 Não há registros de ${activeTab} ativos no momento para este projeto.
                             </td>
                         </tr>

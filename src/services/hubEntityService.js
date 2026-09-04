@@ -1,7 +1,21 @@
 import hubEntityRepository from "../repositories/hubEntityRepository.js";
 
 class HubEntityService {
-  async listEntities({ refresh = "auto", limit = 100, offset = 0, search = "" } = {}) {
+  normalizeTagList(value, defaultValue = []) {
+    if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
+    if (typeof value !== "string") return defaultValue;
+    if (value.trim() === "") return [];
+    return value.split(",").map(item => item.trim()).filter(Boolean);
+  }
+
+  async listEntities({
+    refresh = "auto",
+    limit = 100,
+    offset = 0,
+    search = "",
+    includeTags = "",
+    excludeTags = undefined
+  } = {}) {
     let refreshMetrics = null;
 
     if (refresh === true) {
@@ -14,8 +28,18 @@ class HubEntityService {
     }
 
     const [entities, total] = await Promise.all([
-      hubEntityRepository.listEntities({ limit, offset, search }),
-      hubEntityRepository.countEntities({ search })
+      hubEntityRepository.listEntities({
+        limit,
+        offset,
+        search,
+        includeTags: this.normalizeTagList(includeTags),
+        excludeTags: this.normalizeTagList(excludeTags, ["DESINSTALADO"])
+      }),
+      hubEntityRepository.countEntities({
+        search,
+        includeTags: this.normalizeTagList(includeTags),
+        excludeTags: this.normalizeTagList(excludeTags, ["DESINSTALADO"])
+      })
     ]);
 
     return {
@@ -32,6 +56,24 @@ class HubEntityService {
 
   async getEntityDetails(entityId) {
     return hubEntityRepository.getEntityDetails(entityId);
+  }
+
+  async createManualPhysicalStatusChange({
+    entityId,
+    fromStatus,
+    toStatus,
+    comment,
+    referenceUrl,
+    createdBy
+  }) {
+    return hubEntityRepository.createManualPhysicalStatusChange({
+      entityId,
+      fromStatus,
+      toStatus,
+      comment,
+      referenceUrl,
+      createdBy
+    });
   }
 }
 

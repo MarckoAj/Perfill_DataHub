@@ -89,6 +89,7 @@ Planejado. Ainda nao ha client ou pipeline de ingestao consolidado.
 ## Regras de Trabalho
 
 - Ler a documentacao relevante antes de mudar codigo.
+- Antes de implementar novas regras/telas, fazer perguntas de alinhamento para confirmar o comportamento esperado.
 - Evitar refactors fora do escopo.
 - Nao recriar mappers ja existentes.
 - Manter controllers finos quando possivel.
@@ -109,3 +110,17 @@ npm test
 - `AGENTS.md` foi movido para `docs/AGENTS.md` para concentrar a documentacao em uma unica pasta.
 - A documentacao principal esta em `docs/README.md`.
 - A documentacao tecnica longa esta em `docs/DOCUMENTACAO_TECNICA.md`.
+
+## Decisoes Recentes Do HUB
+
+- A listagem geral de clientes deve usar tags operacionais vindas de `hub_operational_tags`.
+- A tela deve permitir selecionar uma lista de tags para incluir e outra lista de tags para ocultar; as duas selecoes podem ser usadas ao mesmo tempo.
+- Pontos podem exibir multiplos chips de tags na listagem.
+- A tag `Desinstalado` deve ficar oculta por padrao na listagem geral, mas o usuario pode desmarcar a ocultacao para exibir esses pontos.
+- Tags como `Implantacao` devem ser usadas normalmente como filtro e chip, sem ocultacao padrao.
+- Futuramente as regras de ocultacao, acompanhamento e confirmacao manual de alteracoes por tag devem sair do codigo e virar configuracao pela interface.
+- Para nao poluir a UI operacional, criar futuramente uma pagina especifica de administracao/configuracao de tags operacionais.
+- Essa pagina deve permitir gerenciar tags oficiais, cor/chip, ativo/inativo, ocultacao padrao, ordem de exibicao e aliases/tolerancias de nomenclatura.
+- As tolerancias devem permitir reconhecer variacoes como `DESATIVADO`, `*DESATIVADO*`, `**DESATIVADO*` e `**DESATIVADO**` como uma mesma tag oficial, sem depender de grafia perfeita.
+- A configuracao futura deve ter uma area de teste/previa para digitar um nome vindo do AUVO/GLPI e ver quais tags seriam aplicadas e qual seria o nome limpo/canonico sugerido pelo HUB.
+- O HUB deve caminhar para ser a fonte confiavel de nomenclatura, permitindo propagacao controlada para AUVO/GLPI apenas com historico e confirmacao manual.

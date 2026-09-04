@@ -359,6 +359,7 @@ class HubEntityRepository {
     targetSystem = "HUB",
     oldValue = null,
     newValue = null,
+    referenceUrl = null,
     message,
     createdBy = "system"
   }) {
@@ -368,9 +369,9 @@ class HubEntityRepository {
       `
         INSERT INTO hub_entity_history (
           entityId, fieldKey, action, sourceSystem, targetSystem,
-          oldValue, newValue, message, createdBy
+          oldValue, newValue, referenceUrl, message, createdBy
         )
-        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         WHERE NOT EXISTS (
           SELECT 1
           FROM hub_entity_history existing
@@ -389,6 +390,7 @@ class HubEntityRepository {
         targetSystem,
         oldValue,
         newValue,
+        referenceUrl,
         message,
         createdBy,
         entityId,
@@ -405,7 +407,7 @@ class HubEntityRepository {
       `
         SELECT
           historyId, entityId, fieldKey, action, sourceSystem, targetSystem,
-          oldValue, newValue, message, createdBy, createdAt
+          oldValue, newValue, referenceUrl, message, createdBy, createdAt
         FROM hub_entity_history
         WHERE entityId = ?
         ORDER BY createdAt DESC, historyId DESC
@@ -423,10 +425,69 @@ class HubEntityRepository {
       targetSystem: row.targetSystem,
       oldValue: row.oldValue,
       newValue: row.newValue,
+      referenceUrl: row.referenceUrl,
       message: row.message,
       createdBy: row.createdBy,
       createdAt: this.formatDate(row.createdAt)
     }));
+  }
+
+  async createManualPhysicalStatusChange({
+    entityId,
+    fromStatus = null,
+    toStatus,
+    comment = "",
+    referenceUrl = null,
+    createdBy = "admin_panel"
+  }) {
+    const safeEntityId = Number(entityId);
+    const safeToStatus = this.normalizeText(toStatus);
+
+    if (!Number.isInteger(safeEntityId) || safeEntityId <= 0) {
+      return {
+        success: false,
+        message: "entityId invalido"
+      };
+    }
+
+    if (!safeToStatus) {
+      return {
+        success: false,
+        message: "Status obrigatorio"
+      };
+    }
+
+    const safeFromStatus = this.normalizeText(fromStatus) || "N/A";
+    const safeComment = this.normalizeText(comment);
+    const safeReferenceUrl = this.normalizeText(referenceUrl);
+    const message = safeComment
+      ? `Status fisico alterado manualmente de ${safeFromStatus} para ${safeToStatus}. ${safeComment}`
+      : `Status fisico alterado manualmente de ${safeFromStatus} para ${safeToStatus}.`;
+
+    await this.insertHubHistory({
+      entityId: safeEntityId,
+      fieldKey: "physicalStatus",
+      action: "manual_physical_status_change",
+      sourceSystem: "HUB",
+      targetSystem: "HUB",
+      oldValue: safeFromStatus,
+      newValue: safeToStatus,
+      referenceUrl: safeReferenceUrl,
+      message,
+      createdBy
+    });
+
+    return {
+      success: true,
+      message: "Status fisico manual registrado no HUB",
+      data: {
+        entityId: safeEntityId,
+        fromStatus: safeFromStatus,
+        toStatus: safeToStatus,
+        comment: safeComment,
+        referenceUrl: safeReferenceUrl
+      }
+    };
   }
 
   async ensurePilotDeviceLinks({ entityId, auvoCustomer, deviceCode }) {
@@ -687,27 +748,81 @@ class HubEntityRepository {
     `;
   }
 
-  async countEntities({ search = "" } = {}) {
-    const params = [];
-    const searchClause = this.buildEntitySearchClause(search, params);
-    const [[row]] = await pool.query(`
-      SELECT COUNT(*) AS count
-      FROM hub_entities e
-      JOIN hub_entity_sources src
-        ON src.entityId = e.entityId
-       AND src.sourceSystem = 'AUVO'
-       AND src.sourceEntity = 'customer'
-      WHERE e.isActive = 1
-      ${searchClause}
-    `, params);
-
-    return row.count || 0;
+  normalizeTagFilter(value) {
+    return new Set(
+      (Array.isArray(value) ? value : [])
+        .map(tag => hubOperationalTagService.normalizeLabel(tag))
+        .filter(Boolean)
+    );
   }
 
-  async listEntities({ limit = 100, offset = 0, search = "" } = {}) {
+  operationalTagMatchesName(tag, name) {
+    const normalizedTag = hubOperationalTagService.normalizeLabel(tag.normalizedLabel || tag.label || tag);
+    const normalizedName = hubOperationalTagService.normalizeLabel(name);
+    if (!normalizedTag || !normalizedName) return false;
+    if (normalizedName.includes(normalizedTag)) return true;
+    if (normalizedTag === "DESINSTALADO" && normalizedName.includes("DESINSTAL")) return true;
+    return false;
+  }
+
+  buildEntityOperationalTags(row, tagDefinitions = []) {
+    const sourceName = row.auvoName || row.name || row.displayName || "";
+    const extracted = hubOperationalTagService.extractTags(sourceName, tagDefinitions).tags;
+    const byLabel = new Map(extracted.map(tag => [tag.normalizedLabel, tag]));
+
+    for (const tag of tagDefinitions) {
+      if (this.operationalTagMatchesName(tag, sourceName)) {
+        byLabel.set(tag.normalizedLabel, {
+          label: tag.label,
+          normalizedLabel: tag.normalizedLabel,
+          source: "configured_tag"
+        });
+      }
+    }
+
+    return [...byLabel.values()];
+  }
+
+  passesOperationalTagFilters(tags, { includeTags = [], excludeTags = [] } = {}) {
+    const normalizedTags = new Set(tags.map(tag => tag.normalizedLabel).filter(Boolean));
+    const include = this.normalizeTagFilter(includeTags);
+    const exclude = this.normalizeTagFilter(excludeTags);
+
+    if (include.size > 0 && ![...include].some(tag => normalizedTags.has(tag))) return false;
+    if (exclude.size > 0 && [...exclude].some(tag => normalizedTags.has(tag))) return false;
+
+    return true;
+  }
+
+  formatListEntityRow(row, tagDefinitions = []) {
+    const operationalTags = this.buildEntityOperationalTags(row, tagDefinitions);
+
+    return {
+      entityId: row.entityId,
+      entityType: row.entityType,
+      name: row.name || row.displayName,
+      latitude: row.latitude !== null ? Number(row.latitude) : null,
+      longitude: row.longitude !== null ? Number(row.longitude) : null,
+      status: row.status,
+      sourceSystem: row.sourceSystem,
+      sourceEntity: row.sourceEntity,
+      sourceRecordId: row.sourceRecordId,
+      sourceExternalId: row.sourceExternalId,
+      operationalTags,
+      sources: {
+        auvo: {
+          name: row.auvoName,
+          latitude: row.auvoLatitude !== null ? Number(row.auvoLatitude) : null,
+          longitude: row.auvoLongitude !== null ? Number(row.auvoLongitude) : null
+        }
+      }
+    };
+  }
+
+  async listEntityRows({ search = "" } = {}) {
     const params = [];
     const searchClause = this.buildEntitySearchClause(search, params);
-    const query = `
+    const [rows] = await pool.query(`
       SELECT
         e.entityId,
         e.entityType,
@@ -759,30 +874,30 @@ class HubEntityRepository {
       WHERE e.isActive = 1
       ${searchClause}
       ORDER BY COALESCE(hubName.valueText, e.displayName, e.canonicalName) ASC
-      LIMIT ? OFFSET ?
-    `;
+    `, params);
 
-    const [rows] = await pool.query(query, [...params, limit, offset]);
+    return rows;
+  }
 
-    return rows.map(row => ({
-      entityId: row.entityId,
-      entityType: row.entityType,
-      name: row.name || row.displayName,
-      latitude: row.latitude !== null ? Number(row.latitude) : null,
-      longitude: row.longitude !== null ? Number(row.longitude) : null,
-      status: row.status,
-      sourceSystem: row.sourceSystem,
-      sourceEntity: row.sourceEntity,
-      sourceRecordId: row.sourceRecordId,
-      sourceExternalId: row.sourceExternalId,
-      sources: {
-        auvo: {
-          name: row.auvoName,
-          latitude: row.auvoLatitude !== null ? Number(row.auvoLatitude) : null,
-          longitude: row.auvoLongitude !== null ? Number(row.auvoLongitude) : null
-        }
-      }
-    }));
+  async getFilteredListEntities({ search = "", includeTags = [], excludeTags = [] } = {}) {
+    const [rows, tagDefinitions] = await Promise.all([
+      this.listEntityRows({ search }),
+      hubOperationalTagService.listTags()
+    ]);
+
+    return rows
+      .map(row => this.formatListEntityRow(row, tagDefinitions))
+      .filter(entity => this.passesOperationalTagFilters(entity.operationalTags, { includeTags, excludeTags }));
+  }
+
+  async countEntities({ search = "", includeTags = [], excludeTags = [] } = {}) {
+    const entities = await this.getFilteredListEntities({ search, includeTags, excludeTags });
+    return entities.length;
+  }
+
+  async listEntities({ limit = 100, offset = 0, search = "", includeTags = [], excludeTags = [] } = {}) {
+    const entities = await this.getFilteredListEntities({ search, includeTags, excludeTags });
+    return entities.slice(offset, offset + limit);
   }
 
   extractDeviceCode(value) {
@@ -899,6 +1014,374 @@ class HubEntityRepository {
       dateLastUpdate: this.formatDate(row.dateLastUpdate),
       taskUrl: row.taskUrl
     }));
+  }
+
+  normalizeRuleText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+  }
+
+  classifyAuvoPhysicalEvent(task) {
+    const text = this.normalizeRuleText([
+      task.taskType,
+      task.orientation,
+      task.report
+    ].join(" "));
+
+    if (!text.trim()) return null;
+
+    if (text.includes("REMANEJ")) {
+      return {
+        status: "REMANEJADO",
+        title: "Remanejamento identificado",
+        type: "warning"
+      };
+    }
+
+    if (text.includes("REINSTAL")) {
+      return {
+        status: "REINSTALADO",
+        title: "Reinstalacao identificada",
+        type: "warning"
+      };
+    }
+
+    if (text.includes("DESINSTAL") || text.includes("DESATIV")) {
+      return {
+        status: "DESINSTALADO",
+        title: "Desinstalacao identificada",
+        type: "warning"
+      };
+    }
+
+    if (text.includes("VISTORIA") || text.includes("INSPECAO")) {
+      return {
+        status: "VISTORIADO",
+        title: "Vistoria realizada",
+        type: "success"
+      };
+    }
+
+    if (text.includes("INSTAL") || text.includes("ATIVACAO DE PONTO")) {
+      if (text.includes("CAIXA")) {
+        return {
+          status: "CAIXA INSTALADA",
+          title: "Instalacao de caixa identificada",
+          type: "success"
+        };
+      }
+
+      if (text.includes("BRACO")) {
+        return {
+          status: "BRACO INSTALADO",
+          title: "Instalacao de braco identificada",
+          type: "success"
+        };
+      }
+
+      return {
+        status: "INSTALADO",
+        title: "Instalacao identificada",
+        type: "success"
+      };
+    }
+
+    return null;
+  }
+
+  compactPointName(value) {
+    return String(value || "")
+      .replace(/^([*_`~]{1,3})([^*_`~]{2,120})\1\s*/i, "")
+      .replace(/^\*?[^*]*DESINSTAL[A-ZÀ-Ú/ -]*\*?\s*/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  isRetiredOrMovedAuvoName(value) {
+    const text = this.normalizeRuleText(value);
+    return text.includes("DESINSTAL") || text.includes("DESATIV") || text.includes("REMANEJ") || text.includes("MOVIDO");
+  }
+
+  async findHubEntityByAuvoCustomerId(customerId) {
+    if (!customerId) return null;
+
+    const [rows] = await pool.query(
+      `
+        SELECT
+          e.entityId,
+          e.displayName,
+          src.sourceNativeId AS auvoCustomerId
+        FROM hub_entity_sources src
+        JOIN hub_entities e ON e.entityId = src.entityId
+        WHERE src.sourceSystem = 'AUVO'
+          AND src.sourceEntity = 'customer'
+          AND src.sourceNativeId = ?
+        LIMIT 1
+      `,
+      [String(customerId)]
+    );
+
+    return rows[0] || null;
+  }
+
+  buildPhysicalStatusSummary(history) {
+    const sortedHistory = [...history].sort((left, right) => new Date(left.at || 0) - new Date(right.at || 0));
+    const nonPhysicalStatuses = new Set([
+      "MANUTENCAO PREVENTIVA",
+      "MANUTENCAO CORRETIVA",
+      "PONTO RELACIONADO"
+    ]);
+    const latestRelevant = [...sortedHistory]
+      .reverse()
+      .find(item => ["task", "history"].includes(item.sourceEntity) && !nonPhysicalStatuses.has(item.to));
+    const changedToEvent = [...sortedHistory]
+      .reverse()
+      .find(item => item.sourceEntity === "customer" && item.relationType === "changed_to");
+
+    const firstByStatus = (status) => sortedHistory.find(item => ["task", "history"].includes(item.sourceEntity) && item.to === status);
+    const lastByStatus = (status) => [...sortedHistory].reverse().find(item => ["task", "history"].includes(item.sourceEntity) && item.to === status);
+    const lastEvent = [...sortedHistory]
+      .reverse()
+      .find(item => item.sourceEntity === "task") || sortedHistory[sortedHistory.length - 1];
+
+    return {
+      currentStatus: changedToEvent ? "REMANEJADO" : latestRelevant?.to || sortedHistory[sortedHistory.length - 1]?.to || "N/A",
+      inspectionDate: firstByStatus("VISTORIADO")?.date || "N/A",
+      cameraInstallation: lastByStatus("INSTALADO")?.date || "N/A",
+      cameraSubstitution: lastByStatus("REINSTALADO")?.date || "N/A",
+      uninstallDate: lastByStatus("DESINSTALADO")?.date || "N/A",
+      remanejadoDate: lastByStatus("REMANEJADO")?.date || "N/A",
+      lastPhysicalEventDate: lastEvent?.date || "N/A"
+    };
+  }
+
+  async getAuvoPhysicalStatusHistory({ auvoCustomer, deviceCode, limit = 40 }) {
+    const currentCustomerId = auvoCustomer?.customerId ? String(auvoCustomer.customerId) : null;
+    const customerIds = [];
+    if (currentCustomerId) customerIds.push(currentCustomerId);
+    let lineageLink = null;
+
+    if (deviceCode) {
+      const [relatedCustomers] = await pool.query(
+        `
+          SELECT customerId, description, latitude, longitude, active, isActive, lastSyncAt
+          FROM customers_auvo
+          WHERE description LIKE ?
+          ORDER BY customerId ASC
+          LIMIT 20
+        `,
+        [`%${deviceCode}%`]
+      );
+
+      const currentCustomer = relatedCustomers.find(customer => String(customer.customerId) === currentCustomerId);
+      const activeCandidates = relatedCustomers.filter(customer => !this.isRetiredOrMovedAuvoName(customer.description));
+      const retiredCandidates = relatedCustomers.filter(customer => this.isRetiredOrMovedAuvoName(customer.description));
+      const targetCustomer = activeCandidates[activeCandidates.length - 1] || relatedCustomers[relatedCustomers.length - 1] || null;
+      const isCurrentRetired = currentCustomer ? this.isRetiredOrMovedAuvoName(currentCustomer.description) : false;
+
+      if (isCurrentRetired && targetCustomer && String(targetCustomer.customerId) !== currentCustomerId) {
+        const targetHubEntity = await this.findHubEntityByAuvoCustomerId(targetCustomer.customerId);
+        lineageLink = {
+          relationType: "changed_to",
+          fromCustomerId: Number(currentCustomerId),
+          fromName: this.compactPointName(currentCustomer.description) || `AUVO ${currentCustomerId}`,
+          toCustomerId: targetCustomer.customerId,
+          toName: this.compactPointName(targetCustomer.description) || `AUVO ${targetCustomer.customerId}`,
+          toEntityId: targetHubEntity?.entityId || null,
+          toHubName: targetHubEntity?.displayName || targetCustomer.description
+        };
+      } else if (!isCurrentRetired && retiredCandidates.length > 0 && currentCustomer) {
+        const sourceCustomer = retiredCandidates[retiredCandidates.length - 1];
+        const sourceHubEntity = await this.findHubEntityByAuvoCustomerId(sourceCustomer.customerId);
+        lineageLink = {
+          relationType: "originated_from",
+          fromCustomerId: sourceCustomer.customerId,
+          fromName: this.compactPointName(sourceCustomer.description) || `AUVO ${sourceCustomer.customerId}`,
+          fromEntityId: sourceHubEntity?.entityId || null,
+          fromHubName: sourceHubEntity?.displayName || sourceCustomer.description,
+          toCustomerId: Number(currentCustomerId),
+          toName: this.compactPointName(currentCustomer.description) || `AUVO ${currentCustomerId}`
+        };
+      }
+
+      if (currentCustomerId) customerIds.push(currentCustomerId);
+    }
+
+    const uniqueCustomerIds = [...new Set(customerIds)];
+    if (uniqueCustomerIds.length === 0 && !deviceCode) {
+      return {
+        history: [],
+        summary: this.buildPhysicalStatusSummary([]),
+        relatedAuvoCustomers: []
+      };
+    }
+
+    const conditions = [];
+    const params = [];
+
+    if (currentCustomerId) {
+      conditions.push("t.customerId = ?");
+      params.push(currentCustomerId);
+    } else if (uniqueCustomerIds.length > 0) {
+      conditions.push(`t.customerId IN (${uniqueCustomerIds.map(() => "?").join(",")})`);
+      params.push(...uniqueCustomerIds);
+    } else if (deviceCode) {
+      conditions.push("(t.orientation LIKE ? OR t.report LIKE ?)");
+      params.push(`%${deviceCode}%`, `%${deviceCode}%`);
+    }
+
+    const [tasks] = await pool.query(
+      `
+        SELECT
+          t.taskId,
+          t.customerId,
+          c.description AS customerName,
+          t.taskDate,
+          t.taskCreationDate,
+          t.dateLastUpdate,
+          t.finished,
+          st.statusDescriptions AS statusDescription,
+          tt.description AS taskType,
+          t.orientation,
+          t.report,
+          t.taskUrl
+        FROM tasks_auvo t
+        LEFT JOIN customers_auvo c ON c.customerId = t.customerId
+        LEFT JOIN tasks_status st ON st.taskStatusId = t.taskStatusID
+        LEFT JOIN tasks_types_auvo tt ON tt.tasksTypesId = t.tasksTypesId
+        WHERE ${conditions.map(condition => `(${condition})`).join(" OR ")}
+        ORDER BY COALESCE(t.taskDate, t.taskCreationDate, t.dateLastUpdate) ASC
+        LIMIT ?
+      `,
+      [...params, limit]
+    );
+
+    const [relatedAuvoCustomers] = uniqueCustomerIds.length > 0
+      ? await pool.query(
+          `
+            SELECT customerId, description, latitude, longitude, active, isActive, lastSyncAt
+            FROM customers_auvo
+            WHERE customerId IN (${uniqueCustomerIds.map(() => "?").join(",")})
+            ORDER BY customerId ASC
+          `,
+          uniqueCustomerIds
+        )
+      : [[]];
+
+    const history = [];
+    let currentStatus = "NOVO";
+
+    for (const task of tasks) {
+      const event = this.classifyAuvoPhysicalEvent(task);
+      if (!event) continue;
+
+      const eventDate = this.formatDate(task.taskDate || task.taskCreationDate || task.dateLastUpdate);
+      history.push({
+        type: event.type,
+        title: event.title,
+        from: currentStatus,
+        to: event.status,
+        date: eventDate,
+        at: eventDate,
+        sourceSystem: "AUVO",
+        sourceEntity: "task",
+        sourceNativeId: String(task.taskId),
+        linkUrl: task.taskUrl,
+        customerId: task.customerId,
+        taskType: task.taskType,
+        description: task.taskType || task.statusDescription || `Tarefa AUVO ${task.taskId}`
+      });
+
+      currentStatus = event.status;
+    }
+
+    if (lineageLink?.relationType === "changed_to") {
+      history.push({
+        type: "warning",
+        title: `Alterado para ${lineageLink.toName}`,
+        from: lineageLink.fromName,
+        to: lineageLink.toName,
+        date: this.formatDate(auvoCustomer.lastSyncAt),
+        at: this.formatDate(auvoCustomer.lastSyncAt),
+        sourceSystem: "AUVO",
+        sourceEntity: "customer",
+        sourceNativeId: String(auvoCustomer.customerId),
+        linkUrl: null,
+        relatedEntityId: lineageLink.toEntityId,
+        relatedAuvoCustomerId: lineageLink.toCustomerId,
+        relationType: lineageLink.relationType,
+        description: `${deviceCode || "Ponto"} foi alterado para AUVO ${lineageLink.toCustomerId}.`
+      });
+    } else if (lineageLink?.relationType === "originated_from") {
+      history.push({
+        type: "success",
+        title: `Originado de ${lineageLink.fromName}`,
+        from: lineageLink.fromName,
+        to: lineageLink.toName,
+        date: this.formatDate(auvoCustomer.lastSyncAt),
+        at: this.formatDate(auvoCustomer.lastSyncAt),
+        sourceSystem: "AUVO",
+        sourceEntity: "customer",
+        sourceNativeId: String(auvoCustomer.customerId),
+        linkUrl: null,
+        relatedEntityId: lineageLink.fromEntityId,
+        relatedAuvoCustomerId: lineageLink.fromCustomerId,
+        relationType: lineageLink.relationType,
+        description: `${deviceCode || "Ponto"} originado do AUVO ${lineageLink.fromCustomerId}.`
+      });
+    }
+
+    if (auvoCustomer && history.length === 0) {
+      history.push({
+        type: "success",
+        title: "Ponto cadastrado no AUVO",
+        from: "SEM CADASTRO",
+        to: "NOVO",
+        date: this.formatDate(auvoCustomer.lastSyncAt),
+        at: this.formatDate(auvoCustomer.lastSyncAt),
+        sourceSystem: "AUVO",
+        sourceEntity: "customer",
+        sourceNativeId: String(auvoCustomer.customerId),
+        linkUrl: null,
+        description: auvoCustomer.description
+      });
+    }
+
+    return {
+      history: history.sort((left, right) => new Date(right.at || 0) - new Date(left.at || 0)),
+      summary: this.buildPhysicalStatusSummary(history),
+      lineageLink,
+      relatedAuvoCustomers: relatedAuvoCustomers.map(customer => ({
+        customerId: customer.customerId,
+        description: customer.description,
+        latitude: this.parseNumber(customer.latitude),
+        longitude: this.parseNumber(customer.longitude),
+        active: Boolean(customer.active),
+        isActive: Boolean(customer.isActive),
+        lastSyncAt: this.formatDate(customer.lastSyncAt)
+      }))
+    };
+  }
+
+  buildManualPhysicalHistory(persistedHistory) {
+    return persistedHistory
+      .filter(item => item.action === "manual_physical_status_change")
+      .map(item => ({
+        type: "warning",
+        title: "Status fisico alterado manualmente",
+        from: item.oldValue || "N/A",
+        to: item.newValue || "N/A",
+        date: item.createdAt,
+        at: item.createdAt,
+        sourceSystem: item.sourceSystem || "HUB",
+        sourceEntity: "history",
+        sourceNativeId: String(item.historyId),
+        linkUrl: item.referenceUrl || null,
+        description: item.message,
+        createdBy: item.createdBy
+      }));
   }
 
   async getRelatedGlpiTickets({ name, deviceCode, locationId = null, limit = 8 }) {
@@ -1230,6 +1713,18 @@ class HubEntityRepository {
       operationalTags: operationalTagDefinitions
     });
     const persistedHistory = hydrationHistory.length > 0 ? [] : await this.getHubHistory(entityId);
+    const physicalStatus = await this.getAuvoPhysicalStatusHistory({
+      auvoCustomer,
+      deviceCode
+    });
+    const manualPhysicalHistory = this.buildManualPhysicalHistory(persistedHistory);
+    const combinedPhysicalHistory = [
+      ...manualPhysicalHistory,
+      ...physicalStatus.history
+    ]
+      .sort((left, right) => new Date(right.at || 0) - new Date(left.at || 0));
+    const combinedPhysicalSummary = this.buildPhysicalStatusSummary(combinedPhysicalHistory);
+    const syncHistory = persistedHistory.filter(item => item.action !== "manual_physical_status_change");
 
     return {
       entityId: first.entityId,
@@ -1254,7 +1749,10 @@ class HubEntityRepository {
         auvo: {
           source: auvoSource || null,
           customer: auvoCustomer,
-          recentTasks: auvoCustomer ? await this.getRecentAuvoTasks(auvoCustomer.customerId) : []
+          recentTasks: auvoCustomer ? await this.getRecentAuvoTasks(auvoCustomer.customerId) : [],
+          physicalStatusHistory: combinedPhysicalHistory,
+          physicalStatusSummary: combinedPhysicalSummary,
+          relatedCustomers: physicalStatus.relatedAuvoCustomers
         },
         glpi: {
           device: glpiDevice,
@@ -1265,6 +1763,12 @@ class HubEntityRepository {
       },
       entityLinks,
       fieldValues,
+      physicalStatus: {
+        ...physicalStatus,
+        history: combinedPhysicalHistory,
+        summary: combinedPhysicalSummary,
+        manualHistory: manualPhysicalHistory
+      },
       platformFields,
       fieldRelations: this.buildFieldRelations({
         entityId: first.entityId,
@@ -1278,7 +1782,7 @@ class HubEntityRepository {
         glpiDevice,
         hydrationHistory
       })
-        .concat(persistedHistory.map(item => ({
+        .concat(syncHistory.map(item => ({
           type: item.action === "auto_fill_missing_hub_field" ? "success" : "warning",
           title: item.action,
           description: item.message,

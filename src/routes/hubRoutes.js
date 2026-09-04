@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getHubEntityDetails,
+  createManualHubPhysicalStatus,
   listHubEntities,
   createHubOperationalTag,
   confirmGlpiHubMatching,
@@ -24,6 +25,7 @@ router.get("/matching/glpi/preview", previewGlpiHubMatching);
 router.post("/matching/glpi/confirm", confirmGlpiHubMatching);
 router.get("/entities/:entityId/matching/glpi/preview", previewSingleGlpiHubMatching);
 router.post("/entities/:entityId/matching/glpi/confirm", confirmSingleGlpiHubMatching);
+router.post("/entities/:entityId/physical-status/manual", createManualHubPhysicalStatus);
 router.get("/entities/:entityId", getHubEntityDetails);
 
 export default router;

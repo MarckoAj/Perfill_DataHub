@@ -71,6 +71,7 @@ export async function createHubOperationalLinksTables() {
           targetSystem VARCHAR(30) NULL,
           oldValue TEXT NULL,
           newValue TEXT NULL,
+          referenceUrl VARCHAR(500) NULL,
           message TEXT NOT NULL,
           createdBy VARCHAR(100) NULL,
           createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -88,6 +89,18 @@ export async function createHubOperationalLinksTables() {
       console.log(`Migration HUB: Tabela '${table.name}' validada/criada com sucesso.`);
     } catch (error) {
       console.error(`Erro ao criar tabela HUB '${table.name}':`, error.message);
+      throw error;
+    }
+  }
+
+  try {
+    await pool.query("ALTER TABLE hub_entity_history ADD COLUMN referenceUrl VARCHAR(500) NULL AFTER newValue;");
+    console.log("Migration HUB: Coluna hub_entity_history.referenceUrl adicionada.");
+  } catch (error) {
+    if (error.code === "ER_DUP_FIELDNAME") {
+      console.log("Migration HUB: Coluna hub_entity_history.referenceUrl ja existe.");
+    } else {
+      console.error("Erro ao adicionar coluna hub_entity_history.referenceUrl:", error.message);
       throw error;
     }
   }

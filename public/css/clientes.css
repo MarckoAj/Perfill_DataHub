@@ -416,6 +416,76 @@
     color: var(--clientes-text);
 }
 
+.tag-filter-panel {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    gap: 10px;
+}
+
+.tag-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--clientes-border);
+    border-radius: 10px;
+}
+
+.tag-filter-group > span,
+.tag-filter-empty {
+    color: var(--clientes-muted);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.tag-filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-filter-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--clientes-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.tag-filter-option input {
+    accent-color: var(--clientes-accent);
+}
+
+.hub-tag-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+
+.hub-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 8px;
+    color: var(--clientes-accent);
+    background: rgba(20, 231, 197, 0.08);
+    border: 1px solid rgba(20, 231, 197, 0.2);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.hub-tag-chip.empty {
+    color: var(--clientes-muted);
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--clientes-border);
+}
+
 /* =========================================
    GRID PRINCIPAL
 ========================================= */
@@ -744,6 +814,10 @@ tbody tr:last-child td {
     .filters-row {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .tag-filter-panel {
+        grid-template-columns: 1fr;
     }
 
     .hub-pagination {
