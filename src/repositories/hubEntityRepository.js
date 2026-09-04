@@ -1,4 +1,5 @@
 import pool from "../database/connection.js";
+import hubOperationalTagRepository from "./hubOperationalTagRepository.js";
 import hubOperationalTagService from "../services/hubOperationalTagService.js";
 
 class HubEntityRepository {
@@ -761,26 +762,69 @@ class HubEntityRepository {
     const normalizedName = hubOperationalTagService.normalizeLabel(name);
     if (!normalizedTag || !normalizedName) return false;
     if (normalizedName.includes(normalizedTag)) return true;
+    for (const alias of tag.aliases || []) {
+      const normalizedAlias = hubOperationalTagService.normalizeLabel(alias.normalizedAlias || alias.alias);
+      if (normalizedAlias && normalizedName.includes(normalizedAlias)) return true;
+    }
     if (normalizedTag === "DESINSTALADO" && normalizedName.includes("DESINSTAL")) return true;
     return false;
   }
 
-  buildEntityOperationalTags(row, tagDefinitions = []) {
+  buildConfiguredOperationalTagMatches(sourceName, tagDefinitions = []) {
+    return tagDefinitions
+      .filter(tag => this.operationalTagMatchesName(tag, sourceName))
+      .map(tag => ({
+        label: tag.label,
+        normalizedLabel: tag.normalizedLabel,
+        source: "configured_tag",
+        tagId: tag.tagId || null
+      }));
+  }
+
+  buildSystemOperationalTags(row, tagDefinitions = []) {
+    const tags = [];
+    const auvoInactive = row?.auvoActive === 0 || row?.auvoActive === false || row?.status === "inactive";
+
+    if (auvoInactive) {
+      const inactiveTag = tagDefinitions.find(tag => tag.normalizedLabel === "INATIVO NO AUVO");
+      tags.push({
+        label: inactiveTag?.label || "Inativo no AUVO",
+        normalizedLabel: inactiveTag?.normalizedLabel || "INATIVO NO AUVO",
+        source: "auvo_active_flag",
+        tagId: inactiveTag?.tagId || null
+      });
+    }
+
+    return tags;
+  }
+
+  mergeOperationalTags(...tagGroups) {
+    const byLabel = new Map();
+    for (const group of tagGroups) {
+      for (const tag of group || []) {
+        const normalizedLabel = tag.normalizedLabel || hubOperationalTagService.normalizeLabel(tag.label || tag);
+        if (!normalizedLabel) continue;
+        byLabel.set(normalizedLabel, {
+          label: tag.label || normalizedLabel,
+          normalizedLabel,
+          source: tag.source || "configured_tag",
+          tagId: tag.tagId || null
+        });
+      }
+    }
+    return [...byLabel.values()];
+  }
+
+  buildEntityOperationalTags(row, tagDefinitions = [], manualTags = []) {
     const sourceName = row.auvoName || row.name || row.displayName || "";
     const extracted = hubOperationalTagService.extractTags(sourceName, tagDefinitions).tags;
     const byLabel = new Map(extracted.map(tag => [tag.normalizedLabel, tag]));
 
-    for (const tag of tagDefinitions) {
-      if (this.operationalTagMatchesName(tag, sourceName)) {
-        byLabel.set(tag.normalizedLabel, {
-          label: tag.label,
-          normalizedLabel: tag.normalizedLabel,
-          source: "configured_tag"
-        });
-      }
+    for (const tag of this.buildConfiguredOperationalTagMatches(sourceName, tagDefinitions)) {
+      byLabel.set(tag.normalizedLabel, tag);
     }
 
-    return [...byLabel.values()];
+    return this.mergeOperationalTags([...byLabel.values()], this.buildSystemOperationalTags(row, tagDefinitions), manualTags);
   }
 
   passesOperationalTagFilters(tags, { includeTags = [], excludeTags = [] } = {}) {
@@ -794,8 +838,8 @@ class HubEntityRepository {
     return true;
   }
 
-  formatListEntityRow(row, tagDefinitions = []) {
-    const operationalTags = this.buildEntityOperationalTags(row, tagDefinitions);
+  formatListEntityRow(row, tagDefinitions = [], manualTags = []) {
+    const operationalTags = this.buildEntityOperationalTags(row, tagDefinitions, manualTags);
 
     return {
       entityId: row.entityId,
@@ -838,12 +882,15 @@ class HubEntityRepository {
         hubLng.valueNumber AS longitude,
         auvoName.valueText AS auvoName,
         auvoLat.valueNumber AS auvoLatitude,
-        auvoLng.valueNumber AS auvoLongitude
+        auvoLng.valueNumber AS auvoLongitude,
+        c.active AS auvoActive
       FROM hub_entities e
       JOIN hub_entity_sources src
         ON src.entityId = e.entityId
        AND src.sourceSystem = 'AUVO'
        AND src.sourceEntity = 'customer'
+      LEFT JOIN customers_auvo c
+        ON c.customerId = CAST(src.sourceNativeId AS UNSIGNED)
       LEFT JOIN hub_entity_field_values hubName
         ON hubName.entityId = e.entityId
        AND hubName.fieldKey = 'name'
@@ -884,9 +931,10 @@ class HubEntityRepository {
       this.listEntityRows({ search }),
       hubOperationalTagService.listTags()
     ]);
+    const manualTagsByEntity = await hubOperationalTagRepository.listEntityTagsMap(rows.map(row => row.entityId));
 
     return rows
-      .map(row => this.formatListEntityRow(row, tagDefinitions))
+      .map(row => this.formatListEntityRow(row, tagDefinitions, manualTagsByEntity.get(row.entityId) || []))
       .filter(entity => this.passesOperationalTagFilters(entity.operationalTags, { includeTags, excludeTags }));
   }
 
@@ -1048,7 +1096,7 @@ class HubEntityRepository {
       };
     }
 
-    if (text.includes("DESINSTAL") || text.includes("DESATIV")) {
+    if (text.includes("DESINSTAL")) {
       return {
         status: "DESINSTALADO",
         title: "Desinstalacao identificada",
@@ -1101,7 +1149,7 @@ class HubEntityRepository {
 
   isRetiredOrMovedAuvoName(value) {
     const text = this.normalizeRuleText(value);
-    return text.includes("DESINSTAL") || text.includes("DESATIV") || text.includes("REMANEJ") || text.includes("MOVIDO");
+    return text.includes("DESINSTAL") || text.includes("REMANEJ") || text.includes("MOVIDO");
   }
 
   async findHubEntityByAuvoCustomerId(customerId) {
@@ -1701,10 +1749,18 @@ class HubEntityRepository {
     const operationalTagDefinitions = await hubOperationalTagService.listTags();
     const auvoNameTags = hubOperationalTagService.extractTags(auvoCustomer?.description || first.displayName, operationalTagDefinitions);
     const glpiNameTags = hubOperationalTagService.extractTags(glpiDevice?.name, operationalTagDefinitions);
-    const operationalTags = [...new Map([
-      ...auvoNameTags.tags,
-      ...glpiNameTags.tags
-    ].map(tag => [tag.normalizedLabel, tag])).values()];
+    const manualOperationalTags = await hubOperationalTagRepository.listEntityTags(entityId);
+    const operationalTags = this.mergeOperationalTags(
+      auvoNameTags.tags,
+      glpiNameTags.tags,
+      this.buildConfiguredOperationalTagMatches(auvoCustomer?.description || first.displayName, operationalTagDefinitions),
+      this.buildConfiguredOperationalTagMatches(glpiDevice?.name || "", operationalTagDefinitions),
+      this.buildSystemOperationalTags({
+        status: first.status,
+        auvoActive: auvoCustomer?.active
+      }, operationalTagDefinitions),
+      manualOperationalTags
+    );
     const platformFields = this.buildPlatformFields({
       entityId,
       fieldValues,

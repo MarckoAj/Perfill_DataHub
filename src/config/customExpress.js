@@ -47,6 +47,7 @@ const customExpress = () => {
   app.get("/tickets", (req, res) => res.sendFile(path.join(publicPath, "index.html")));
   app.get("/clientes", (req, res) => res.sendFile(path.join(publicPath, "clientes.html")));
   app.get("/admin/sync", (req, res) => res.sendFile(path.join(publicPath, "sync.html")));
+  app.get("/admin/tags", (req, res) => res.sendFile(path.join(publicPath, "admin-tags.html")));
 
   app.use("/", express.static("public")); // Fallback para arquivos estáticos
 

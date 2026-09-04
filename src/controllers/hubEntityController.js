@@ -90,10 +90,23 @@ export const listHubOperationalTags = asyncHandler(async (req, res) => {
   });
 });
 
+export const previewHubOperationalTags = asyncHandler(async (req, res) => {
+  const preview = await hubOperationalTagService.previewName(req.body?.name || "");
+
+  res.status(200).json({
+    success: true,
+    data: preview
+  });
+});
+
 export const createHubOperationalTag = asyncHandler(async (req, res) => {
   const result = await hubOperationalTagService.createTag({
     label: req.body?.label,
     description: req.body?.description,
+    color: req.body?.color,
+    hideByDefault: req.body?.hideByDefault === true,
+    displayOrder: req.body?.displayOrder,
+    aliases: req.body?.aliases,
     createdBy: req.user?.username || "admin_panel",
     entityId: req.body?.entityId,
     addToHistory: req.body?.addToHistory === true,
@@ -103,12 +116,69 @@ export const createHubOperationalTag = asyncHandler(async (req, res) => {
   res.status(result.success ? 201 : 400).json(result);
 });
 
+export const updateHubOperationalTag = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.updateTag({
+    tagId: req.params.tagId,
+    label: req.body?.label,
+    description: req.body?.description,
+    color: req.body?.color,
+    hideByDefault: req.body?.hideByDefault === true,
+    displayOrder: req.body?.displayOrder,
+    aliases: req.body?.aliases,
+    createdBy: req.user?.username || "admin_panel"
+  });
+
+  res.status(result.success ? 200 : 400).json(result);
+});
+
 export const removeHubOperationalTag = asyncHandler(async (req, res) => {
   const result = await hubOperationalTagService.removeTag({
     tagId: req.params.tagId,
     createdBy: req.user?.username || "admin_panel",
     entityId: req.body?.entityId,
     addToHistory: req.body?.addToHistory === true,
+    comment: req.body?.comment
+  });
+
+  res.status(result.success ? 200 : 400).json(result);
+});
+
+export const createHubOperationalTagAlias = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.createTagAlias({
+    tagId: req.params.tagId,
+    alias: req.body?.alias,
+    createdBy: req.user?.username || "admin_panel"
+  });
+
+  res.status(result.success ? 201 : 400).json(result);
+});
+
+export const removeHubOperationalTagAlias = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.removeTagAlias({
+    aliasId: req.params.aliasId
+  });
+
+  res.status(result.success ? 200 : 400).json(result);
+});
+
+export const assignHubEntityOperationalTag = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.assignEntityTag({
+    entityId: req.params.entityId,
+    tagId: req.body?.tagId,
+    createdBy: req.user?.username || "admin_panel",
+    addToHistory: req.body?.addToHistory !== false,
+    comment: req.body?.comment
+  });
+
+  res.status(result.success ? 201 : 400).json(result);
+});
+
+export const unassignHubEntityOperationalTag = asyncHandler(async (req, res) => {
+  const result = await hubOperationalTagService.unassignEntityTag({
+    entityId: req.params.entityId,
+    tagId: req.params.tagId,
+    createdBy: req.user?.username || "admin_panel",
+    addToHistory: req.body?.addToHistory !== false,
     comment: req.body?.comment
   });
 

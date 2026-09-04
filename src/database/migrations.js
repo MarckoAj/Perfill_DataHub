@@ -3,6 +3,7 @@ import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
 import { runAuvoMigrations } from "./migrations/auvoTables.js";
 import { runAuvoSeeds } from "./seeds/auvoSeeds.js";
+import { runHubOperationalTagSeeds } from "./seeds/hubOperationalTagSeeds.js";
 import { createSyncLogsTables } from "./migrations/syncLogsTables.js";
 import { createSyncSchedulesTable } from "./migrations/syncSchedulesTables.js";
 import { runScheduleSeeds } from "./seeds/scheduleSeeds.js";
@@ -236,6 +237,7 @@ export async function runMigrations() {
         // Tabelas canonicas do HUB
         await createHubCoreTables();
         await createHubOperationalLinksTables();
+        await runHubOperationalTagSeeds();
         await createPowerBiTicketsView();
 
         // Garantir existência e senha do usuário administrador nativo (admin)

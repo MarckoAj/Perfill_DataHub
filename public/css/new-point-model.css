@@ -452,6 +452,41 @@
     cursor: pointer;
 }
 
+.pm-split-history-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.pm-icon-action {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #06221e;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.pm-icon-action:hover {
+    filter: brightness(1.05);
+}
+
+.pm-op-tags-compact-head .pm-icon-action {
+    width: 28px;
+    min-width: 28px;
+    padding: 0;
+    font-size: 18px;
+}
+
 .pm-op-tags-compact .pm-op-tags-form {
     display: flex;
     flex-direction: column;

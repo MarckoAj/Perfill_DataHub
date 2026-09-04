@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function() {
+      if (!localStorage.getItem('authToken')) {
+        window.location.replace('/login.html');
+      }
+    })();
+  </script>
+  <title>PerfillBI - Configuracao e Cadastro de Tags</title>
+  <link rel="stylesheet" href="/css/sync.css">
+  <link rel="stylesheet" href="/css/admin-tags.css">
+</head>
+
+<body>
+  <nav class="global-nav">
+    <div class="nav-left">
+      <div class="nav-logo">
+        <div style="font-size: 18px; font-weight: bold; color: #0ea5e9;">Perfill</div>
+      </div>
+      <div class="nav-menu">
+        <div class="nav-item"><a href="/noc" class="nav-link">NOC</a></div>
+        <div class="nav-item"><a href="/alerts" class="nav-link">Alertas</a></div>
+        <div class="nav-item"><a href="/tickets" class="nav-link">Chamados</a></div>
+        <div class="nav-item"><a href="/clientes" class="nav-link">Clientes</a></div>
+        <div class="nav-item">
+          <a class="nav-link active">Admin</a>
+          <div class="nav-dropdown">
+            <a href="/admin/sync" class="dropdown-link">Sincronizacao</a>
+            <a href="/admin/tags" class="dropdown-link">Configuracao e Cadastro de Tags</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <div class="live-status">
+        <div class="dot-cron"></div>
+        <span>Ao Vivo</span>
+      </div>
+      <button class="btn-refresh-nav" onclick="loadTags()">Atualizar</button>
+      <div class="nav-item">
+        <a class="nav-link logout-link" onclick="doLogout()" title="Sair do sistema">Sair</a>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    function doLogout() {
+      localStorage.removeItem('authToken');
+      window.location.replace('/login.html');
+    }
+  </script>
+
+  <main class="tag-admin-shell">
+    <header class="tag-admin-header">
+      <div>
+        <span class="tag-admin-kicker">Admin HUB</span>
+        <h1>Configuracao e Cadastro de Tags</h1>
+      </div>
+      <div class="tag-admin-note">Filtros globais para todos os usuarios</div>
+    </header>
+
+    <section class="tag-admin-grid">
+      <div class="tag-admin-panel">
+        <div class="tag-panel-head">
+          <h2>Tags operacionais</h2>
+          <span id="tagCount">0 tags</span>
+        </div>
+        <div id="tagList" class="tag-list">
+          <div class="tag-empty">Carregando tags...</div>
+        </div>
+      </div>
+
+      <div class="tag-admin-panel">
+        <div class="tag-panel-head">
+          <h2 id="tagFormTitle">Nova tag</h2>
+          <button id="clearFormBtn" type="button" class="tag-secondary-btn">Limpar</button>
+        </div>
+
+        <form id="tagForm" class="tag-form">
+          <input id="tagId" type="hidden">
+          <label>
+            Nome da tag
+            <input id="tagLabel" type="text" maxlength="80" required placeholder="Ex.: Vandalizado">
+          </label>
+          <label>
+            Descricao
+            <input id="tagDescription" type="text" maxlength="255" placeholder="Uso operacional da tag">
+          </label>
+          <div class="tag-form-row">
+            <label>
+              Cor
+              <input id="tagColor" type="color" value="#14e7c5">
+            </label>
+            <label>
+              Ordem
+              <input id="tagDisplayOrder" type="number" value="0">
+            </label>
+          </div>
+          <label class="tag-check">
+            <input id="tagHideByDefault" type="checkbox">
+            Ocultar por padrao na listagem de clientes
+          </label>
+          <label>
+            Tolerancias iniciais
+            <textarea id="tagAliases" rows="7" placeholder="Uma variacao por linha"></textarea>
+          </label>
+          <button type="submit" class="tag-primary-btn">Salvar tag</button>
+        </form>
+      </div>
+
+      <div class="tag-admin-panel tag-preview-panel">
+        <div class="tag-panel-head">
+          <h2>Teste de nomenclatura</h2>
+        </div>
+        <form id="previewForm" class="tag-form">
+          <label>
+            Nome vindo do AUVO/GLPI
+            <textarea id="previewName" rows="3" placeholder="Cole aqui o nome do cliente ou ativo"></textarea>
+          </label>
+          <button type="submit" class="tag-primary-btn">Testar regras</button>
+        </form>
+        <div id="previewResult" class="tag-preview-result">
+          <span>Informe um nome para visualizar tags e nome limpo.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/admin-tags.js"></script>
+</body>
+
+</html>

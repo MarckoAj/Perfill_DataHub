@@ -1,4 +1,5 @@
 import hubEntityRepository from "../repositories/hubEntityRepository.js";
+import hubOperationalTagService from "./hubOperationalTagService.js";
 
 class HubEntityService {
   normalizeTagList(value, defaultValue = []) {
@@ -27,18 +28,28 @@ class HubEntityService {
       }
     }
 
+    const normalizedIncludeTags = this.normalizeTagList(includeTags);
+    let normalizedExcludeTags = this.normalizeTagList(excludeTags, null);
+
+    if (normalizedExcludeTags === null) {
+      const defaultHiddenTags = await hubOperationalTagService.listTags();
+      normalizedExcludeTags = defaultHiddenTags
+        .filter(tag => tag.hideByDefault)
+        .map(tag => tag.normalizedLabel);
+    }
+
     const [entities, total] = await Promise.all([
       hubEntityRepository.listEntities({
         limit,
         offset,
         search,
-        includeTags: this.normalizeTagList(includeTags),
-        excludeTags: this.normalizeTagList(excludeTags, ["DESINSTALADO"])
+        includeTags: normalizedIncludeTags,
+        excludeTags: normalizedExcludeTags
       }),
       hubEntityRepository.countEntities({
         search,
-        includeTags: this.normalizeTagList(includeTags),
-        excludeTags: this.normalizeTagList(excludeTags, ["DESINSTALADO"])
+        includeTags: normalizedIncludeTags,
+        excludeTags: normalizedExcludeTags
       })
     ]);
 

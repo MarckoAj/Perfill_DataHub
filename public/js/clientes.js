@@ -109,7 +109,7 @@ let hubSearchTimer = null;
 let hubOperationalTags = [];
 let hubTagFilters = {
     include: new Set(),
-    exclude: new Set(['DESINSTALADO'])
+    exclude: new Set()
 };
 
 function escapeHtml(value) {
@@ -211,6 +211,12 @@ async function loadHubOperationalTags() {
 
         const payload = await response.json();
         hubOperationalTags = Array.isArray(payload.data) ? payload.data : [];
+        hubTagFilters.exclude = new Set(
+            hubOperationalTags
+                .filter(tag => tag.hideByDefault)
+                .map(tag => tag.normalizedLabel || tag.label)
+                .filter(Boolean)
+        );
         renderHubTagFilters();
     } catch (error) {
         console.warn('[Clientes] Falha ao carregar tags operacionais:', error.message);

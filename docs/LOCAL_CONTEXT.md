@@ -121,6 +121,18 @@ npm test
 - Futuramente as regras de ocultacao, acompanhamento e confirmacao manual de alteracoes por tag devem sair do codigo e virar configuracao pela interface.
 - Para nao poluir a UI operacional, criar futuramente uma pagina especifica de administracao/configuracao de tags operacionais.
 - Essa pagina deve permitir gerenciar tags oficiais, cor/chip, ativo/inativo, ocultacao padrao, ordem de exibicao e aliases/tolerancias de nomenclatura.
-- As tolerancias devem permitir reconhecer variacoes como `DESATIVADO`, `*DESATIVADO*`, `**DESATIVADO*` e `**DESATIVADO**` como uma mesma tag oficial, sem depender de grafia perfeita.
+- As tolerancias iniciais automaticas devem cobrir apenas casos simples e confirmados de `Desinstalado`, como acentos, caixa de texto, hifens, barras e asteriscos incompletos.
+- `Desativado` nao deve ser tratado automaticamente como `Desinstalado`, pois nem sempre representa ponto desinstalado; essa tag e suas tolerancias devem ser criadas manualmente na pagina administrativa quando a regra estiver validada.
 - A configuracao futura deve ter uma area de teste/previa para digitar um nome vindo do AUVO/GLPI e ver quais tags seriam aplicadas e qual seria o nome limpo/canonico sugerido pelo HUB.
 - O HUB deve caminhar para ser a fonte confiavel de nomenclatura, permitindo propagacao controlada para AUVO/GLPI apenas com historico e confirmacao manual.
+- No modal de cliente/ponto, a secao `Tags operacionais` deve apenas listar tags relacionadas ao cliente e permitir vincular tags ja existentes por um botao `+`.
+- A criacao, edicao, aliases/tolerancias e configuracoes globais de tags devem ficar somente na pagina administrativa futura de `Filtros e Tags`.
+- Na aba `Estado do ponto`, a alteracao manual de status deve ser acionada por um botao `+` dentro do cabecalho do `Historico de Status Fisico`, mantendo o formulario em modal/dialogo.
+- Tolerancias/aliases de tags operacionais devem ser armazenadas em tabela propria (`hub_operational_tag_aliases`) e carregadas por seed, nao fixadas na regra de runtime.
+- O seed inicial deve conter apenas a tag `Desinstalado` e variacoes simples confirmadas nos nomes reais, como acentos, caixa de texto, hifen, barra e asterisco incompleto.
+- Os filtros padrao de tags na listagem de clientes devem ser globais para todos os usuarios, usando a configuracao da propria tag (`hideByDefault`) no banco.
+- A manutencao de tags e tolerancias deve ficar em uma pagina administrativa chamada `Configuracao e Cadastro de Tags`, abaixo de `Admin > Sincronizacao` no menu.
+- Futuramente adicionar/remover tags e tolerancias deve exigir um nivel administrativo superior ao acesso comum autenticado.
+- `customers_auvo.active` representa o estado operacional do cliente no AUVO; quando for `0`, o HUB deve aplicar automaticamente a tag `Inativo no AUVO`, oculta por padrao, preservando o registro para auditoria.
+- `customers_auvo.isActive` representa existencia/sincronizacao do registro na fonte; nao deve ser confundido com ponto operacionalmente ativo.
+- A correlacao de IDs entre HUB/GLPI/AUVO deve considerar apenas clientes AUVO operacionalmente ativos (`active = 1`) para evitar vincular novos relacionamentos em cadastros antigos/inativos.

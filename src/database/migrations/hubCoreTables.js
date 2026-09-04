@@ -77,12 +77,36 @@ export async function createHubCoreTables() {
           label VARCHAR(80) NOT NULL,
           normalizedLabel VARCHAR(100) NOT NULL,
           description VARCHAR(255) NULL,
+          color VARCHAR(20) NULL,
+          hideByDefault BOOLEAN DEFAULT 0,
+          displayOrder INT DEFAULT 0,
           isActive BOOLEAN DEFAULT 1,
           createdBy VARCHAR(100) NULL,
           createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           UNIQUE KEY uniq_hub_operational_tags_normalized (normalizedLabel),
           KEY idx_hub_operational_tags_active (isActive)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `
+    },
+    {
+      name: "hub_operational_tag_aliases",
+      query: `
+        CREATE TABLE IF NOT EXISTS hub_operational_tag_aliases (
+          aliasId BIGINT AUTO_INCREMENT PRIMARY KEY,
+          tagId BIGINT NOT NULL,
+          alias VARCHAR(120) NOT NULL,
+          normalizedAlias VARCHAR(140) NOT NULL,
+          matchType ENUM('prefix', 'contains', 'exact') NOT NULL DEFAULT 'prefix',
+          removeFromName BOOLEAN DEFAULT 1,
+          isActive BOOLEAN DEFAULT 1,
+          createdBy VARCHAR(100) NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_hub_operational_tag_alias (tagId, normalizedAlias, matchType),
+          KEY idx_hub_operational_tag_aliases_tag (tagId),
+          KEY idx_hub_operational_tag_aliases_active (isActive),
+          CONSTRAINT fk_hub_operational_tag_aliases_tag FOREIGN KEY (tagId) REFERENCES hub_operational_tags (tagId)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
       `
     }
@@ -107,8 +131,28 @@ export async function createHubCoreTables() {
     } else {
       console.error("Erro ao adicionar coluna hub_entities.canonicalKey:", error.message);
       throw error;
+  }
+
+  const tagColumns = [
+    ["color", "ALTER TABLE hub_operational_tags ADD COLUMN color VARCHAR(20) NULL AFTER description;"],
+    ["hideByDefault", "ALTER TABLE hub_operational_tags ADD COLUMN hideByDefault BOOLEAN DEFAULT 0 AFTER color;"],
+    ["displayOrder", "ALTER TABLE hub_operational_tags ADD COLUMN displayOrder INT DEFAULT 0 AFTER hideByDefault;"]
+  ];
+
+  for (const [column, query] of tagColumns) {
+    try {
+      await pool.query(query);
+      console.log(`Migration HUB: Coluna hub_operational_tags.${column} adicionada.`);
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log(`Migration HUB: Coluna hub_operational_tags.${column} ja existe.`);
+      } else {
+        console.error(`Erro ao adicionar coluna hub_operational_tags.${column}:`, error.message);
+        throw error;
+      }
     }
   }
+}
 
   try {
     await pool.query("ALTER TABLE hub_entities ADD UNIQUE KEY uniq_hub_entities_canonical_key (canonicalKey);");
@@ -122,15 +166,4 @@ export async function createHubCoreTables() {
     }
   }
 
-  try {
-    await pool.query(`
-      INSERT INTO hub_operational_tags (label, normalizedLabel, description, isActive, createdBy)
-      VALUES ('Desinstalado', 'DESINSTALADO', 'Tag operacional extraida de prefixos como **Desinstalado** no AUVO.', 1, 'migration')
-      ON DUPLICATE KEY UPDATE isActive = 1
-    `);
-    console.log("Migration HUB: Tag operacional padrao 'Desinstalado' garantida.");
-  } catch (error) {
-    console.error("Erro ao semear tag operacional padrao:", error.message);
-    throw error;
-  }
 }

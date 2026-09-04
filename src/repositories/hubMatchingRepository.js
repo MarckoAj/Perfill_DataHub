@@ -6,7 +6,9 @@ class HubMatchingRepository {
     const conditions = [
       "src.sourceSystem = 'AUVO'",
       "src.sourceEntity = 'customer'",
-      "e.isActive = 1"
+      "e.isActive = 1",
+      "COALESCE(e.status, 'active') <> 'inactive'",
+      "COALESCE(c.active, 1) = 1"
     ];
 
     if (search) {

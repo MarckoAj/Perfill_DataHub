@@ -80,6 +80,25 @@ export async function createHubOperationalLinksTables() {
           CONSTRAINT fk_hub_history_entities FOREIGN KEY (entityId) REFERENCES hub_entities (entityId)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
       `
+    },
+    {
+      name: "hub_entity_operational_tags",
+      query: `
+        CREATE TABLE IF NOT EXISTS hub_entity_operational_tags (
+          entityId BIGINT NOT NULL,
+          tagId BIGINT NOT NULL,
+          source VARCHAR(30) NOT NULL DEFAULT 'manual',
+          isActive BOOLEAN DEFAULT 1,
+          createdBy VARCHAR(100) NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (entityId, tagId),
+          KEY idx_hub_entity_operational_tags_tag (tagId),
+          KEY idx_hub_entity_operational_tags_active (isActive),
+          CONSTRAINT fk_hub_entity_operational_tags_entity FOREIGN KEY (entityId) REFERENCES hub_entities (entityId),
+          CONSTRAINT fk_hub_entity_operational_tags_tag FOREIGN KEY (tagId) REFERENCES hub_operational_tags (tagId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
+      `
     }
   ];
 

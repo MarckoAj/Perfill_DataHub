@@ -402,6 +402,10 @@ function closeHubOperationalTagDialog(confirmed) {
   resolve?.(result);
 }
 
+function _normalizedTagSet(tags = []) {
+  return new Set((tags || []).map(tag => tag.normalizedLabel || tag.label).filter(Boolean));
+}
+
 async function refreshCurrentHubClientAfterTagChange() {
   const client = _getCurrentClient();
   if (!client) return;
@@ -418,46 +422,54 @@ async function refreshCurrentHubClientAfterTagChange() {
 }
 
 async function addHubOperationalTag() {
-  const input = document.getElementById("pmOperationalTagInput");
-  const label = input?.value?.trim();
-  if (!label) return;
-  const dialog = await openHubOperationalTagDialog("add", label);
-  if (!dialog.confirmed) return;
+  const client = _getCurrentClient();
+  const entityId = client?.entityId || client?.hubId || client?.clientId;
+  if (!entityId) return;
+
+  const related = _normalizedTagSet(client.operationalTags || []);
+  const availableTags = (client.operationalTagDefinitions || [])
+    .filter(tag => !related.has(tag.normalizedLabel || tag.label));
+
+  if (availableTags.length === 0) {
+    alert("Nao ha tags operacionais disponiveis para vincular.");
+    return;
+  }
+
+  const dialog = await openHubOperationalTagSelectDialog(availableTags);
+  if (!dialog.confirmed || !dialog.tagId) return;
 
   const token = localStorage.getItem("authToken");
-  const client = _getCurrentClient();
   try {
-    const response = await fetch("/api/hub/tags", {
+    const response = await fetch(`/api/hub/entities/${encodeURIComponent(entityId)}/tags`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
-        label,
-        entityId: client?.entityId,
-        addToHistory: dialog.addToHistory,
+        tagId: dialog.tagId,
+        addToHistory: true,
         comment: dialog.comment
       })
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || result.error || `HTTP ${response.status}`);
 
-    if (input) input.value = "";
     await refreshCurrentHubClientAfterTagChange();
   } catch (error) {
-    alert(`Falha ao adicionar tag operacional: ${error.message}`);
+    alert(`Falha ao vincular tag operacional: ${error.message}`);
   }
 }
 
 async function addManualPhysicalStatusChange() {
   const client = _getCurrentClient();
   const entityId = client?.entityId || client?.hubId || client?.clientId;
-  const toStatus = document.getElementById("pmManualPhysicalStatus")?.value || "";
-  const referenceUrl = document.getElementById("pmManualPhysicalLink")?.value?.trim() || "";
-  const comment = document.getElementById("pmManualPhysicalComment")?.value?.trim() || "";
+  if (!entityId) return;
 
-  if (!entityId || !toStatus) return;
+  const dialog = await openManualPhysicalStatusDialog(client.pointStatus?.currentStatus || "N/A");
+  if (!dialog.confirmed || !dialog.toStatus) return;
+
+  const { toStatus, referenceUrl, comment } = dialog;
 
   const token = localStorage.getItem("authToken");
   try {
@@ -483,6 +495,103 @@ async function addManualPhysicalStatusChange() {
   }
 }
 
+function openHubOperationalTagSelectDialog(tags = []) {
+  return new Promise(resolve => {
+    const existing = document.getElementById("pmOperationalTagDialog");
+    existing?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "pmOperationalTagDialog";
+    overlay.className = "pm-tag-dialog-overlay active";
+    overlay.innerHTML = `
+      <div class="pm-tag-dialog">
+        <div class="pm-tag-dialog-head">
+          <strong>Vincular tag operacional</strong>
+          <button type="button" onclick="closeHubOperationalTagSelectDialog(false)">x</button>
+        </div>
+        <div class="pm-tag-dialog-body">
+          <select id="pmTagSelect" class="pm-op-tag-input">
+            ${tags.map(tag => `<option value="${Number(tag.tagId)}">${_escapeHtml(tag.label)}</option>`).join("")}
+          </select>
+          <textarea id="pmTagDialogComment" class="pm-tag-dialog-comment" placeholder="Observacao"></textarea>
+        </div>
+        <div class="pm-tag-dialog-foot">
+          <button type="button" class="pm-match-secondary" onclick="closeHubOperationalTagSelectDialog(false)">Cancelar</button>
+          <button type="button" class="pm-match-primary" onclick="closeHubOperationalTagSelectDialog(true)">Confirmar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    window.__pmTagDialogResolve = resolve;
+  });
+}
+
+function closeHubOperationalTagSelectDialog(confirmed) {
+  const overlay = document.getElementById("pmOperationalTagDialog");
+  const resolve = window.__pmTagDialogResolve;
+  const result = confirmed ? {
+    confirmed: true,
+    tagId: Number(document.getElementById("pmTagSelect")?.value || 0),
+    comment: document.getElementById("pmTagDialogComment")?.value?.trim() || ""
+  } : { confirmed: false };
+  overlay?.remove();
+  window.__pmTagDialogResolve = null;
+  resolve?.(result);
+}
+
+function openManualPhysicalStatusDialog(currentStatus = "N/A") {
+  return new Promise(resolve => {
+    const existing = document.getElementById("pmManualPhysicalStatusDialog");
+    existing?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "pmManualPhysicalStatusDialog";
+    overlay.className = "pm-tag-dialog-overlay active";
+    overlay.innerHTML = `
+      <div class="pm-tag-dialog">
+        <div class="pm-tag-dialog-head">
+          <strong>Alteracao manual de status</strong>
+          <button type="button" onclick="closeManualPhysicalStatusDialog(false)">x</button>
+        </div>
+        <div class="pm-tag-dialog-body">
+          <div class="pm-tag-dialog-label">Status atual: ${_escapeHtml(currentStatus)}</div>
+          <select id="pmManualPhysicalStatus" class="pm-op-tag-input">
+            <option value="">Selecionar status</option>
+            <option value="NOVO">NOVO</option>
+            <option value="VISTORIADO">VISTORIADO</option>
+            <option value="INSTALADO">INSTALADO</option>
+            <option value="REINSTALADO">REINSTALADO</option>
+            <option value="REMANEJADO">REMANEJADO</option>
+            <option value="DESINSTALADO">DESINSTALADO</option>
+          </select>
+          <input id="pmManualPhysicalLink" class="pm-op-tag-input" type="url" placeholder="Link relacionado">
+          <textarea id="pmManualPhysicalComment" class="pm-tag-dialog-comment" placeholder="Observacao"></textarea>
+        </div>
+        <div class="pm-tag-dialog-foot">
+          <button type="button" class="pm-match-secondary" onclick="closeManualPhysicalStatusDialog(false)">Cancelar</button>
+          <button type="button" class="pm-match-primary" onclick="closeManualPhysicalStatusDialog(true)">Salvar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    window.__pmManualStatusDialogResolve = resolve;
+  });
+}
+
+function closeManualPhysicalStatusDialog(confirmed) {
+  const overlay = document.getElementById("pmManualPhysicalStatusDialog");
+  const resolve = window.__pmManualStatusDialogResolve;
+  const result = confirmed ? {
+    confirmed: true,
+    toStatus: document.getElementById("pmManualPhysicalStatus")?.value || "",
+    referenceUrl: document.getElementById("pmManualPhysicalLink")?.value?.trim() || "",
+    comment: document.getElementById("pmManualPhysicalComment")?.value?.trim() || ""
+  } : { confirmed: false };
+  overlay?.remove();
+  window.__pmManualStatusDialogResolve = null;
+  resolve?.(result);
+}
+
 async function openRelatedHubEntity(entityId) {
   if (!entityId || typeof fetchHubEntityDetails !== "function" || typeof mapHubEntityDetailsToModalClient !== "function") return;
 
@@ -502,21 +611,22 @@ async function openRelatedHubEntity(entityId) {
 
 async function removeHubOperationalTag(tagId) {
   const currentClient = _getCurrentClient();
-  const label = (currentClient?.operationalTagDefinitions || []).find(tag => Number(tag.tagId) === Number(tagId))?.label || `Tag ${tagId}`;
+  const entityId = currentClient?.entityId || currentClient?.hubId || currentClient?.clientId;
+  const label = (currentClient?.operationalTags || []).find(tag => Number(tag.tagId) === Number(tagId))?.label || `Tag ${tagId}`;
+  if (!entityId) return;
   const dialog = await openHubOperationalTagDialog("remove", label);
   if (!dialog.confirmed) return;
 
   const token = localStorage.getItem("authToken");
   try {
-    const response = await fetch(`/api/hub/tags/${encodeURIComponent(tagId)}`, {
+    const response = await fetch(`/api/hub/entities/${encodeURIComponent(entityId)}/tags/${encodeURIComponent(tagId)}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
-        entityId: currentClient?.entityId,
-        addToHistory: dialog.addToHistory,
+        addToHistory: true,
         comment: dialog.comment
       })
     });
@@ -1085,56 +1195,57 @@ function _subTabContent(client) {
 
   /* ── ESTADO DO PONTO ── */
   if (currentPointTab === "status") {
-    const tagDefinitions = client.operationalTagDefinitions || [];
-    const definitionsHtml = tagDefinitions.length
-      ? tagDefinitions.map(tag => `
-          <span class="pm-op-tag">
+    const relatedTags = client.operationalTags || [];
+    const relatedTagsHtml = relatedTags.length
+      ? relatedTags.map(tag => `
+          <span class="pm-op-tag ${tag.source === "manual" ? "" : "muted"}">
             ${_escapeHtml(tag.label)}
-            <button type="button" onclick="removeHubOperationalTag(${Number(tag.tagId)})" aria-label="Remover tag ${_escapeHtml(tag.label)}">x</button>
+            ${tag.source === "manual" && tag.tagId ? `<button type="button" onclick="removeHubOperationalTag(${Number(tag.tagId)})" aria-label="Remover tag ${_escapeHtml(tag.label)}">x</button>` : ""}
           </span>
         `).join("")
-      : `<span class="pm-op-tag empty">Nenhuma tag cadastrada</span>`;
+      : `<span class="pm-op-tag empty">Sem tags relacionadas</span>`;
 
     return `
       <div class="pm-split-layout">
-        <!-- Campos à esquerda — grade 2 colunas horizontal -->
         <div class="pm-fields-grid">
           <div>
-            ${_field("Status físico atual",    client.pointStatus.currentStatus)}
+            ${_field("Status fisico atual",    client.pointStatus.currentStatus)}
             ${_field("Originado de",           client.pointStatus.originatedFrom)}
             ${_field("Alterado para",          client.pointStatus.changedTo)}
             ${_field("Data da vistoria",       client.pointStatus.inspectionDate)}
-            ${_field("Instalação da câmera",   client.pointStatus.cameraInstallation)}
-            ${_field("Substatus Câmera",       client.pointStatus.cameraSubstitution)}
-            ${_field("Data Desinstalação",     client.pointStatus.uninstallDate)}
+            ${_field("Instalacao da camera",   client.pointStatus.cameraInstallation)}
+            ${_field("Substatus Camera",       client.pointStatus.cameraSubstitution)}
+            ${_field("Data Desinstalacao",     client.pointStatus.uninstallDate)}
             ${_field("Data Remanejamento",     client.pointStatus.remanejadoDate)}
             ${_field("Poste Dedicado",         client.pointStatus.dedicatedPole)}
           </div>
           <div>
             ${_field("Tipo de Caixa",          client.pointStatus.boxType)}
-            ${_field("Instalação de caixa",    client.pointStatus.boxInstallation)}
-            ${_field("Data Instalação Caixa",  client.pointStatus.boxInstallationDate)}
-            ${_field("Instalação de Braço",    client.pointStatus.armInstallation)}
+            ${_field("Instalacao de caixa",    client.pointStatus.boxInstallation)}
+            ${_field("Data Instalacao Caixa",  client.pointStatus.boxInstallationDate)}
+            ${_field("Instalacao de Braco",    client.pointStatus.armInstallation)}
             ${_field("Estado do poste",        client.pointStatus.poleStatus)}
           </div>
         </div>
 
-        <!-- Histórico à direita com fundo branco -->
         <div class="pm-split-history">
           <div class="pm-split-history-header">
-            <span class="pm-split-history-title">Histórico de Status Físico</span>
-            <span class="pm-split-history-count">${(client.operationalHistory || []).length} registros</span>
+            <span class="pm-split-history-title">Historico de Status Fisico</span>
+            <div class="pm-split-history-actions">
+              <span class="pm-split-history-count">${(client.operationalHistory || []).length} registros</span>
+              <button type="button" class="pm-icon-action" onclick="addManualPhysicalStatusChange()" title="Adicionar alteracao manual de status" aria-label="Adicionar alteracao manual de status">+</button>
+            </div>
           </div>
           <div class="pm-split-history-list">
             ${(client.operationalHistory || []).map(item => `
               <div class="pm-split-history-item">
-                <div class="pm-split-history-item-title">${_escapeHtml(item.title || "Evento físico")}</div>
+                <div class="pm-split-history-item-title">${_escapeHtml(item.title || "Evento fisico")}</div>
                 <div class="pm-split-history-item-row">
                   <div class="pm-split-history-kv">
                     <span class="pm-split-kv-key">DE</span>
                     <span class="pm-split-kv-val">${_escapeHtml(item.from || "N/A")}</span>
                   </div>
-                  <div class="pm-split-history-arrow">→</div>
+                  <div class="pm-split-history-arrow">-&gt;</div>
                   <div class="pm-split-history-kv">
                     <span class="pm-split-kv-key">PARA</span>
                     <span class="pm-split-kv-val">${_escapeHtml(item.to || "N/A")}</span>
@@ -1150,37 +1261,13 @@ function _subTabContent(client) {
           <div class="pm-op-tags-compact">
             <div class="pm-op-tags-compact-head">
               <span>Tags operacionais</span>
-              <button type="button" onclick="addHubOperationalTag()">Adicionar</button>
+              <button type="button" class="pm-icon-action" onclick="addHubOperationalTag()" title="Vincular tag operacional" aria-label="Vincular tag operacional">+</button>
             </div>
-            <div class="pm-op-tags-form">
-              <input id="pmOperationalTagInput" class="pm-op-tag-input" type="text" placeholder="Nova tag">
-            </div>
-            <div class="pm-op-tags-list">${definitionsHtml}</div>
-          </div>
-          <div class="pm-op-tags-compact">
-            <div class="pm-op-tags-compact-head">
-              <span>Alteração manual de status</span>
-              <button type="button" onclick="addManualPhysicalStatusChange()">Salvar</button>
-            </div>
-            <div class="pm-op-tags-form">
-              <select id="pmManualPhysicalStatus" class="pm-op-tag-input">
-                <option value="">Selecionar status</option>
-                <option value="NOVO">NOVO</option>
-                <option value="VISTORIADO">VISTORIADO</option>
-                <option value="INSTALADO">INSTALADO</option>
-                <option value="REINSTALADO">REINSTALADO</option>
-                <option value="REMANEJADO">REMANEJADO</option>
-                <option value="DESINSTALADO">DESINSTALADO</option>
-              </select>
-              <input id="pmManualPhysicalLink" class="pm-op-tag-input" type="url" placeholder="Link relacionado">
-              <textarea id="pmManualPhysicalComment" class="pm-tag-dialog-comment" placeholder="Observação"></textarea>
-            </div>
+            <div class="pm-op-tags-list">${relatedTagsHtml}</div>
           </div>
         </div>
       </div>`;
   }
-
-  /* ── ATENDIMENTOS ── */
   if (currentPointTab === "attendance") {
     return `
       <div class="pm-split-layout">
