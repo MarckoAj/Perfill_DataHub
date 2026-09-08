@@ -106,11 +106,9 @@ let hubPagination = {
 };
 let hubSearchText = '';
 let hubSearchTimer = null;
+let hubEntitiesRequestId = 0;
 let hubOperationalTags = [];
-let hubTagFilters = {
-    include: new Set(),
-    exclude: new Set()
-};
+let hubSelectedTags = new Set();
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -122,6 +120,7 @@ function escapeHtml(value) {
 }
 
 async function loadHubEntities(page = 1, searchText = hubSearchText) {
+    const requestId = ++hubEntitiesRequestId;
     try {
         hubPagination.isLoading = true;
         renderPaginationControls();
@@ -135,10 +134,10 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         });
         const normalizedSearch = String(searchText || '').trim();
         if (normalizedSearch) params.set('search', normalizedSearch);
-        if (hubTagFilters.include.size > 0) {
-            params.set('includeTags', Array.from(hubTagFilters.include).join(','));
-        }
-        params.set('excludeTags', Array.from(hubTagFilters.exclude).join(','));
+        params.set('excludeTags', hubOperationalTags
+            .map(tag => tag.normalizedLabel || tag.label)
+            .filter(label => !hubSelectedTags.has(label))
+            .join(','));
 
         const response = await fetch(`/api/hub/entities?${params.toString()}`, {
             headers: token ? { authorization: `Bearer ${token}` } : {}
@@ -147,6 +146,7 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const payload = await response.json();
+        if (requestId !== hubEntitiesRequestId) return;
         const entities = Array.isArray(payload.data) ? payload.data : [];
         const pagination = payload.meta?.pagination || {};
 
@@ -187,6 +187,7 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
             operationalTags: entity.operationalTags || []
         }));
     } catch (error) {
+        if (requestId !== hubEntitiesRequestId) return;
         hubPagination = {
             isHub: false,
             isLoading: false,
@@ -211,9 +212,9 @@ async function loadHubOperationalTags() {
 
         const payload = await response.json();
         hubOperationalTags = Array.isArray(payload.data) ? payload.data : [];
-        hubTagFilters.exclude = new Set(
+        hubSelectedTags = new Set(
             hubOperationalTags
-                .filter(tag => tag.hideByDefault)
+                .filter(tag => !tag.hideByDefault)
                 .map(tag => tag.normalizedLabel || tag.label)
                 .filter(Boolean)
         );
@@ -234,40 +235,50 @@ function renderHubTagFilters() {
         return;
     }
 
-    const renderGroup = (title, type) => `
+    container.innerHTML = `
       <div class="tag-filter-group">
-        <span>${title}</span>
+        <div class="tag-filter-heading">
+          <span>Filtrar tags</span>
+          <button type="button" class="tag-filter-show-all" id="hubShowAllTags">Mostrar tudo</button>
+        </div>
         <div class="tag-filter-options">
           ${hubOperationalTags.map(tag => {
             const normalized = tag.normalizedLabel || tag.label;
-            const checked = hubTagFilters[type].has(normalized) ? 'checked' : '';
+            const checked = hubSelectedTags.has(normalized) ? 'checked' : '';
             return `
               <label class="tag-filter-option">
-                <input type="checkbox" data-tag-filter="${type}" value="${escapeHtml(normalized)}" ${checked}>
+                <input type="checkbox" data-tag-filter value="${escapeHtml(normalized)}" ${checked}>
                 ${escapeHtml(tag.label)}
               </label>
             `;
           }).join('')}
         </div>
+        <small class="tag-filter-help">Desmarque uma tag para ocultar os clientes com ela. Clientes sem tags continuam visíveis.</small>
       </div>
     `;
 
-    container.innerHTML = renderGroup('Incluir tags', 'include') + renderGroup('Ocultar tags', 'exclude');
+    document.getElementById('hubShowAllTags')?.addEventListener('click', showAllHubTags);
     container.querySelectorAll('input[data-tag-filter]').forEach(input => {
         input.addEventListener('change', handleHubTagFilterChange);
     });
 }
 
 function handleHubTagFilterChange(event) {
-    const type = event.target.dataset.tagFilter;
     const value = event.target.value;
-    if (!hubTagFilters[type]) return;
 
-    if (event.target.checked) hubTagFilters[type].add(value);
-    else hubTagFilters[type].delete(value);
+    if (event.target.checked) hubSelectedTags.add(value);
+    else hubSelectedTags.delete(value);
 
-    runHubSearch(hubSearchText).catch(error => {
+    runHubSearch(document.getElementById('searchAsset')?.value ?? hubSearchText).catch(error => {
         console.warn('[Clientes] Falha ao aplicar filtro de tags:', error.message);
+    });
+}
+
+function showAllHubTags() {
+    hubSelectedTags = new Set(hubOperationalTags.map(tag => tag.normalizedLabel || tag.label));
+    renderHubTagFilters();
+    runHubSearch(document.getElementById('searchAsset')?.value ?? hubSearchText).catch(error => {
+        console.warn('[Clientes] Falha ao mostrar todas as tags:', error.message);
     });
 }
 
@@ -714,8 +725,7 @@ function applyFilters() {
 }
 
 async function runHubSearch(searchText) {
-    if (hubPagination.isLoading) return;
-
+    clearTimeout(hubSearchTimer);
     hubSearchText = String(searchText || '').trim();
     await loadHubEntities(1, hubSearchText);
     renderProjects(document.getElementById('projectSearch')?.value || '');

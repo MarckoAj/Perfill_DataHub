@@ -114,7 +114,8 @@ npm test
 ## Decisoes Recentes Do HUB
 
 - A listagem geral de clientes deve usar tags operacionais vindas de `hub_operational_tags`.
-- A tela deve permitir selecionar uma lista de tags para incluir e outra lista de tags para ocultar; as duas selecoes podem ser usadas ao mesmo tempo.
+- A listagem usa um unico grupo `Filtrar tags`: marcadas permitem exibir os clientes; desmarcadas ocultam clientes com aquela tag. Se um cliente tiver varias tags, a exclusao prevalece. Clientes sem tags continuam visiveis.
+- O botao `Mostrar tudo` marca todas as tags e remove a ocultacao por tags, preservando o texto da busca. Tags com `hideByDefault` iniciam desmarcadas.
 - Pontos podem exibir multiplos chips de tags na listagem.
 - A tag `Desinstalado` deve ficar oculta por padrao na listagem geral, mas o usuario pode desmarcar a ocultacao para exibir esses pontos.
 - Tags como `Implantacao` devem ser usadas normalmente como filtro e chip, sem ocultacao padrao.
