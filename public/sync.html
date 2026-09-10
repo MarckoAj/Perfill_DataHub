@@ -159,6 +159,7 @@
         <p class="hub-match-subtitle">Pre-visualizacao local de vinculos. A propagacao para outras plataformas permanece bloqueada.</p>
       </div>
       <div class="hub-match-actions">
+        <button class="btn-resume" type="button" id="hubBulkStart">Vincular todos com 100%</button>
         <button class="btn-resume" type="button" onclick="showHubMatchingReviewQueue()">Fila de revisao</button>
         <button class="btn-resume" type="button" onclick="showHubMatchingAll()">Todos</button>
         <button class="btn-resume" type="button" onclick="resetHubMatchingFilters()">Limpar filtros</button>
@@ -167,6 +168,13 @@
       </div>
     </div>
 
+    <section class="hub-bulk-progress" aria-label="Vinculação em lote HUB e GLPI">
+      <div class="hub-bulk-heading"><strong>Vinculação HUB x GLPI</strong><span id="hubBulkStatus" role="status">Pronto</span></div>
+      <p class="hub-match-subtitle">Todos os cadastros com 100% em ID + Nome, sem ambiguidade. Independente dos filtros e da página atual.</p>
+      <div class="progress-track" id="hubBulkTrack" role="progressbar" aria-label="Dispositivos processados" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="hubBulkFill" style="width:0%"></div></div>
+      <div id="hubBulkCounts">0 vinculados · 0 ignorados · 0 falhas</div>
+      <details id="hubBulkDetails" hidden><summary>Detalhes dos itens ignorados e falhas (até 100)</summary><ul id="hubBulkErrors"></ul></details>
+    </section>
     <div class="hub-match-filters">
       <div class="form-group">
         <label>Busca</label>
@@ -200,10 +208,6 @@
           <option value="score_asc">Menor score</option>
           <option value="name_asc">Nome HUB</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label>Score minimo</label>
-        <input class="form-input" id="hubMatchMinScore" type="number" min="0" max="100" value="90">
       </div>
       <label class="hub-match-check"><input id="hubMatchIncludeLinked" type="checkbox" checked> Ja vinculados</label>
       <label class="hub-match-check"><input id="hubMatchIncludeAmbiguous" type="checkbox" checked> Ambiguos</label>
@@ -889,7 +893,6 @@
         search: document.getElementById('hubMatchSearch')?.value || '',
         status: document.getElementById('hubMatchStatus')?.value || '',
         sort: document.getElementById('hubMatchSort')?.value || 'score_desc',
-        minScore: document.getElementById('hubMatchMinScore')?.value || '90',
         includeLinked: document.getElementById('hubMatchIncludeLinked')?.checked ? 'true' : 'false',
         includeAmbiguous: document.getElementById('hubMatchIncludeAmbiguous')?.checked ? 'true' : 'false',
         includeLowScore: document.getElementById('hubMatchIncludeLowScore')?.checked ? 'true' : 'false',
@@ -925,13 +928,11 @@
       clearHubMatchingSearchAndStatus();
       const mode = document.getElementById('hubMatchMode');
       const sort = document.getElementById('hubMatchSort');
-      const minScore = document.getElementById('hubMatchMinScore');
       const includeLinked = document.getElementById('hubMatchIncludeLinked');
       const includeAmbiguous = document.getElementById('hubMatchIncludeAmbiguous');
       const includeLowScore = document.getElementById('hubMatchIncludeLowScore');
       if (mode) mode.value = 'both';
       if (sort) sort.value = 'score_desc';
-      if (minScore) minScore.value = '90';
       if (includeLinked) includeLinked.checked = true;
       if (includeAmbiguous) includeAmbiguous.checked = true;
       if (includeLowScore) includeLowScore.checked = true;
@@ -1251,7 +1252,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      ['hubMatchMode', 'hubMatchStatus', 'hubMatchSort', 'hubMatchMinScore', 'hubMatchIncludeLinked', 'hubMatchIncludeAmbiguous', 'hubMatchIncludeLowScore']
+      ['hubMatchMode', 'hubMatchStatus', 'hubMatchSort', 'hubMatchIncludeLinked', 'hubMatchIncludeAmbiguous', 'hubMatchIncludeLowScore']
         .forEach(id => document.getElementById(id)?.addEventListener('change', () => loadHubMatchingPreview(1)));
       document.getElementById('hubMatchSearch')?.addEventListener('keydown', event => {
         if (event.key === 'Enter') loadHubMatchingPreview(1);
@@ -1408,6 +1409,7 @@
       </div>
     </div>
   </div>
+  <script src="/js/hub-bulk-matching.js"></script>
 </body>
 
 </html>

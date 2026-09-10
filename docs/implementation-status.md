@@ -2,6 +2,17 @@
 
 ## Resumo Executivo
 
+### Atualizacao de 10/09/2026
+
+- Vinculacao HUB x GLPI em lote para candidatos unicos com score 100%, revalidacao antes da gravacao e historico transacional. Veja [detalhes e limites](./hub-bulk-matching.md).
+- Indicador do lote com barra verde e texto de conclusao, sem contorno verde; estados de falha diferenciados.
+- Atendimentos por ponto separados por fonte, paginados em 20 itens e filtrados por tipos dinamicos. GLPI consulta chamados da localizacao vinculada, pois o cache ainda nao relaciona diretamente ticket e dispositivo.
+- Matching restrito a clientes AUVO operacionalmente ativos e protecao contra dispositivos ja vinculados a outro HUB.
+- Administracao de tags e aliases ja disponivel; permissoes administrativas mais especificas continuam pendentes.
+- Verificacao local: 80 testes em 18 suites passaram, mas o comando terminou com erro por chamadas GLPI assincronas apos o encerramento dos testes e certificado expirado.
+- Validacao focada antes do commit: 43 testes em 5 suites de lote, matching, repositorio, atendimentos e modal passaram com codigo de saida zero; sintaxe do script do lote e `git diff --check` tambem passaram.
+- Diagnostico direto do GLPI: autenticacao e leitura de um Peripheral funcionaram. O certificado venceu em 02/04/2026; o cliente existente desativa a validacao TLS. Renovacao do certificado e isolamento das chamadas externas nos testes continuam pendentes.
+
 O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard operacional, sincronizacao automatizada, Alert Engine modular e fase inicial do HUB canonico. Zabbix e automacoes mais avancadas seguem como proximas etapas.
 
 ## Arquitetura Base

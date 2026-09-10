@@ -33,8 +33,21 @@ jest.unstable_mockModule("../src/services/hubOperationalTagService.js", () => ({
 const { default: hubMatchingService } = await import("../src/services/hubMatchingService.js");
 
 describe("HubMatchingService", () => {
+  it('recusa candidato que caiu de 100% antes da gravacao em lote', async () => {
+    const preview = jest.spyOn(hubMatchingService, 'previewGlpiMatching').mockResolvedValueOnce({ data: [{
+      canAutoConfirm: true, requiresManualReview: false, status: 'match_nome',
+      candidates: [{ glpiDeviceId: '20', score: 99 }]
+    }] });
+    const result = await hubMatchingService.confirmSingleGlpiMatch({
+      entityId: 2, glpiDeviceId: '20', requireExactMatch: true, allowManualReview: false
+    });
+    expect(result.status).toBe('not_confirmable');
+    expect(repositoryMock.upsertGlpiLink).not.toHaveBeenCalled();
+    preview.mockRestore();
+  });
   beforeEach(() => {
     jest.clearAllMocks();
+    repositoryMock.upsertGlpiLink.mockResolvedValue({ success: true, status: 'confirmed' });
   });
 
   it("gera preview de match por ID + nome com score 100", async () => {
@@ -66,6 +79,42 @@ describe("HubMatchingService", () => {
       canAutoConfirm: true,
       propagationBlocked: true
     });
+  });
+
+  it('não atribui alta confiança apenas pelo mesmo código 11-176', () => {
+    const oldName = '11-176_RF_TP_IV_R FRANCISCO OTAVIANO, BARRA- PROX EXPRESSO 222 RESIDENCE';
+    const newName = '11-176_RF_TP_III_AV.OCEÂNICA-RM FRENTE AO MONTE PASCOAL PRAIA HOTEL';
+    expect(hubMatchingService.nameScore(oldName, oldName)).toBe(100);
+    expect(hubMatchingService.nameScore(oldName, newName)).toBeLessThan(90);
+  });
+
+  it('mantém candidato de nome abaixo do limiar para revisão, sem aprovação automática', async () => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([{ entityId: 15660, auvoCustomerId: '20315889', auvoName: '11-176_RF_TP_III_AV.OCEÂNICA-RM FRENTE AO MONTE PASCOAL PRAIA HOTEL-PERF-012', alreadyLinked: false }]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([{ deviceId: '11139', name: '11-176_RF_TP_III_AV.OCEÂNICA-RM FRENTE AO MONTE PASCOAL PRAIA HOTEL', auvoCustomerId: null }]);
+    const result = await hubMatchingService.previewGlpiMatching({ mode: 'both', includeLowScore: true });
+    expect(result.data[0]).toMatchObject({ status: 'baixo_score', glpiDeviceId: '11139', requiresManualReview: true, canAutoConfirm: false });
+    expect(result.data[0].score).toBeLessThan(90);
+  });
+
+  it.each(['id', 'name', 'both'])('exclui candidatos pertencentes a outro HUB no modo %s', async mode => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([{ entityId: 14901, auvoCustomerId: '16952025', auvoName: '11-176 CAMERA RUA A', alreadyLinked: false }]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([{ deviceId: '10681', name: '11-176 CAMERA RUA A', auvoCustomerId: '16952025', linkedHubEntityId: '15660' }]);
+    const preview = await hubMatchingService.previewGlpiMatching({ mode });
+    expect(preview.data[0].candidates).toEqual([]);
+    const result = await hubMatchingService.confirmSingleGlpiMatch({ entityId: 14901, glpiDeviceId: '10681', matchMode: mode });
+    expect(result.success).toBe(false);
+    expect(repositoryMock.upsertGlpiLink).not.toHaveBeenCalled();
+  });
+
+  it('retorna conflito se outro usuário confirmar o dispositivo após a prévia', async () => {
+    repositoryMock.listHubAuvoEntities.mockResolvedValue([{ entityId: 14901, auvoCustomerId: '16952025', auvoName: '11-176 CAMERA RUA A', alreadyLinked: false }]);
+    repositoryMock.listGlpiDevices.mockResolvedValue([{ deviceId: '10681', name: '11-176 CAMERA RUA A', auvoCustomerId: null }]);
+    repositoryMock.getGlpiDevice.mockResolvedValue({ deviceId: '10681', name: '11-176 CAMERA RUA A' });
+    repositoryMock.upsertGlpiLink.mockResolvedValue({ success: false, status: 'device_already_linked', linkedHubEntityId: 15660 });
+    const result = await hubMatchingService.confirmSingleGlpiMatch({ entityId: 14901, glpiDeviceId: '10681', matchMode: 'name', score: 1 });
+    expect(result).toMatchObject({ success: false, status: 'device_already_linked', linkedHubEntityId: 15660 });
+    expect(repositoryMock.upsertGlpiLink.mock.calls[0][0].score).toBe(100);
+    expect(repositoryMock.insertLinkHistory).not.toHaveBeenCalled();
   });
 
   it("ordena preview por maior score", async () => {
@@ -244,7 +293,7 @@ describe("HubMatchingService", () => {
       propagationBlocked: true
     });
     expect(repositoryMock.upsertGlpiLink).toHaveBeenCalledTimes(1);
-    expect(repositoryMock.insertLinkHistory).toHaveBeenCalledTimes(1);
+    expect(repositoryMock.insertLinkHistory).not.toHaveBeenCalled();
   });
 
   it("permite confirmacao individual explicita de baixo score", async () => {
@@ -283,7 +332,7 @@ describe("HubMatchingService", () => {
       propagationBlocked: true
     });
     expect(repositoryMock.upsertGlpiLink).toHaveBeenCalledTimes(1);
-    expect(repositoryMock.insertLinkHistory).toHaveBeenCalledTimes(1);
+    expect(repositoryMock.insertLinkHistory).not.toHaveBeenCalled();
   });
 
   it("ignora tag operacional no inicio do nome ao calcular score", async () => {

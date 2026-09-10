@@ -2,6 +2,14 @@
 
 Este documento acompanha a criacao incremental da entidade canonica do HUB.
 
+## Atualizacao de 10/09/2026
+
+A etapa atual inclui vinculacao em lote dos candidatos unicos com score 100%, revalidacao transacional, protecao de propriedade dos dispositivos e indicacao visual de conclusao sem contorno verde. Os criterios e limites estao em [Vinculacao HUB x GLPI em lote](./hub-bulk-matching.md).
+
+O modal agora separa atendimentos AUVO/GLPI com paginacao e filtros por tipo. As tags operacionais ja possuem administracao e aliases persistidos. A correlacao considera clientes AUVO operacionalmente ativos. Zabbix, divergencias por campo e propagacao controlada para fontes externas continuam pendentes.
+
+Os numeros de dispositivos e exemplos de carga apresentados abaixo sao registros historicos, nao uma contagem atual do banco.
+
 ## Objetivo
 
 Criar uma camada canonica do HUB para consolidar dados vindos de plataformas externas sem perder o estado atual de cada fonte.

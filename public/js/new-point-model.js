@@ -6,6 +6,17 @@ let currentPlatformTab = "hub";
 let currentPointTab = "general";
 let currentClientId = null;
 let _sidebarOpen = false;
+let currentAttendanceSource = 'auvo';
+let pointAttendancePages = {};
+let pointAttendanceFilters = {};
+const pointPlatformSections = {
+  hub: ['general', 'network', 'status', 'attendance'],
+  glpi: ['general', 'network', 'status', 'attendance'],
+  auvo: ['general', 'attendance'],
+  zabbix: ['general', 'network'],
+  spreadsheet: ['general', 'network', 'status']
+};
+const pointPlatformLabels = { hub: 'HUB', glpi: 'GLPI', auvo: 'AUVO', zabbix: 'ZABBIX', spreadsheet: 'Planilha base' };
 
 /* =========================================================
    SVG ICONS
@@ -43,6 +54,9 @@ function openPointModal(clientOrId = 1) {
   window.__currentPointModalClient = client;
   currentPlatformTab = "hub";
   currentPointTab = "general";
+  currentAttendanceSource = 'auvo';
+  pointAttendancePages = {};
+  pointAttendanceFilters = {};
   _sidebarOpen = false;
 
   const overlay = document.getElementById("pointModalOverlay");
@@ -69,13 +83,16 @@ function closePointModal() {
 ========================================================= */
 
 function changePlatformTab(tab) {
+  if (tab !== 'history' && !pointPlatformSections[tab]) return;
   currentPlatformTab = tab;
+  if (tab !== 'history' && !pointPlatformSections[tab].includes(currentPointTab)) currentPointTab = 'general';
   const client = _getCurrentClient();
   if (!client) return;
   _renderBody(client);
 }
 
 function changePointTab(tab) {
+  if (!pointPlatformSections[currentPlatformTab]?.includes(tab)) return;
   currentPointTab = tab;
   const client = _getCurrentClient();
   if (!client) return;
@@ -957,6 +974,7 @@ function _renderBody(client) {
       ${_platformTab("glpi",    "GLPI",     pmIcons.glpi,    _countPlatformDivergences(client, "glpi"))}
       ${_platformTab("zabbix",  "ZABBIX",   pmIcons.zabbix,  0)}
       ${_platformTab("auvo",    "AUVO",     pmIcons.auvo,    _countPlatformDivergences(client, "auvo"))}
+      ${_platformTab("spreadsheet", "Planilha base", pmIcons.glpi, 0)}
       ${_platformTab("history", "Histórico",pmIcons.history, 0)}
     </div>`;
 
@@ -998,10 +1016,9 @@ function _renderBody(client) {
       <div class="pm-info-card">
         <div class="pm-info-card-header">
           <div>
-            <div class="pm-info-card-title">Informações consolidadas (${currentPlatformTab.toUpperCase()})</div>
-            <div class="pm-info-card-subtitle">Valores considerados como fonte principal de verdade.</div>
+            <div class="pm-info-card-title">${pointPlatformLabels[currentPlatformTab]}</div>
+            <div class="pm-info-card-subtitle">${currentPlatformTab === 'hub' ? 'Informações consolidadas do ponto.' : currentPlatformTab === 'spreadsheet' ? 'Layout preparado. Dados da planilha ainda não importados.' : currentPlatformTab === 'zabbix' ? 'Integração ainda não disponível. Campos sem dados exibem N/A.' : 'Dados disponíveis nesta fonte. Campos sem dados exibem N/A.'}</div>
           </div>
-          <span class="pm-critical-badge">4 campos críticos definidos</span>
         </div>
 
         <div class="pm-info-card-body">
@@ -1011,14 +1028,14 @@ function _renderBody(client) {
         <div class="pm-info-card-footer">
           <div class="pm-status-row">
             <span>Status operacional</span>
-            <span class="pm-dot-online"></span>
-            <span style="color:#10b981;font-weight:700;">ONLINE</span>
+            <span>N/A</span>
           </div>
           <span class="pm-readonly-label">Modo de visualização (somente leitura)</span>
         </div>
       </div>
 
     </div>`;
+  if (currentPointTab === 'attendance') loadPointAttendances();
 }
 
 function _platformTab(id, label, icon, divergences) {
@@ -1036,116 +1053,153 @@ function _platformTab(id, label, icon, divergences) {
 
 function _subTab(id, label) {
   const active = currentPointTab === id ? "active" : "";
-  return `<button class="point-tab ${active}" onclick="changePointTab('${id}')">${label}</button>`;
+  const disabled = !pointPlatformSections[currentPlatformTab]?.includes(id);
+  return `<button type="button" class="point-tab ${active}" ${disabled ? 'disabled aria-disabled="true" title="Indisponível nesta fonte"' : `onclick="changePointTab('${id}')"`}>${label}${disabled ? ' <span aria-hidden="true">🔒</span>' : ''}</button>`;
 }
 
 /* =========================================================
    SUB-ABA: CONTEÚDO
 ========================================================= */
 
+function pointClientForSource(client) {
+  const fields = client.platformFields?.[currentPlatformTab] || {};
+  const networkKeys = ['ip', 'subnet', 'gateway', 'wanIp', 'circuit', 'availabilityDate', 'uptime', 'linkStatus'];
+  const statusKeys = ['currentStatus', 'originatedFrom', 'changedTo', 'inspectionDate', 'cameraInstallation',
+    'cameraSubstitution', 'uninstallDate', 'remanejadoDate', 'dedicatedPole', 'boxType',
+    'boxInstallation', 'boxInstallationDate', 'armInstallation', 'poleStatus'];
+  const isHub = currentPlatformTab === 'hub';
+  return { ...client, __renderedGeneralFieldKeys: new Set(),
+    network: Object.fromEntries(networkKeys.map(key => [key, (isHub ? client.network?.[key] : fields.network?.[key]) ?? 'N/A'])),
+    pointStatus: Object.fromEntries(statusKeys.map(key => [key,
+      (isHub ? client.pointStatus?.[key] : fields.physicalStatus?.[key] ?? (key === 'currentStatus' && currentPlatformTab === 'glpi' ? fields.status : null)) ?? 'N/A'])),
+    operationalHistory: isHub ? client.operationalHistory || [] : [],
+    operationalTags: isHub ? client.operationalTags || [] : []
+  };
+}
+
+function pointAttendanceSource() {
+  return currentPlatformTab === 'hub' ? currentAttendanceSource : currentPlatformTab;
+}
+
+function changeAttendanceSource(source) {
+  if (currentPlatformTab !== 'hub' || !['auvo', 'glpi'].includes(source)) return;
+  currentAttendanceSource = source;
+  _renderBody(_getCurrentClient());
+}
+
+function attendanceKey(client, source) {
+  return `${_getHubId(client)}:${source}`;
+}
+
+function filterPointAttendances(type = '') {
+  const client = _getCurrentClient();
+  const source = pointAttendanceSource();
+  if (!client || !['auvo', 'glpi'].includes(source)) return;
+  const key = attendanceKey(client, source);
+  pointAttendanceFilters[key] = pointAttendanceFilters[key] === type ? '' : type;
+  delete pointAttendancePages[key];
+  loadPointAttendances(0);
+}
+
+async function loadPointAttendances(offset = null) {
+  const client = _getCurrentClient();
+  const source = pointAttendanceSource();
+  if (!client || currentPointTab !== 'attendance' || !['auvo', 'glpi'].includes(source)) return;
+  const key = attendanceKey(client, source);
+  if (offset === null && pointAttendancePages[key]) return;
+  const state = { loading: true, offset: offset ?? 0, items: [], pagination: { total: 0, limit: 20 } };
+  pointAttendancePages[key] = state;
+  _renderBody(client);
+  try {
+    const params = new URLSearchParams({ source, limit: '20', offset: String(state.offset) });
+    const selectedType = pointAttendanceFilters[key] || '';
+    if (selectedType) params.set('type', selectedType);
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`/api/hub/entities/${encodeURIComponent(_getHubId(client))}/attendances?${params}`, {
+      headers: token ? { authorization: `Bearer ${token}` } : {}
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || `HTTP ${response.status}`);
+    Object.assign(state, result.data);
+  } catch (error) {
+    state.error = error.message;
+  } finally {
+    state.loading = false;
+    if (pointAttendancePages[key] === state && _getCurrentClient() === client && currentPointTab === 'attendance' && pointAttendanceSource() === source) _renderBody(client);
+  }
+}
+
+function safeAttendanceUrl(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? _escapeHtml(url.href) : '';
+  } catch { return ''; }
+}
+
+function renderPointAttendances(client) {
+  const source = pointAttendanceSource();
+  const state = pointAttendancePages[attendanceKey(client, source)];
+  const tabs = currentPlatformTab === 'hub' ? `<div class="pm-attendance-tabs" role="group" aria-label="Fonte dos atendimentos">
+    ${['auvo', 'glpi'].map(id => `<button type="button" class="point-tab ${source === id ? 'active' : ''}" aria-pressed="${source === id}" onclick="changeAttendanceSource('${id}')">${id.toUpperCase()}</button>`).join('')}
+  </div>` : '';
+  let content;
+  if (!state || state.loading) content = '<p class="pm-attendance-message" role="status">Carregando atendimentos...</p>';
+  else if (state.error) content = `<p class="pm-attendance-message" role="alert">Não foi possível carregar os atendimentos: ${_escapeHtml(state.error)}</p><button type="button" class="pm-match-secondary" onclick="loadPointAttendances(${state.offset})">Tentar novamente</button>`;
+  else {
+    const { total, limit, hasMore } = state.pagination;
+    const sourceLabel = state.sourceId ? (source === 'auvo' ? `Cliente AUVO ${state.sourceId}` : `Localização GLPI ${state.sourceId} do dispositivo vinculado`) : state.unavailableReason || 'Nenhum vínculo disponível para consultar esta fonte.';
+    const summary = state.summary || { total, byType: [] };
+    const counts = state.sourceId ? `<div class="pm-attendance-counts" aria-label="Contagem geral de atendimentos ${source.toUpperCase()}">
+      <button type="button" class="pm-attendance-count pm-attendance-count-total ${state.selectedType ? '' : 'active'}" onclick="filterPointAttendances('')" aria-pressed="${!state.selectedType}"><span>Total de ${source === 'auvo' ? 'tarefas AUVO' : 'chamados GLPI'}</span><strong>${_escapeHtml(summary.total)}</strong></button>
+      ${(summary.byType || []).map(group => `<button type="button" class="pm-attendance-count ${state.selectedType === group.type ? 'active' : ''}" data-attendance-type="${_escapeHtml(group.type)}" aria-pressed="${state.selectedType === group.type}"><span>${_escapeHtml(group.type)}</span><strong>${_escapeHtml(group.total)}</strong></button>`).join('')}
+    </div>` : '';
+    content = `${counts}<p class="pm-attendance-message">${_escapeHtml(sourceLabel)} · Histórico sincronizado no HUB.</p>
+      <div class="pm-attendance-list">
+        ${state.items.length ? state.items.map(item => {
+          const url = safeAttendanceUrl(item.url);
+          return `<details class="pm-attendance-item">
+            <summary><span class="pm-attendance-id">#${_escapeHtml(item.id)}</span><span class="pm-attendance-title">${_escapeHtml(item.title || 'N/A')}</span><span class="pm-attendance-status">${_escapeHtml(item.status || 'N/A')}</span><time>${_escapeHtml(_formatDateTime(item.date))}</time></summary>
+            <div class="pm-attendance-detail">
+              ${_field('Responsável', item.responsible || 'N/A')}
+              ${source === 'auvo' ? _field('Orientação', item.orientation || 'N/A') + _field('Relatório', item.report || 'N/A') : _field('Tipo', item.type || 'N/A') + _field('Descrição', item.description || 'N/A')}
+              ${url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">Abrir ${source === 'auvo' ? 'tarefa no AUVO' : 'chamado no GLPI'}</a>` : ''}
+            </div>
+          </details>`;
+        }).join('') : state.sourceId ? '<p class="pm-attendance-message">Nenhum atendimento encontrado para este cadastro.</p>' : ''}
+      </div>
+      <div class="pm-attendance-pagination">
+        <span>${state.selectedType ? `${_escapeHtml(state.selectedType)} · ` : ''}${total ? state.offset + 1 : 0}–${Math.min(state.offset + state.items.length, total)} de ${total} ${source === 'auvo' ? 'tarefas' : 'chamados'}</span>
+        <div><button type="button" class="pm-match-secondary" onclick="loadPointAttendances(${Math.max(0, state.offset - limit)})" ${state.offset === 0 ? 'disabled' : ''}>Anterior</button>
+        <button type="button" class="pm-match-secondary" onclick="loadPointAttendances(${state.offset + limit})" ${hasMore ? '' : 'disabled'}>Próxima</button></div>
+      </div>`;
+  }
+  setTimeout(() => document.querySelectorAll('.pm-attendance-count[data-attendance-type]').forEach(button => {
+    button.addEventListener('click', () => filterPointAttendances(button.dataset.attendanceType || ''));
+  }), 0);
+  return `<section class="pm-attendances"><h3>Atendimentos</h3>${tabs}${content}</section>`;
+}
+
 function _subTabContent(client) {
+  // Keep every field in its own source; unavailable values remain visible as N/A.
+  client = pointClientForSource(client);
   /* ── INFORMAÇÕES GERAIS ── */
   if (currentPointTab === "general") {
-    const nameBadge = currentPlatformTab === "glpi"
-      ? { type: "warning", label: "Divergente do HUB" }
-      : { type: "critical", label: "Campo Crítico" };
-    const assetName = _getAssetName(client);
-    const links = _getPlatformLinks(client);
-    client.__renderedGeneralFieldKeys = new Set();
-    const fieldValues = {
-      name: _getPlatformGeneralValue(client, "name", assetName),
-      id: currentPlatformTab === "hub" ? _formatHubId(client) : _getPlatformGeneralValue(client, "id", _formatHubId(client)),
-      type: _getPlatformGeneralValue(client, "type", client.type),
-      city: _getPlatformGeneralValue(client, "city", client.city),
-      latitude: _getPlatformGeneralValue(client, "latitude", client.latitude),
-      longitude: _getPlatformGeneralValue(client, "longitude", client.longitude),
-      unit: _getPlatformGeneralValue(client, "unit", client.unit),
-      region: _getPlatformGeneralValue(client, "region", client.region),
-      responsible: _getPlatformGeneralValue(client, "responsible", "HUB")
-    };
-
+    const fields = client.platformFields?.[currentPlatformTab] || {};
+    const value = key => fields[key] ?? 'N/A';
+    const id = currentPlatformTab === 'hub' ? _formatHubId(client) : value('id');
     return `
-      <div class="pm-general-layout">
-        <!-- Campos: 2/3 esquerda -->
-        <div class="pm-fields-grid">
-          <div>
-            ${_field("Nome do ativo",    _shortText(fieldValues.name, 36), nameBadge, fieldValues.name, client, "name")}
-            ${_field("ID do ativo", fieldValues.id, null, null, client, "id")}
-            ${_platformField(client, "Tipo", "deviceType", client.type)}
-            ${_platformField(client, "Status", "status")}
-            ${_platformField(client, "Latitude", "latitude", client.latitude, { type:"critical", label:"Campo Critico" })}
-            ${_field("Município",        fieldValues.city)}
-          </div>
-          <div>
-            ${_platformField(client, "ID Auvo", "auvoCustomerId", links.auvo?.customerId, null, null, "id")}
-            ${_platformField(client, "Localizacao", "locationName", client.address, null, null, "location")}
-            ${_platformField(client, "Fabricante", "manufacturer")}
-            ${_platformField(client, "Modelo", "model", "N/A", null, null, "model")}
-            ${_platformField(client, "Projeto", "project")}
-            ${_field("Longitude",        fieldValues.longitude, { type:"critical", label:"Campo Critico" }, null, client, "longitude")}
-            ${_platformField(client, "Fonte de Atualizacao", "updateSource")}
-            ${_platformField(client, "Tecnico encarregado", "hardwareTechnician")}
-            ${_field("Região",           fieldValues.region)}
-            ${_field("Longitude",        fieldValues.longitude, { type:"critical", label:"Campo Critico" }, null, client, "longitude")}
-            ${_field("Responsável técnico", fieldValues.responsible)}
-          </div>
+      <div class="pm-fields-grid pm-general-fields">
+        <div>
+          ${_field('Nome do ativo', value('name'), null, value('name'), client, 'name')}
+          ${_field('ID do ativo', id, null, null, client, 'id')}
         </div>
-
-        <!-- Prévia do dispositivo à direita -->
-        <div class="pm-device-preview">
-          <div class="pm-device-preview-label">Dispositivo</div>
-          <div class="pm-device-img-wrap">
-            <svg class="pm-device-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- Corpo da câmera -->
-              <rect x="8" y="22" width="52" height="36" rx="6" fill="rgba(20,231,197,0.08)" stroke="rgba(20,231,197,0.35)" stroke-width="1.5"/>
-              <!-- Lente -->
-              <circle cx="34" cy="40" r="13" fill="rgba(20,231,197,0.05)" stroke="rgba(20,231,197,0.4)" stroke-width="1.5"/>
-              <circle cx="34" cy="40" r="8" fill="rgba(20,231,197,0.08)" stroke="rgba(20,231,197,0.5)" stroke-width="1.5"/>
-              <circle cx="34" cy="40" r="4" fill="rgba(20,231,197,0.25)"/>
-              <circle cx="32" cy="38" r="1.2" fill="rgba(255,255,255,0.5)"/>
-              <!-- Visor -->
-              <rect x="18" y="26" width="12" height="7" rx="2" fill="rgba(20,231,197,0.12)" stroke="rgba(20,231,197,0.3)" stroke-width="1"/>
-              <!-- Flash -->
-              <circle cx="56" cy="28" r="3" fill="rgba(20,231,197,0.15)" stroke="rgba(20,231,197,0.4)" stroke-width="1"/>
-              <!-- Botão disparador -->
-              <rect x="34" y="16" width="10" height="6" rx="3" fill="rgba(20,231,197,0.2)" stroke="rgba(20,231,197,0.4)" stroke-width="1"/>
-              <!-- Indicador LED -->
-              <circle cx="58" cy="38" r="2.5" fill="#10b981" opacity="0.9"/>
-              <circle cx="58" cy="38" r="2.5" fill="#10b981" style="filter:blur(3px);opacity:0.6;"/>
-              <!-- Suporte/tripé -->
-              <line x1="34" y1="58" x2="28" y2="72" stroke="rgba(20,231,197,0.3)" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="34" y1="58" x2="34" y2="72" stroke="rgba(20,231,197,0.3)" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="34" y1="58" x2="40" y2="72" stroke="rgba(20,231,197,0.3)" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="24" y1="72" x2="44" y2="72" stroke="rgba(20,231,197,0.25)" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-            <div class="pm-device-status-row">
-              <span class="pm-device-dot online"></span>
-              <span class="pm-device-status-label">Câmera Ativa</span>
-            </div>
-          </div>
-          <div class="pm-device-info">
-            <div class="pm-device-info-row">
-              <span class="pm-device-info-key">Codigo</span>
-              <span class="pm-device-info-val">${_escapeHtml(links.hub?.deviceCode || client.pointId || "N/A")}</span>
-            </div>
-            <div class="pm-device-info-row">
-              <span class="pm-device-info-key">AUVO</span>
-              <span class="pm-device-info-val">${_escapeHtml(links.auvo?.customerId || "N/A")}</span>
-            </div>
-            <div class="pm-device-info-row">
-              <span class="pm-device-info-key">GLPI</span>
-              <span class="pm-device-info-val">${_escapeHtml(links.glpi?.deviceId || "N/A")}</span>
-            </div>
-            <div class="pm-device-info-row">
-              <span class="pm-device-info-key">Localizacao</span>
-              <span class="pm-device-info-val">${_escapeHtml(links.glpi?.locationId || "N/A")}</span>
-            </div>
-          </div>
+        <div>
+          ${_field('Latitude', value('latitude'), null, null, client, 'latitude')}
+          ${_field('Longitude', value('longitude'), null, null, client, 'longitude')}
         </div>
       </div>`;
   }
 
-  /* ── INFORMAÇÕES DE REDE ── */
   if (currentPointTab === "network") {
     return `
       <div class="pm-network-layout">
@@ -1177,11 +1231,11 @@ function _subTabContent(client) {
           </div>
           <div class="pm-cmd-output" id="pmCmdOutput"><span class="cmd-prompt">C:\\Windows\\System32&gt; </span><span class="cmd-text cmd-cursor">_</span></div>
           <div class="pm-cmd-actions">
-            <button class="pm-cmd-btn ping" onclick="runNetworkCmd('ping')">
+            <button class="pm-cmd-btn ping" disabled title="Diagnóstico de rede ainda indisponível">
               ${pmIcons.ping}
               <span>Ping -t</span>
             </button>
-            <button class="pm-cmd-btn tracert" onclick="runNetworkCmd('tracert')">
+            <button class="pm-cmd-btn tracert" disabled title="Diagnóstico de rede ainda indisponível">
               ${pmIcons.route}
               <span>Tracert -d</span>
             </button>
@@ -1233,10 +1287,11 @@ function _subTabContent(client) {
             <span class="pm-split-history-title">Historico de Status Fisico</span>
             <div class="pm-split-history-actions">
               <span class="pm-split-history-count">${(client.operationalHistory || []).length} registros</span>
-              <button type="button" class="pm-icon-action" onclick="addManualPhysicalStatusChange()" title="Adicionar alteracao manual de status" aria-label="Adicionar alteracao manual de status">+</button>
+              ${currentPlatformTab === 'hub' ? '<button type="button" class="pm-icon-action" onclick="addManualPhysicalStatusChange()" title="Adicionar alteracao manual de status" aria-label="Adicionar alteracao manual de status">+</button>' : ''}
             </div>
           </div>
           <div class="pm-split-history-list">
+            ${!(client.operationalHistory || []).length ? '<p class="pm-attendance-message">Nenhum histórico físico disponível nesta fonte.</p>' : ''}
             ${(client.operationalHistory || []).map(item => `
               <div class="pm-split-history-item">
                 <div class="pm-split-history-item-title">${_escapeHtml(item.title || "Evento fisico")}</div>
@@ -1258,7 +1313,7 @@ function _subTabContent(client) {
                 </div>
               </div>`).join("")}
           </div>
-          <div class="pm-op-tags-compact">
+          <div class="pm-op-tags-compact" ${currentPlatformTab !== 'hub' ? 'hidden' : ''}>
             <div class="pm-op-tags-compact-head">
               <span>Tags operacionais</span>
               <button type="button" class="pm-icon-action" onclick="addHubOperationalTag()" title="Vincular tag operacional" aria-label="Vincular tag operacional">+</button>
@@ -1269,41 +1324,7 @@ function _subTabContent(client) {
       </div>`;
   }
   if (currentPointTab === "attendance") {
-    return `
-      <div class="pm-split-layout">
-        <!-- Campos à esquerda — grade 2 colunas horizontal -->
-        <div class="pm-fields-grid">
-          <div>
-            ${_field("Atendimentos AUVO",    (client.attendances || []).length)}
-            ${_field("Tarefas concluídas",   "12")}
-            ${_field("Pendências em Campo",  "02")}
-          </div>
-          <div>
-            ${_field("Chamados GLPI",        "04")}
-            ${_field("Chamados críticos",    "01")}
-            ${_field("Chamados encerrados",  "08")}
-          </div>
-        </div>
-
-        <!-- Histórico de Tarefas à direita com fundo branco -->
-        <div class="pm-split-history">
-          <div class="pm-split-history-header">
-            <span class="pm-split-history-title">Histórico de Tarefas em Campo</span>
-            <span class="pm-split-history-count">${(client.attendances || []).length} tarefas</span>
-          </div>
-          <div class="pm-split-history-list">
-            ${(client.attendances || []).map(task => `
-              <div class="pm-split-task-item" onclick="openAuvoTaskModal(${task.taskId})">
-                <div class="pm-split-task-icon ${task.status}"></div>
-                <div class="pm-split-task-body">
-                  <div class="pm-split-task-title">${task.title}</div>
-                  <div class="pm-split-task-meta">${task.date || "—"}</div>
-                </div>
-                <div class="pm-split-task-arrow">›</div>
-              </div>`).join("")}
-          </div>
-        </div>
-      </div>`;
+    return renderPointAttendances(client);
   }
 
   return "";
@@ -1457,7 +1478,7 @@ function _historyTab() {
 ========================================================= */
 
 function _field(label, value, badge = null, title = null, client = null, fieldKey = null) {
-  if (value === undefined || value === null || value === "") return "";
+  if (value === undefined || value === null || value === "") value = 'N/A';
   if (client?.__renderedGeneralFieldKeys && fieldKey) {
     const renderKey = `${label}|${fieldKey}`;
     if (client.__renderedGeneralFieldKeys.has(renderKey)) return "";
@@ -1475,7 +1496,7 @@ function _field(label, value, badge = null, title = null, client = null, fieldKe
     <div class="info-block">
       <div class="info-label">${label}${relationHTML}</div>
       <div class="info-value-wrapper">
-        <span class="info-value"${titleAttr}>${_escapeHtml(value || "N/A")}</span>
+        <span class="info-value"${titleAttr}>${_escapeHtml(value ?? "N/A")}</span>
         ${badgeHTML}
       </div>
     </div>`;

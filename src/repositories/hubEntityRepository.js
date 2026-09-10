@@ -1064,6 +1064,90 @@ class HubEntityRepository {
     }));
   }
 
+  async getEntityAttendances({ entityId, source, limit, offset, type = '' }) {
+    const [entities] = await pool.query('SELECT entityId FROM hub_entities WHERE entityId = ?', [entityId]);
+    if (!entities.length) return null;
+
+    let sourceId = null;
+    let rows = [];
+    let total = 0;
+    let filteredTotal = 0;
+    let typeCounts = [];
+    if (source === 'auvo') {
+      const [sources] = await pool.query(`
+        SELECT sourceNativeId FROM hub_entity_sources
+        WHERE entityId = ? AND sourceSystem = 'AUVO' AND sourceEntity = 'customer'
+        ORDER BY sourceNativeId LIMIT 1`, [entityId]);
+      sourceId = sources[0]?.sourceNativeId || null;
+      if (sourceId) {
+        const [counts] = await pool.query(`
+          SELECT COALESCE(NULLIF(TRIM(tt.description), ''), 'Não informado') AS type, COUNT(*) AS total
+          FROM tasks_auvo t
+          LEFT JOIN tasks_types_auvo tt ON tt.tasksTypesId = t.tasksTypesId
+          WHERE t.customerId = ?
+          GROUP BY COALESCE(NULLIF(TRIM(tt.description), ''), 'Não informado')
+          ORDER BY total DESC, type ASC`, [sourceId]);
+        typeCounts = counts.map(row => ({ type: row.type, total: Number(row.total) }));
+        total = typeCounts.reduce((sum, row) => sum + row.total, 0);
+        const selectedType = typeCounts.find(row => row.type === type)?.type || '';
+        filteredTotal = selectedType ? typeCounts.find(row => row.type === selectedType).total : total;
+        const typeClause = selectedType
+          ? " AND COALESCE(NULLIF(TRIM(tt.description), ''), 'Não informado') = ?"
+          : '';
+        const [tasks] = await pool.query(`
+          SELECT t.taskId AS id, tt.description AS title, st.statusDescriptions AS status,
+            t.finished, u.name AS responsible, t.orientation, t.report,
+            COALESCE(t.taskDate, t.taskCreationDate, t.dateLastUpdate) AS date, t.taskUrl AS url
+          FROM tasks_auvo t
+          LEFT JOIN tasks_types_auvo tt ON tt.tasksTypesId = t.tasksTypesId
+          LEFT JOIN tasks_status st ON st.taskStatusId = t.taskStatusID
+          LEFT JOIN users_auvo u ON u.userId = t.userToId
+          WHERE t.customerId = ?${typeClause}
+          ORDER BY COALESCE(t.taskDate, t.taskCreationDate, t.dateLastUpdate) DESC, t.taskId DESC
+          LIMIT ? OFFSET ?`, selectedType ? [sourceId, selectedType, limit, offset] : [sourceId, limit, offset]);
+        rows = tasks.map(task => ({ ...task, title: task.title || `Tarefa AUVO ${task.id}`,
+          status: task.finished ? 'Concluída' : task.status || 'N/A', date: this.formatDate(task.date) }));
+      }
+    } else {
+      const [devices] = await pool.query(`
+        SELECT d.locationId FROM hub_entity_links l
+        JOIN glpi_devices d ON d.deviceId = l.sourceNativeId
+        WHERE l.entityId = ? AND l.sourceSystem = 'GLPI' AND l.sourceEntity = 'device' AND l.isActive = 1
+        ORDER BY l.isPrimary DESC, l.linkId DESC LIMIT 1`, [entityId]);
+      sourceId = devices[0]?.locationId || null;
+      if (sourceId) {
+        const [counts] = await pool.query(`
+          SELECT COALESCE(NULLIF(TRIM(tipo), ''), 'Não informado') AS type, COUNT(*) AS total
+          FROM tickets WHERE idLocalizacaoPonto = ?
+          GROUP BY COALESCE(NULLIF(TRIM(tipo), ''), 'Não informado')
+          ORDER BY total DESC, type ASC`, [sourceId]);
+        typeCounts = counts.map(row => ({ type: row.type, total: Number(row.total) }));
+        total = typeCounts.reduce((sum, row) => sum + row.total, 0);
+        const selectedType = typeCounts.find(row => row.type === type)?.type || '';
+        filteredTotal = selectedType ? typeCounts.find(row => row.type === selectedType).total : total;
+        const typeClause = selectedType
+          ? " AND COALESCE(NULLIF(TRIM(tipo), ''), 'Não informado') = ?"
+          : '';
+        const [tickets] = await pool.query(`
+          SELECT ticketId AS id, titulo AS title, status, nomeTecnico AS responsible,
+            descricao AS description, tipo AS type,
+            COALESCE(dataCriacao, dataAtualizacao, updated_at) AS date
+          FROM tickets WHERE idLocalizacaoPonto = ?${typeClause}
+          ORDER BY COALESCE(dataCriacao, dataAtualizacao, updated_at) DESC, ticketId DESC
+          LIMIT ? OFFSET ?`, selectedType ? [sourceId, selectedType, limit, offset] : [sourceId, limit, offset]);
+        const baseUrl = String(process.env.GLPI_BASE_URL || '').replace(/\/$/, '');
+        rows = tickets.map(ticket => ({ ...ticket, date: this.formatDate(ticket.date),
+          url: baseUrl ? `${baseUrl}/front/ticket.form.php?id=${ticket.id}` : null }));
+      }
+    }
+    const selectedType = typeCounts.some(row => row.type === type) ? type : '';
+    return { items: rows, source, sourceId, selectedType, summary: { total, byType: typeCounts }, relation: source === 'auvo' ? 'customer' : 'location',
+      unavailableReason: sourceId ? null : source === 'auvo'
+        ? 'Nenhum cadastro AUVO vinculado a este ponto.'
+        : 'É necessário um dispositivo GLPI vinculado com ID de localização disponível no HUB para consultar os chamados.',
+      pagination: { limit, offset, total: selectedType ? filteredTotal : total, hasMore: offset + rows.length < (selectedType ? filteredTotal : total) } };
+  }
+
   normalizeRuleText(value) {
     return String(value || "")
       .normalize("NFD")

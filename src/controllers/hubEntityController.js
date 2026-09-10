@@ -57,6 +57,22 @@ export const getHubEntityDetails = asyncHandler(async (req, res) => {
   });
 });
 
+export const listHubEntityAttendances = asyncHandler(async (req, res) => {
+  const entityId = Number(req.params.entityId);
+  const source = req.query.source;
+  const limit = req.query.limit === undefined ? 20 : Number(req.query.limit);
+  const offset = req.query.offset === undefined ? 0 : Number(req.query.offset);
+  const type = typeof req.query.type === 'string' ? req.query.type.trim() : '';
+  if (!Number.isSafeInteger(entityId) || entityId <= 0 || !['auvo', 'glpi'].includes(source)
+      || !Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isSafeInteger(offset) || offset < 0
+      || type.length > 200) {
+    return res.status(400).json({ success: false, message: 'Parâmetros de atendimentos inválidos' });
+  }
+  const result = await hubEntityService.getEntityAttendances({ entityId, source, limit, offset, type });
+  if (!result) return res.status(404).json({ success: false, message: 'Entidade HUB não encontrada' });
+  res.json({ success: true, data: result });
+});
+
 export const createManualHubPhysicalStatus = asyncHandler(async (req, res) => {
   const entityId = parseInt(req.params.entityId, 10);
 
@@ -196,7 +212,6 @@ export const previewGlpiHubMatching = asyncHandler(async (req, res) => {
     search: typeof req.query.search === "string" ? req.query.search.trim() : "",
     status: typeof req.query.status === "string" ? req.query.status.trim() : "",
     sort: typeof req.query.sort === "string" ? req.query.sort.trim() : "",
-    minScore: req.query.minScore,
     includeLinked: parseBooleanQuery(req.query.includeLinked, false),
     includeAmbiguous: parseBooleanQuery(req.query.includeAmbiguous, true),
     includeLowScore: parseBooleanQuery(req.query.includeLowScore, true),
@@ -225,7 +240,6 @@ export const previewSingleGlpiHubMatching = asyncHandler(async (req, res) => {
   const result = await hubMatchingService.previewGlpiMatching({
     entityId,
     mode: req.query.mode,
-    minScore: req.query.minScore,
     includeLinked: true,
     includeAmbiguous: true,
     includeLowScore: true,

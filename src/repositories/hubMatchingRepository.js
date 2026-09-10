@@ -1,7 +1,7 @@
 import pool from "../database/connection.js";
 
 class HubMatchingRepository {
-  async listHubAuvoEntities({ search = "" } = {}) {
+  async listHubAuvoEntities({ search = "", entityId = null } = {}) {
     const params = [];
     const conditions = [
       "src.sourceSystem = 'AUVO'",
@@ -11,6 +11,10 @@ class HubMatchingRepository {
       "COALESCE(c.active, 1) = 1"
     ];
 
+    if (entityId !== null) {
+      conditions.push("e.entityId = ?");
+      params.push(entityId);
+    }
     if (search) {
       conditions.push(`(
         e.displayName LIKE ?
@@ -66,15 +70,18 @@ class HubMatchingRepository {
     const [rows] = await pool.query(
       `
         SELECT
-          deviceId,
-          name,
-          auvoCustomerId,
-          locationId,
-          locationName,
-          status,
-          lastSyncAt
-        FROM glpi_devices
-        ORDER BY name ASC
+          d.deviceId,
+          d.name,
+          d.auvoCustomerId,
+          d.locationId,
+          d.locationName,
+          d.status,
+          d.lastSyncAt,
+          linked.entityId AS linkedHubEntityId
+        FROM glpi_devices d
+        LEFT JOIN hub_entity_links linked ON linked.sourceSystem = 'GLPI'
+          AND linked.sourceEntity = 'device' AND CAST(linked.sourceNativeId AS UNSIGNED) = d.deviceId
+        ORDER BY d.name ASC
       `
     );
 
@@ -85,7 +92,8 @@ class HubMatchingRepository {
       locationId: row.locationId ? String(row.locationId) : null,
       locationName: row.locationName || null,
       status: row.status || null,
-      lastSyncAt: row.lastSyncAt
+      lastSyncAt: row.lastSyncAt,
+      linkedHubEntityId: row.linkedHubEntityId ? String(row.linkedHubEntityId) : null
     }));
   }
 
@@ -122,7 +130,36 @@ class HubMatchingRepository {
   }
 
   async upsertGlpiLink({ entityId, glpiDevice, score, matchStrategy, confirmedBy = "admin" }) {
-    await pool.query(
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      // Serialize confirmations of the same HUB or device, including when no link exists yet.
+      const [entities] = await connection.query('SELECT entityId FROM hub_entities WHERE entityId = ? FOR UPDATE', [entityId]);
+      const [devices] = await connection.query('SELECT deviceId FROM glpi_devices WHERE deviceId = ? FOR UPDATE', [glpiDevice.deviceId]);
+      if (!entities.length || !devices.length) {
+        await connection.rollback();
+        return { success: false, status: 'not_found', message: 'HUB ou dispositivo GLPI não encontrado' };
+      }
+      const [links] = await connection.query(`
+        SELECT entityId, sourceNativeId, isActive FROM hub_entity_links
+        WHERE sourceSystem = 'GLPI' AND sourceEntity = 'device'
+          AND (sourceNativeId = ? OR (entityId = ? AND isActive = 1))
+        FOR UPDATE`, [String(glpiDevice.deviceId), entityId]);
+      const deviceLink = links.find(link => String(link.sourceNativeId) === String(glpiDevice.deviceId));
+      if (deviceLink && String(deviceLink.entityId) !== String(entityId)) {
+        await connection.rollback();
+        return { success: false, status: 'device_already_linked', linkedHubEntityId: deviceLink.entityId,
+          message: `Dispositivo GLPI já vinculado ao HUB ${deviceLink.entityId}. Atualize a prévia.` };
+      }
+      if (links.some(link => String(link.entityId) === String(entityId) && link.isActive && String(link.sourceNativeId) !== String(glpiDevice.deviceId))) {
+        await connection.rollback();
+        return { success: false, status: 'hub_already_linked', message: 'Este HUB já possui outro dispositivo GLPI vinculado. Atualize a prévia.' };
+      }
+      if (deviceLink?.isActive) {
+        await connection.commit();
+        return { success: true, status: 'already_linked', message: 'Vínculo GLPI já existia no HUB' };
+      }
+      await connection.query(
       `
         INSERT INTO hub_entity_links (
           entityId, sourceSystem, sourceEntity, sourceNativeId, sourceExternalId,
@@ -130,7 +167,6 @@ class HubMatchingRepository {
           metadata, lastSeenAt
         ) VALUES (?, 'GLPI', 'device', ?, NULL, 'platform_record', ?, ?, 0, 1, ?, NOW())
         ON DUPLICATE KEY UPDATE
-          entityId = VALUES(entityId),
           confidenceScore = VALUES(confidenceScore),
           matchStrategy = VALUES(matchStrategy),
           relationRole = VALUES(relationRole),
@@ -153,11 +189,20 @@ class HubMatchingRepository {
           locationName: glpiDevice.locationName || null
         })
       ]
-    );
+      );
+      await this.insertLinkHistory({ entityId, glpiDevice, score, matchStrategy, confirmedBy }, connection);
+      await connection.commit();
+      return { success: true, status: 'confirmed' };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
-  async insertLinkHistory({ entityId, glpiDevice, score, matchStrategy, confirmedBy = "admin" }) {
-    await pool.query(
+  async insertLinkHistory({ entityId, glpiDevice, score, matchStrategy, confirmedBy = "admin" }, connection = pool) {
+    await connection.query(
       `
         INSERT INTO hub_entity_history (
           entityId, fieldKey, action, sourceSystem, targetSystem,

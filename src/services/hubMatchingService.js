@@ -2,6 +2,8 @@ import hubMatchingRepository from "../repositories/hubMatchingRepository.js";
 import hubOperationalTagService from "./hubOperationalTagService.js";
 
 const VALID_MODES = new Set(["id", "name", "both"]);
+// Classifies confidence; lower-scoring candidates remain available for manual review.
+const AUTO_MATCH_CONFIDENCE = 90;
 const VALID_STATUSES = new Set([
   "sem_vinculo",
   "match_id",
@@ -74,11 +76,7 @@ class HubMatchingService {
     const distance = this.levenshteinDistance(left, right);
     const editScore = Math.round(((maxLength - distance) / maxLength) * 100);
     const tokenScore = this.tokenScore(left, right);
-    const codeLeft = this.extractDeviceCode(leftName);
-    const codeRight = this.extractDeviceCode(rightName);
-    const codeBoost = codeLeft && codeRight && codeLeft === codeRight ? 98 : 0;
-
-    return Math.max(editScore, tokenScore, codeBoost);
+    return Math.max(editScore, tokenScore);
   }
 
   buildCandidate(device, score, matchOrigin) {
@@ -94,7 +92,7 @@ class HubMatchingService {
     };
   }
 
-  resolvePreview({ entity, devicesByAuvoId, devices, mode, minScore, operationalTags = [] }) {
+  resolvePreview({ entity, devicesByAuvoId, devices, mode, operationalTags = [] }) {
     if (entity.alreadyLinked) {
       const linkedDevice = devices.find(device => device.deviceId === entity.linkedGlpiDeviceId);
       return {
@@ -109,12 +107,13 @@ class HubMatchingService {
       };
     }
 
+    const availableToEntity = device => !device.linkedHubEntityId || String(device.linkedHubEntityId) === String(entity.entityId);
     const auvoId = entity.auvoCustomerId;
-    const idCandidates = auvoId ? (devicesByAuvoId.get(auvoId) || []) : [];
+    const idCandidates = auvoId ? (devicesByAuvoId.get(auvoId) || []).filter(availableToEntity) : [];
     const baseName = entity.auvoName || entity.hubName;
     const baseDeviceCode = this.extractDeviceCode(baseName);
     const nameCandidateDevices = baseDeviceCode
-      ? devices.filter(device => device.deviceCode === baseDeviceCode)
+      ? devices.filter(device => device.deviceCode === baseDeviceCode && availableToEntity(device))
       : [];
     const scoredNameCandidates = nameCandidateDevices
       .map(device => this.buildCandidate(device, this.nameScore(baseName, device.name, operationalTags), "name"))
@@ -153,7 +152,7 @@ class HubMatchingService {
     }
 
     if (mode === "name") {
-      const strongCandidates = scoredNameCandidates.filter(candidate => candidate.score >= minScore);
+      const strongCandidates = scoredNameCandidates.filter(candidate => candidate.score >= AUTO_MATCH_CONFIDENCE);
       if (strongCandidates.length > 1) {
         return {
           glpiDeviceId: null,
@@ -217,7 +216,7 @@ class HubMatchingService {
 
     if (bothCandidates.length === 1) {
       const candidate = bothCandidates[0];
-      const strongEnough = candidate.score >= minScore;
+      const strongEnough = candidate.score >= AUTO_MATCH_CONFIDENCE;
       return {
         glpiDeviceId: candidate.glpiDeviceId,
         glpiName: candidate.glpiName,
@@ -230,7 +229,7 @@ class HubMatchingService {
       };
     }
 
-    const strongNameFallbacks = scoredNameCandidates.filter(candidate => candidate.score >= minScore);
+    const strongNameFallbacks = scoredNameCandidates.filter(candidate => candidate.score >= AUTO_MATCH_CONFIDENCE);
     if (strongNameFallbacks.length > 1) {
       return {
         glpiDeviceId: null,
@@ -264,6 +263,19 @@ class HubMatchingService {
       };
     }
 
+    if (scoredNameCandidates.length) {
+      const candidate = { ...scoredNameCandidates[0], matchOrigin: 'name_fallback_no_glpi_auvo_id' };
+      return {
+        glpiDeviceId: candidate.glpiDeviceId,
+        glpiName: candidate.glpiName,
+        matchOrigin: candidate.matchOrigin,
+        score: candidate.score,
+        status: 'baixo_score',
+        canAutoConfirm: false,
+        requiresManualReview: true,
+        candidates: [candidate]
+      };
+    }
     return this.emptyPreview("sem_vinculo");
   }
 
@@ -321,7 +333,6 @@ class HubMatchingService {
     mode = "both",
     search = "",
     status = "",
-    minScore = 90,
     sort = "score_desc",
     includeLinked = false,
     includeAmbiguous = true,
@@ -334,12 +345,11 @@ class HubMatchingService {
     const safeMode = VALID_MODES.has(mode) ? mode : "both";
     const safeStatus = VALID_STATUSES.has(status) ? status : "";
     const safeSort = ["score_desc", "score_asc", "name_asc"].includes(sort) ? sort : "score_desc";
-    const safeMinScore = Math.min(Math.max(Number(minScore) || 90, 0), 100);
     const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
     const safeOffset = Math.max(Number(offset) || 0, 0);
 
     const [entities, rawDevices] = await Promise.all([
-      hubMatchingRepository.listHubAuvoEntities({ search }),
+      hubMatchingRepository.listHubAuvoEntities({ search, entityId }),
       hubMatchingRepository.listGlpiDevices()
     ]);
     const operationalTags = await hubOperationalTagService.listTags();
@@ -375,7 +385,6 @@ class HubMatchingService {
           devicesByAuvoId,
           devices,
           mode: safeMode,
-          minScore: safeMinScore,
           operationalTags
         });
 
@@ -423,7 +432,6 @@ class HubMatchingService {
       meta: {
         mode: safeMode,
         sort: safeSort,
-        minScore: safeMinScore,
         limit: safeLimit,
         offset: safeOffset,
         total: allItems.length,
@@ -446,7 +454,8 @@ class HubMatchingService {
     score = null,
     confirmedBy = "admin",
     allowManualReview = true,
-    allowLowScoreManual = false
+    allowLowScoreManual = false,
+    requireExactMatch = false
   }) {
     const safeEntityId = Number(entityId);
     const safeGlpiDeviceId = glpiDeviceId ? String(glpiDeviceId) : "";
@@ -475,7 +484,6 @@ class HubMatchingService {
     const preview = await this.previewGlpiMatching({
       entityId: safeEntityId,
       mode: safeMode,
-      minScore: 90,
       includeLinked: true,
       includeAmbiguous: true,
       includeLowScore: true,
@@ -518,9 +526,10 @@ class HubMatchingService {
       };
     }
 
-    const confirmedScore = Number.isFinite(Number(score))
-      ? Math.min(Math.max(Number(score), 0), 100)
-      : candidate.score;
+    if (requireExactMatch && (candidate.score !== 100 || !item.canAutoConfirm || item.requiresManualReview || item.candidates.length !== 1)) {
+      return { success: false, status: "not_confirmable", message: "O candidato deixou de ser único com 100%." };
+    }
+    const confirmedScore = candidate.score;
     const canConfirm = item.canAutoConfirm || (allowManualReview && item.requiresManualReview);
 
     const lowScoreBlocked = item.status === "baixo_score" && !allowLowScoreManual;
@@ -547,20 +556,15 @@ class HubMatchingService {
     }
 
     const matchStrategy = item.matchOrigin || candidate.matchOrigin || safeMode;
-    await hubMatchingRepository.upsertGlpiLink({
+    const linkResult = await hubMatchingRepository.upsertGlpiLink({
       entityId: safeEntityId,
       glpiDevice,
       score: confirmedScore,
       matchStrategy,
       confirmedBy
     });
-    await hubMatchingRepository.insertLinkHistory({
-      entityId: safeEntityId,
-      glpiDevice,
-      score: confirmedScore,
-      matchStrategy,
-      confirmedBy
-    });
+    if (!linkResult.success) return { ...linkResult, entityId: safeEntityId, glpiDeviceId: safeGlpiDeviceId };
+    if (linkResult.status === 'already_linked') return { ...linkResult, entityId: safeEntityId, glpiDeviceId: safeGlpiDeviceId, propagationBlocked: true };
 
     return {
       success: true,

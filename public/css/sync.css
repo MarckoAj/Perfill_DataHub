@@ -477,6 +477,26 @@ header strong {
   font-size: 14px;
 }
 
+.hub-bulk-progress {
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color, #173047);
+  border-radius: 12px;
+  background: rgba(10, 18, 43, 0.6);
+}
+.hub-bulk-heading { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#hubBulkCounts, #hubBulkDetails { font-size: 12px; margin-top: 12px; }
+#hubBulkErrors { max-height: 200px; overflow: auto; }
+.hub-bulk-progress[data-status="PARTIAL"] { border-color: #fbbf24; }
+.hub-bulk-progress[data-status="FAILED"] { border-color: #f87171; }
+.hub-bulk-progress[data-status="COMPLETED"] #hubBulkStatus { color: #10b981; font-weight: 700; }
+.hub-bulk-progress[data-status="PARTIAL"] #hubBulkStatus { color: #fbbf24; font-weight: 700; }
+.hub-bulk-progress[data-status="FAILED"] #hubBulkStatus { color: #f87171; font-weight: 700; }
+.hub-bulk-progress[data-status="COMPLETED"] .progress-fill { background: #10b981; }
+.hub-bulk-progress[data-status="PARTIAL"] .progress-fill { background: #fbbf24; }
+.hub-bulk-progress[data-status="FAILED"] .progress-fill { background: #f87171; }
+.hub-bulk-progress[data-status="RUNNING"] .progress-fill,
+.hub-bulk-progress[data-status="PREPARING"] .progress-fill { background: #3b82f6; }
 .progress-track {
   width: 100%;
   height: 4px;
@@ -758,7 +778,7 @@ header strong {
 
 .hub-match-filters {
   display: grid;
-  grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(130px, 1fr)) repeat(3, auto);
+  grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(130px, 1fr)) repeat(3, auto);
   gap: 14px;
   align-items: end;
   margin-bottom: 18px;

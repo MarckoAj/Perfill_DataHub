@@ -69,6 +69,10 @@ class HubEntityService {
     return hubEntityRepository.getEntityDetails(entityId);
   }
 
+  async getEntityAttendances(options) {
+    return hubEntityRepository.getEntityAttendances(options);
+  }
+
   async createManualPhysicalStatusChange({
     entityId,
     fromStatus,

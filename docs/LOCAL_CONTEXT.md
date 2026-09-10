@@ -113,6 +113,20 @@ npm test
 
 ## Decisoes Recentes Do HUB
 
+- O lote HUB x GLPI indica conclusao com barra verde em 100% e `✓ Concluído`, mantendo o contorno neutro. Conclusao com falhas usa amarelo; falha de preparacao usa vermelho. Ver `docs/hub-bulk-matching.md` para criterios e limites.
+- Validacao de conexao em 10/09/2026: autenticacao GLPI e leitura de Peripheral funcionaram com o cliente existente, que desativa validacao TLS. Certificado expirado em 02/04/2026; nao considerar a validacao TLS regularizada.
+
+- A sincronizacao HUB x GLPI nao possui ajuste de score minimo na interface/API. A pontuacao continua visivel; classificacao de confianca automatica usa regra interna de 90%, mantendo candidatos de baixa confianca disponiveis para revisao manual.
+
+- Matching GLPI: codigo do ponto igual seleciona candidatos, mas nao garante 98% de score; a confianca considera o nome completo normalizado, incluindo endereco. Dispositivos que pertencem a outro HUB nao aparecem como candidatos. A confirmacao bloqueia HUB/dispositivo em transacao, recusa transferencias e salva vinculo/historico atomicamente; score vem da previa recalculada no servidor.
+
+- Modal por fonte: HUB e GLPI possuem Geral, Rede, Estado do ponto e Atendimentos. AUVO possui Geral e Atendimentos. Zabbix possui Geral e Rede. `Planilha base` possui Geral, Rede e Estado do ponto, sem importacao nesta etapa. Subabas indisponiveis ficam desabilitadas e apagadas.
+- Informacoes gerais com apenas nome do ativo, ID da fonte, latitude e longitude, mantendo comparacao de IDs no hover. Campos ausentes exibem N/A, sem emprestar dados de outra fonte.
+- Atendimentos do HUB separados em AUVO e GLPI; guias das plataformas mostram apenas seus proprios atendimentos. Paginacao de 20 itens com todos os registros existentes no cache local, inclusive encerrados. AUVO usa o customerId vinculado; GLPI usa a locationId do dispositivo vinculado, sem busca por codigo/nome que misture cadastros antigos. A consulta GLPI representa chamados da localizacao, pois ainda nao ha relacao direta ticket-device no cache.
+- A fonte `Planilha base` referencia futuramente o arquivo de acompanhamento PI Novo; importacao, sincronizacao e escolha de valores canonicos ficam para uma proxima etapa.
+- Atendimentos mantem contagem geral e totais por tipo da fonte selecionada (tipo de tarefa AUVO / tipo de chamado GLPI), calculados sobre todo o historico vinculado e nao apenas a pagina atual. Tipos ausentes ficam em `Nao informado`.
+- Os cards de tipo sao filtros dinamicos: os grupos sao lidos diretamente dos tipos existentes no banco, portanto novos tipos aparecem automaticamente. Clicar filtra e reinicia a paginacao; clicar novamente ou em `Total` limpa o filtro.
+
 - A listagem geral de clientes deve usar tags operacionais vindas de `hub_operational_tags`.
 - A listagem usa um unico grupo `Filtrar tags`: marcadas permitem exibir os clientes; desmarcadas ocultam clientes com aquela tag. Se um cliente tiver varias tags, a exclusao prevalece. Clientes sem tags continuam visiveis.
 - O botao `Mostrar tudo` marca todas as tags e remove a ocultacao por tags, preservando o texto da busca. Tags com `hideByDefault` iniciam desmarcadas.
