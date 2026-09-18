@@ -20,6 +20,7 @@ import {
 } from "../controllers/hubEntityController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import bulkMatching from "../services/hubBulkMatchingService.js";
+import { listGlpiPointHistory, getGlpiPointHistoryTicket, syncGlpiPointHistory } from '../controllers/glpiPointHistoryController.js';
 
 const router = express.Router();
 
@@ -47,5 +48,8 @@ router.post("/entities/:entityId/tags", assignHubEntityOperationalTag);
 router.delete("/entities/:entityId/tags/:tagId", unassignHubEntityOperationalTag);
 router.get("/entities/:entityId", getHubEntityDetails);
 router.get("/entities/:entityId/attendances", listHubEntityAttendances);
+router.get('/entities/:entityId/glpi-history', listGlpiPointHistory);
+router.get('/entities/:entityId/glpi-history/:ticketId', getGlpiPointHistoryTicket);
+router.post('/entities/:entityId/glpi-history/sync', syncGlpiPointHistory);
 
 export default router;

@@ -11,6 +11,7 @@ import { createAlertsHistoryTable } from "./migrations/alertsHistoryTable.js";
 import { createHubCoreTables } from "./migrations/hubCoreTables.js";
 import { createHubOperationalLinksTables } from "./migrations/hubOperationalLinksTables.js";
 import { createGlpiSolutionsTable } from "./migrations/glpiSolutionsTable.js";
+import { createGlpiPointHistoryTables } from './migrations/glpiPointHistoryTables.js';
 import { createPowerBiTicketsView } from "./migrations/powerBiTicketsView.js";
 
 dotenv.config();
@@ -192,6 +193,7 @@ export async function runMigrations() {
         await pool.query(glpiTasksTableQuery);
         console.log("Migration: Tabela 'glpi_tickettasks' verificada/criada com sucesso.");
         await createGlpiSolutionsTable();
+        await createGlpiPointHistoryTables();
         await pool.query(alertsTableQuery);
         console.log("Migration: Tabela 'datahub_ticket_alerts' verificada/criada com sucesso.");
 

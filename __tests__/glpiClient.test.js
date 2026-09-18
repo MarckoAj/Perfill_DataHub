@@ -16,7 +16,7 @@ describe("Integração do Cliente e Serviço GLPI", () => {
     let glpi_service;
 
     beforeAll(async () => {
-        // We must provide a default mock for the constructor's initial fetch to initSession
+        // Authentication is lazy; all network requests remain mocked.
         global.fetch.mockResolvedValue({
             ok: true,
             status: 200,

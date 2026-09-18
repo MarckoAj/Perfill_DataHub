@@ -113,6 +113,14 @@ npm test
 
 ## Decisoes Recentes Do HUB
 
+- Detalhe expandido GLPI destaca o ID a direita. Estados da solucao: 2 aguardando, 3 aprovada, 4 recusada. Decisao final do usuario: apenas acompanhamento original no #2237, sem cartao adicional de recusa/aprovacao ou avisos de correlacao. Encerramentos sao interacoes proprias extraidas do Log; #6579 validado em 16/11/2023 15:54:23 por Rafael Martins. Fechamento nao altera artificialmente aprovacao da solucao. Ver `docs/glpi-point-history.md`.
+
+- Retomada: servidor local usa porta 3002 (`npm.cmd start` no PowerShell); a porta 3010 era apenas previa temporaria. Proximo passo: validar o piloto 06-014 e um chamado compartilhado real antes de expandir para todos os pontos; permissoes individuais e anexos ficam para etapas seguintes.
+
+- Historico GLPI por dispositivo implementado no piloto HUB-012130 / Peripheral 4412 (06-014). Atendimentos > GLPI no modal usa Item_Ticket, lista ID/titulo/ultima atualizacao/elementos/categoria e expande interacoes. Chamados compartilhados aparecem nos outros HUBs vinculados com links entre modais. Privadas ficam no banco e sao filtradas na API por politica central fechada ate RBAC. Atualizacao ao acessar a aba quando cache tem mais de 5 minutos, botao manual e integracao com fila GLPI; cooldown de 1 minuto. Demais pontos sem relacao com o piloto ainda usam localizacao. Ver `docs/glpi-point-history.md`.
+
+- GLPI (18/09/2026): autenticacao sob demanda e renovacao compartilhada ao receber `ERROR_SESSION_TOKEN_INVALID`, com apenas uma repeticao da consulta. Removida desativacao global de TLS; excecao temporaria local via `GLPI_TLS_REJECT_UNAUTHORIZED=false`, exclusiva do GLPI. Certificado remoto continua expirado. Ver `docs/integrations.md`.
+
 - O lote HUB x GLPI indica conclusao com barra verde em 100% e `✓ Concluído`, mantendo o contorno neutro. Conclusao com falhas usa amarelo; falha de preparacao usa vermelho. Ver `docs/hub-bulk-matching.md` para criterios e limites.
 - Validacao de conexao em 10/09/2026: autenticacao GLPI e leitura de Peripheral funcionaram com o cliente existente, que desativa validacao TLS. Certificado expirado em 02/04/2026; nao considerar a validacao TLS regularizada.
 
@@ -122,7 +130,7 @@ npm test
 
 - Modal por fonte: HUB e GLPI possuem Geral, Rede, Estado do ponto e Atendimentos. AUVO possui Geral e Atendimentos. Zabbix possui Geral e Rede. `Planilha base` possui Geral, Rede e Estado do ponto, sem importacao nesta etapa. Subabas indisponiveis ficam desabilitadas e apagadas.
 - Informacoes gerais com apenas nome do ativo, ID da fonte, latitude e longitude, mantendo comparacao de IDs no hover. Campos ausentes exibem N/A, sem emprestar dados de outra fonte.
-- Atendimentos do HUB separados em AUVO e GLPI; guias das plataformas mostram apenas seus proprios atendimentos. Paginacao de 20 itens com todos os registros existentes no cache local, inclusive encerrados. AUVO usa o customerId vinculado; GLPI usa a locationId do dispositivo vinculado, sem busca por codigo/nome que misture cadastros antigos. A consulta GLPI representa chamados da localizacao, pois ainda nao ha relacao direta ticket-device no cache.
+- Atendimentos do HUB separados em AUVO e GLPI; guias das plataformas mostram apenas seus proprios atendimentos. Paginacao de 20 itens, inclusive encerrados. AUVO usa o customerId vinculado. O piloto GLPI 06-014 e seus chamados compartilhados usam relacao direta ticket-device; demais pontos ainda usam locationId do dispositivo vinculado, sem busca por codigo/nome.
 - A fonte `Planilha base` referencia futuramente o arquivo de acompanhamento PI Novo; importacao, sincronizacao e escolha de valores canonicos ficam para uma proxima etapa.
 - Atendimentos mantem contagem geral e totais por tipo da fonte selecionada (tipo de tarefa AUVO / tipo de chamado GLPI), calculados sobre todo o historico vinculado e nao apenas a pagina atual. Tipos ausentes ficam em `Nao informado`.
 - Os cards de tipo sao filtros dinamicos: os grupos sao lidos diretamente dos tipos existentes no banco, portanto novos tipos aparecem automaticamente. Clicar filtra e reinicia a paginacao; clicar novamente ou em `Total` limpa o filtro.

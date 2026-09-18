@@ -10,6 +10,7 @@ import syncLogRepository from "../repositories/syncLogRepository.js";
 import systemStatusService from "./systemStatusService.js";
 import TicketAlertService from "./TicketAlertService.js";
 import alertRunnerService from "./alertRunnerService.js";
+import glpiPointHistoryService from './glpiPointHistoryService.js';
 
 class GlpiSyncService {
   constructor() {
@@ -280,6 +281,13 @@ class GlpiSyncService {
           }
 
           systemStatusService.setSyncing(false);
+          if (this.syncState.status === 'COMPLETED' || this.syncState.status === 'PARTIAL') {
+            try {
+              await glpiPointHistoryService.sync();
+            } catch (error) {
+              console.error('[GlpiSync] Historico do ponto piloto:', error.message);
+            }
+          }
       }
   }
 

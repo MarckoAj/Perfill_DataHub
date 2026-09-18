@@ -95,6 +95,7 @@ npm test
 - [Documentacao tecnica oficial](./DOCUMENTACAO_TECNICA.md)
 - [Progresso HUB canonico](./hub-core-entity-progress.md)
 - [Vinculacao HUB x GLPI em lote](./hub-bulk-matching.md)
+- [Historico GLPI por dispositivo — piloto 06-014](./glpi-point-history.md)
 - [Dashboard e Alert Engine](./dashboard-alert-engine.md)
 - [Plano UI/UX](./UI_UX_REFACTOR_PLAN.md)
 - [Guia de trabalho dos agentes](./AGENTS.md)

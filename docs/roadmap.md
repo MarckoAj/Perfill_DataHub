@@ -46,6 +46,19 @@
 
 ## Em Andamento
 
+### Historico GLPI por ponto — prioridade imediata
+
+- Piloto 06-014 / HUB-012130 / GLPI 4412 implementado com seis chamados reais,
+  detalhes de interacoes, dispositivos vinculados e encerramentos.
+- Confirmar com o usuario a apresentacao final; #2237 mantem acompanhamento normal,
+  sem cartao adicional de recusa; #6579 inclui o encerramento registrado no GLPI.
+- Validar chamado compartilhado real entre dispositivos (testes automatizados ja existem).
+- Apos validacao, ampliar para todos os pontos com carga incremental e controle de concorrencia.
+- Adicionar permissoes individuais antes de liberar interacoes privadas.
+- Avaliar anexos e reaberturas separadamente; nao estao no escopo entregue.
+- Renovar certificado GLPI no servidor e remover excecao TLS local.
+- Detalhes e limites: [Historico GLPI por dispositivo](./glpi-point-history.md).
+
 ### HUB Canonico
 
 - Consolidar entidades operacionais alem da fonte AUVO.

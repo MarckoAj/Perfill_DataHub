@@ -2,6 +2,20 @@
 
 ## Resumo Executivo
 
+### Atualizacao de 18/09/2026
+
+- Historico GLPI por dispositivo no piloto 06-014 / HUB-012130 / GLPI 4412: seis chamados reais sincronizados, dispositivos vinculados, categorias e detalhes cronologicos de respostas, tarefas, solucoes e encerramentos. Chamados compartilhados ficam acessiveis nos outros HUBs vinculados. Privadas filtradas no backend com politica preparada para RBAC. Cache transacional, atualizacao em segundo plano e pela fila GLPI. Ver `docs/glpi-point-history.md`.
+- ID destacado a direita no detalhe; #2237 exibe somente o acompanhamento original, sem cartao adicional de recusa. #6579 inclui encerramento de 16/11/2023 15:54:23 por Rafael Martins, obtido do Log. Estado do chamado e aprovacao da solucao permanecem separados.
+- Servidor local verificado na porta 3002: pagina de clientes, API do historico e healthcheck retornaram HTTP 200.
+- Proximas etapas: validar piloto e chamado compartilhado real, ampliar para demais dispositivos apos aprovacao, implementar permissoes individuais e avaliar anexos/reaberturas. Prioridades em `docs/roadmap.md`.
+- Validacao final antes do commit: 120 testes em 23 suites passaram, com codigo de saida zero; `git diff --check` sem erros. API real local verificada; conferencia visual automatizada no navegador pendente por indisponibilidade da ferramenta.
+
+- Cliente GLPI autentica sob demanda e renova automaticamente ao receber `ERROR_SESSION_TOKEN_INVALID`, compartilhando a renovacao entre consultas concorrentes e repetindo cada consulta no maximo uma vez.
+- Removida a desativacao global de TLS. Excecao temporaria no `.env` local (`GLPI_TLS_REJECT_UNAUTHORIZED=false`) fica restrita ao GLPI; validacao TLS e habilitada por padrao.
+- Teste real confirmou consulta apos encerramento da propria sessao de diagnostico, com nova autenticacao automatica. Certificado remoto continua expirado e precisa ser renovado no servidor.
+- A autenticacao GLPI nao e mais disparada no import dos testes.
+- Detalhes de configuracao e operacao em `docs/integrations.md`.
+
 ### Atualizacao de 10/09/2026
 
 - Vinculacao HUB x GLPI em lote para candidatos unicos com score 100%, revalidacao antes da gravacao e historico transacional. Veja [detalhes e limites](./hub-bulk-matching.md).

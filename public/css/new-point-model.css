@@ -2045,3 +2045,38 @@
 .pm-attendance-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; font-size: 13px; }
 .pm-attendance-pagination > div { display: flex; gap: 8px; }
 .pm-attendance-pagination button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Device-linked GLPI pilot history. */
+.pm-glpi-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.pm-glpi-toolbar .pm-attendance-message { margin: 4px 0; max-width: 720px; }
+.pm-glpi-toolbar button { flex-shrink: 0; }
+.pm-glpi-columns, .pm-glpi-ticket summary { display: grid; grid-template-columns: 65px minmax(140px, 1.2fr) 140px minmax(140px, 1.5fr) minmax(130px, 1fr); gap: 12px; align-items: start; }
+.pm-glpi-columns { padding: 12px 14px; font-size: 12px; color: var(--text-muted, #94a3b8); }
+.pm-glpi-ticket summary::before { display: none; }
+.pm-glpi-ticket summary > * { min-width: 0; overflow-wrap: anywhere; }
+.pm-glpi-ticket summary:hover, .pm-glpi-ticket summary:focus-visible { background: rgba(20, 231, 197, .06); }
+.pm-glpi-ticket .pm-attendance-id::before { content: '▸ '; color: var(--primary, #14e7c5); }
+.pm-glpi-ticket[open] .pm-attendance-id::before { content: '▾ '; }
+.pm-glpi-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; overflow-wrap: anywhere; }
+.pm-glpi-device-link { text-align: left; color: var(--primary, #14e7c5); border: 1px solid rgba(20, 231, 197, .2); border-radius: 6px; padding: 9px 12px; background: transparent; font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.pm-glpi-device-link:hover, .pm-glpi-device-link:focus-visible { background: rgba(20, 231, 197, .08); border-color: currentColor; }
+.pm-glpi-device-link span { display: block; margin-top: 5px; font-size: 12px; }
+.pm-glpi-detail h4 { margin: 22px 0 12px; font-size: 14px; }
+.pm-glpi-detail-heading, .pm-glpi-event-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pm-glpi-detail-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 20px; }
+.pm-glpi-detail-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
+.pm-glpi-detail-id { justify-self: end; text-align: right; font-size: clamp(24px, 3vw, 34px); font-weight: 800; line-height: 1.1; color: var(--primary, #14e7c5); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pm-glpi-content { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; font-size: 13px; }
+.pm-glpi-timeline { list-style: none; padding: 0 0 0 18px; margin: 0 0 20px 5px; border-left: 2px solid rgba(20, 231, 197, .25); display: grid; gap: 12px; }
+.pm-glpi-timeline > li { padding: 14px 16px; border: 1px solid rgba(148, 163, 184, .16); border-radius: 8px; background: rgba(148, 163, 184, .035); font-size: 13px; }
+.pm-glpi-event-author { margin: 6px 0 12px; color: var(--text-muted, #94a3b8); font-size: 12px; }
+@media (max-width: 1000px) {
+  .pm-glpi-columns { display: none; }
+  .pm-glpi-ticket summary { grid-template-columns: 75px 1fr; }
+  .pm-glpi-ticket summary > :nth-child(n+3) { grid-column: 1 / -1; }
+  .pm-glpi-ticket summary > :nth-child(n+3)::before { content: attr(data-label); display: block; color: var(--text-muted, #94a3b8); font-size: 11px; margin-bottom: 5px; }
+}
+@media (max-width: 600px) {
+  .pm-glpi-toolbar { flex-direction: column; }
+  .pm-glpi-device-link { width: 100%; }
+}

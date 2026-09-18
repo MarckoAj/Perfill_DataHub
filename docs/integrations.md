@@ -34,6 +34,18 @@ Endpoints relevantes:
 - `GET /api/alerts`
 - `GET /api/rules`
 
+### Sessao e TLS do GLPI (18/09/2026)
+
+- A autenticacao por `GLPI_APIKEY` acontece na primeira consulta, sem requisicao no import/boot.
+- `ERROR_SESSION_TOKEN_INVALID` invalida a sessao em cache e dispara novo `initSession`. A consulta original e repetida apenas uma vez.
+- Chamadas simultaneas compartilham a autenticacao/renovacao; respostas atrasadas de uma sessao antiga nao invalidam a nova.
+- Falhas de autenticacao liberam o cache para uma tentativa futura. Outros erros HTTP, rede ou permissoes nao provocam repeticao automatica.
+- Timeout de 30 segundos por requisicao; redirects sao recusados. Logs de erro nao incluem tokens ou payloads de autenticacao.
+- TLS e validado por padrao. A excecao temporaria `GLPI_TLS_REJECT_UNAUTHORIZED=false` usa um dispatcher exclusivo do GLPI (`undici`), sem alterar `NODE_TLS_REJECT_UNAUTHORIZED` ou outras integracoes.
+- O `.env` local recebeu essa excecao para manter acesso ao servidor com certificado expirado. Outros ambientes precisam configura-la explicitamente enquanto o certificado estiver vencido.
+- Apos renovar o certificado no servidor, remover a excecao ou definir `GLPI_TLS_REJECT_UNAUTHORIZED=true` e reiniciar o Data Hub. A alteracao do cliente nao renova o certificado remoto.
+- Validacao real em 18/09/2026: consulta, encerramento da propria sessao de diagnostico e nova consulta com renovacao automatica funcionaram. TLS estrito ainda retorna `CERT_HAS_EXPIRED`.
+
 ## AUVO
 
 Status: **implementado**.

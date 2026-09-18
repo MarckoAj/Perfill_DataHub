@@ -57,6 +57,7 @@ function openPointModal(clientOrId = 1) {
   currentAttendanceSource = 'auvo';
   pointAttendancePages = {};
   pointAttendanceFilters = {};
+  if (typeof resetPointGlpiHistory === 'function') resetPointGlpiHistory();
   _sidebarOpen = false;
 
   const overlay = document.getElementById("pointModalOverlay");
@@ -1114,6 +1115,17 @@ async function loadPointAttendances(offset = null) {
     const params = new URLSearchParams({ source, limit: '20', offset: String(state.offset) });
     const selectedType = pointAttendanceFilters[key] || '';
     if (selectedType) params.set('type', selectedType);
+    if (source === 'glpi' && typeof fetchPointGlpiHistory === 'function') {
+      const history = await fetchPointGlpiHistory(_getHubId(client), state.offset);
+      if (history.enabled) {
+        Object.assign(state, history, { historyMode: true });
+        if (history.refreshNeeded || history.syncing) {
+          // Let the cached page render first; refresh continues without blocking it.
+          setTimeout(() => refreshPointGlpiHistory(false, client, state), 0);
+        }
+        return;
+      }
+    }
     const token = localStorage.getItem('authToken');
     const response = await fetch(`/api/hub/entities/${encodeURIComponent(_getHubId(client))}/attendances?${params}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {}
@@ -1139,6 +1151,9 @@ function safeAttendanceUrl(value) {
 function renderPointAttendances(client) {
   const source = pointAttendanceSource();
   const state = pointAttendancePages[attendanceKey(client, source)];
+  if (source === 'glpi' && state?.historyMode && typeof renderPointGlpiHistory === 'function') {
+    return renderPointGlpiHistory(client, state);
+  }
   const tabs = currentPlatformTab === 'hub' ? `<div class="pm-attendance-tabs" role="group" aria-label="Fonte dos atendimentos">
     ${['auvo', 'glpi'].map(id => `<button type="button" class="point-tab ${source === id ? 'active' : ''}" aria-pressed="${source === id}" onclick="changeAttendanceSource('${id}')">${id.toUpperCase()}</button>`).join('')}
   </div>` : '';
