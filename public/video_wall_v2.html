@@ -10,9 +10,51 @@
     />
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="stylesheet" href="css/video_wall_v2.css">
-  </head>
-  <body>
+  <link rel="stylesheet" href="/css/clientes-perfill.css">
+<link rel="stylesheet" href="/css/perfill-shared.css">
+<link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="/css/point-modal.css"><link rel="stylesheet" href="/css/new-point-model.css"><link rel="stylesheet" href="/css/clientes-perfill.css"><link rel="stylesheet" href="/css/perfill-shared.css"></head>
+  <body class="clientes-perfill">
+<nav class="global-nav">
+        <div class="nav-left">
+            <div class="nav-logo">
+                <div class="perfill-wordmark">perfill<span>DATA HUB</span></div>
+            </div>
+            <div class="nav-menu">
+                <div class="nav-item">
+                    <a href="/noc" class="nav-link active">NOC</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/alerts" class="nav-link">Alertas</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/tickets" class="nav-link">Chamados</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/clientes" class="nav-link">Clientes</a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link">Admin ▾</a>
+                    <div class="nav-dropdown">
+                        <a href="/admin/sync" class="dropdown-link">Sincronização</a>
+                        <a href="/admin/tags" class="dropdown-link">Configuração e Cadastro de Tags</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-right">
+
+            <div class="nav-item">
+                <button type="button" class="nav-link logout-link" onclick="doLogout()" aria-label="Sair do sistema">Sair</button>
+            </div>
+        </div>
+    </nav>
     <div id="root"></div>
     <script type="module" src="/js/video_wall_v2.js"></script>
-  </body>
+  <script src="/js/perfill-navigation.js"></script>
+<div class="point-modal-overlay" id="pointModalOverlay"><div class="point-modal" role="dialog" aria-modal="true" aria-label="Ficha do cliente ou ponto"><div class="point-modal-header"></div><div class="point-modal-content"><div id="pointTabContent"></div></div></div></div><script src="/js/client-mock.js"></script>
+<script src="/js/new-point-model.js"></script>
+<script src="/js/glpi-point-history.js"></script>
+<script src="/js/hub-client-modal.js"></script>
+</body>
 </html>

@@ -136,8 +136,10 @@ npm test
 - Os cards de tipo sao filtros dinamicos: os grupos sao lidos diretamente dos tipos existentes no banco, portanto novos tipos aparecem automaticamente. Clicar filtra e reinicia a paginacao; clicar novamente ou em `Total` limpa o filtro.
 
 - A listagem geral de clientes deve usar tags operacionais vindas de `hub_operational_tags`.
-- A listagem usa um unico grupo `Filtrar tags`: marcadas permitem exibir os clientes; desmarcadas ocultam clientes com aquela tag. Se um cliente tiver varias tags, a exclusao prevalece. Clientes sem tags continuam visiveis.
-- O botao `Mostrar tudo` marca todas as tags e remove a ocultacao por tags, preservando o texto da busca. Tags com `hideByDefault` iniciam desmarcadas.
+- A listagem usa `Tags` para inclusao: nenhuma selecionada permite todas; varias usam OU. `Sem tags` selecionada sozinha mostra apenas pontos sem tags; combinada com tags inclui ambos. Selecao tem busca e chips removiveis.
+- `Mais filtros > Ocultar pontos com...` separa exclusoes e inicia com as tags `hideByDefault`. Exclusao prevalece sobre inclusao; resumo das ocultacoes fica sempre visivel e conflitos sao sinalizados.
+- `Limpar filtros` remove inclusoes, exclusoes e restricao de coordenadas. `Restaurar padrao` reaplica `hideByDefault`. Ambos preservam a busca textual e voltam a primeira pagina.
+- Coordenadas: Todas / Completas (ambas) / Incompletas (apenas uma) / Ausentes (nenhuma). Zero e valido. Todos os filtros sao aplicados no servidor antes da paginacao e da contagem. Busca aceita nome, codigo, IDs de origem e ID HUB formatado.
 - Pontos podem exibir multiplos chips de tags na listagem.
 - A tag `Desinstalado` deve ficar oculta por padrao na listagem geral, mas o usuario pode desmarcar a ocultacao para exibir esses pontos.
 - Tags como `Implantacao` devem ser usadas normalmente como filtro e chip, sem ocultacao padrao.
@@ -159,3 +161,5 @@ npm test
 - `customers_auvo.active` representa o estado operacional do cliente no AUVO; quando for `0`, o HUB deve aplicar automaticamente a tag `Inativo no AUVO`, oculta por padrao, preservando o registro para auditoria.
 - `customers_auvo.isActive` representa existencia/sincronizacao do registro na fonte; nao deve ser confundido com ponto operacionalmente ativo.
 - A correlacao de IDs entre HUB/GLPI/AUVO deve considerar apenas clientes AUVO operacionalmente ativos (`active = 1`) para evitar vincular novos relacionamentos em cadastros antigos/inativos.
+
+- 19/11/2026: identidade de Clientes compartilhada nas seis paginas internas via clientes-perfill.css e perfill-shared.css; navegacao uniforme. Mapeadores de ficha HUB centralizados em hub-client-modal.js. Chamados/Alertas/NOC buscam cadastro por nome/codigo, permitem escolher entre resultados e abrem detalhe real; sem resultado exibem aviso. Backend preservado. Verificacao visual ainda pendente.

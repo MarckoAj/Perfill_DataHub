@@ -216,7 +216,7 @@ function renderDashboard() {
                       <span class="ticket-rank">${currentAlert.badge}</span>
                       <p class="ticket-number">#${currentAlert.Ticket}</p>
                       <div class="ticket-topline-meta">
-                        <span>Ponto: ${currentAlert.pointId}</span>
+                        <button type="button" class="hub-client-link" onclick="openHubClientByName(this.textContent.replace('Ponto: ' ,''))">Ponto: ${currentAlert.pointId}</button>
                         <span>TIPO <strong class="type-pill">${currentAlert.Categoria || currentAlert.type || '—'}</strong></span>
                       </div>
                     </div>
@@ -428,7 +428,7 @@ function renderGeneralTicketsHtml() {
 
   return pageItems.map(t => `
     <tr>
-      <td style="max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.point}">${t.point}</td>
+      <td style="max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.point}"><button type="button" class="hub-client-link" onclick="openHubClientByName(this.textContent)">${t.point}</button></td>
       <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.asset}">${t.asset}</td>
       <td style="max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.type}"><span class="type-badge" style="display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;">${t.type}</span></td>
       <td style="white-space: nowrap;" title="${t.sla}"><span class="sla-badge sla-${t.slaStatus}">${t.sla}</span></td>

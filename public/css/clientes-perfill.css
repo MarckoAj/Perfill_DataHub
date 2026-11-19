@@ -1,0 +1,80 @@
+/* Clientes / Pontos — identidade Perfill aprovada em 17/11/2026.
+   Scoped to this page: other dashboards retain their existing styling. */
+.clientes-perfill{--accent:#c7d2f2;--primary:#c7d2f2;--text-muted:#b4bddb;--text-primary:#f3f5fc;background:#191f49;color:#f3f5fc;font-family:Inter,"Segoe UI",sans-serif}
+.clientes-perfill .global-nav{background:#f4f5fa;color:#242b50;border-bottom:1px solid #dce0eb;box-shadow:none}
+.clientes-perfill .global-nav .nav-link{color:#343e65}
+.clientes-perfill .global-nav .nav-link.active{background:#e4e8f3;color:#191f49}
+.clientes-perfill .nav-logo{border-color:#d5dae7}
+.clientes-perfill .perfill-wordmark{color:#252f5b;font-size:23px;font-weight:600;letter-spacing:-1px;line-height:1.1}
+.clientes-perfill .perfill-wordmark span{display:block;font-size:10px;letter-spacing:1.8px;margin-top:4px}
+
+.clientes-perfill .sidebar,.clientes-perfill .content-area{background:#191f49}
+.clientes-perfill .sidebar{border-right:1px solid #414c76}
+.clientes-perfill .table-card{background:#1e2652;border:1px solid #434e79;border-radius:5px;box-shadow:none}
+.clientes-perfill .table-card th{background:#252f5e;color:#bdc7e3}
+.clientes-perfill .table-card td{border-color:#414b73}
+.clientes-perfill .table-card tbody tr:hover{background:#2a3564}
+.clientes-perfill .point-modal-overlay{background:rgba(8,12,31,.78);backdrop-filter:blur(6px)}
+.clientes-perfill .point-modal{background:#191f49;border:1px solid #515b82;border-radius:10px;box-shadow:0 24px 80px #080d2566;color:#f3f5fc;--accent:#c7d2f2;--primary:#c7d2f2;--text-muted:#b4bddb}
+.clientes-perfill .point-modal-header{padding:24px 64px 22px 28px;border-color:#424c76;grid-template-columns:minmax(0,1fr) auto}
+.clientes-perfill .pm-header-left{max-width:100%;gap:9px}
+.clientes-perfill .pm-breadcrumb{color:#aeb9dc;font-size:12px}
+.clientes-perfill .pm-title{font-size:24px;font-weight:500;white-space:normal;overflow-wrap:anywhere;letter-spacing:-.3px}
+.clientes-perfill .pm-meta-row{gap:14px}
+.clientes-perfill .pm-meta-item{color:#b4bddb;font-size:12px}
+.clientes-perfill .pm-source-ids{display:flex;flex-wrap:wrap;gap:8px;margin-top:3px}
+.clientes-perfill .pm-source-ids span{padding:4px 9px;border:1px solid #515c85;border-radius:4px;font-size:12px;color:#d4dcf1}
+.clientes-perfill .pm-source-ids strong{font-weight:500;margin-left:5px;color:#f3f5fc}
+.clientes-perfill .point-btn-auvo{background:#edf0f8;color:#273153;border:1px solid #cdd3e4;border-radius:4px;font-weight:500;box-shadow:none}
+.clientes-perfill button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.clientes-perfill .ticket-modal-close{background:#29335f;color:#d5def3;border-color:#515b82;border-radius:4px}
+.clientes-perfill .platform-tabs{background:#171d43;border-color:#424c76;gap:7px;padding:14px 28px}
+.clientes-perfill .platform-tab{color:#b6c1df;border-radius:4px;font-weight:500}
+.clientes-perfill .platform-tab.active{background:#333f71;color:#fff;border-color:#63729e;box-shadow:none}
+.clientes-perfill .pm-content-single{padding:20px 28px}
+.clientes-perfill .pm-subtabs-row{gap:14px;align-items:flex-start}
+.clientes-perfill .point-tabs{gap:5px;border-bottom:1px solid #49547d;flex:1;flex-wrap:wrap}
+.clientes-perfill .point-tab{background:transparent;color:#c0cae5;border:0;border-radius:4px 4px 0 0;font-weight:500;padding:11px 15px}
+.clientes-perfill .point-tab.active{background:#eff1f8;color:#242e55;box-shadow:none;border:0}
+.clientes-perfill .pm-options-btn{background:transparent;border:1px solid #56628c;color:#dce3f6;border-radius:4px}
+.clientes-perfill .pm-info-card{background:transparent;border:0;border-radius:0;box-shadow:none}
+.clientes-perfill .pm-info-card-header{background:transparent;border:0;padding:0 0 18px}
+.clientes-perfill .pm-info-card-title{font-weight:500;color:#f3f5fc}
+.clientes-perfill .pm-info-card-subtitle{color:#aeb9dc}
+.clientes-perfill .pm-info-card-body{padding:0 0 24px}
+.clientes-perfill .pm-info-card-footer{background:transparent;border-color:#424c76;padding:13px 0}
+.clientes-perfill .pm-general-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px}
+.clientes-perfill .pm-section-heading{font-size:15px;font-weight:500;color:#f3f5fc;margin:0 0 16px}
+.clientes-perfill .pm-fields-grid{gap:24px}
+.clientes-perfill .info-block{background:transparent;border:0;border-bottom:1px solid #434e77;border-radius:0;padding:0 0 10px;margin-bottom:18px;box-shadow:none}
+.clientes-perfill .info-label{color:#b1bcdb;font-size:12px;text-transform:none;letter-spacing:0;font-weight:400}
+.clientes-perfill .info-value{color:#f3f5fc;font-size:14px;font-weight:400;overflow-wrap:anywhere}
+.clientes-perfill .pm-location-preview{min-height:230px;background:#e5e9ef;color:#35415e;border-radius:4px;display:grid;place-items:center;padding:24px;text-align:center}
+.clientes-perfill .pm-location-preview>div{display:flex;flex-direction:column;align-items:center;gap:14px}
+.clientes-perfill .pm-location-preview svg{width:24px;height:24px}
+.clientes-perfill .pm-location-preview strong{font-weight:500}
+.clientes-perfill .pm-location-preview a{color:#263963;text-decoration:underline}
+.clientes-perfill .pm-location-note{font-size:12px;color:#b4bddb;margin:12px 0 0}
+.clientes-perfill .pm-network-layout{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px}
+.clientes-perfill .pm-network-unavailable{background:#eff1f8;color:#35415e;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:17px;padding:32px;text-align:center}
+.clientes-perfill .pm-network-unavailable strong{font-size:24px;font-weight:500}
+.clientes-perfill .pm-network-unavailable small{color:#5d6a87}
+.clientes-perfill .pm-network-track{height:4px;background:#b6bfd1;width:100%}
+.clientes-perfill .pm-future-actions{display:flex;gap:8px;flex-wrap:wrap}
+.clientes-perfill .pm-future-actions button{padding:7px 10px;border:1px solid #a4aec6;border-radius:4px;background:transparent;color:#35415e}
+.clientes-perfill .pm-attendance-count{background:#222b56;border-color:#4b567f;border-radius:4px}
+.clientes-perfill .pm-attendance-count.active{background:#364574;border-color:#a5b6e3;box-shadow:none}
+.clientes-perfill .pm-attendance-item{border-color:#49547c;background:#202952;border-radius:4px}
+.clientes-perfill .pm-attendance-detail{border-color:#49547c;background:#222c56}
+.clientes-perfill .pm-attendance-count strong,.clientes-perfill .pm-glpi-detail-id{font-weight:500}
+.clientes-perfill .pm-sidebar-popover{background:#222b56;border-color:#59658d}
+.clientes-perfill .pm-sidebar-card{background:transparent;border-color:#46517b;box-shadow:none}
+.clientes-perfill .pm-split-history{background:#222b56;border-color:#4c5781;border-radius:4px}
+.clientes-perfill .pm-match-secondary{background:#303b68;color:#e0e6f5;border-color:#626e97;border-radius:4px}
+.clientes-perfill button:focus-visible,.clientes-perfill a:focus-visible{outline:2px solid #aecdfc;outline-offset:3px}
+@media(max-width:760px){.clientes-perfill .point-modal-header{grid-template-columns:1fr;padding:20px 52px 20px 20px}.clientes-perfill .pm-header-right{justify-content:flex-start}.clientes-perfill .pm-title{font-size:21px}.clientes-perfill .pm-general-layout,.clientes-perfill .pm-network-layout{grid-template-columns:1fr}.clientes-perfill .platform-tabs{padding:12px 18px;flex-wrap:wrap}.clientes-perfill .pm-content-single{padding:18px}.clientes-perfill .point-tab{padding:10px 8px;font-size:12px}.clientes-perfill .pm-subtabs-row{flex-wrap:wrap}.clientes-perfill .pm-location-preview{min-height:180px}}
+.clientes-perfill .point-modal-header{height:auto;min-height:0;overflow:visible}.clientes-perfill .info-value-wrapper{border:0;box-shadow:none}
+
+.clientes-perfill .global-nav .logout-link{background:#252f5b;color:#fff!important;border:1px solid #252f5b;border-radius:4px;padding:8px 16px;font:inherit;font-size:13px;font-weight:500;opacity:1;cursor:pointer}
+.clientes-perfill .global-nav .logout-link:hover{background:#384572;color:#fff!important;border-color:#384572}
+.clientes-perfill .global-nav .logout-link:focus-visible{outline:2px solid #252f5b;outline-offset:3px}

@@ -1,0 +1,24 @@
+/* Identidade compartilhada com Clientes. */
+.clientes-perfill {--bg-primary:#191f49;--bg-secondary:#1e2652;--bg-tertiary:#252f5e;--bg-card:#1e2652;--border-color:#434e79;--text-primary:#f3f5fc;--text-secondary:#b4bddb;--accent:#c7d2f2;--text:#f3f5fc;--border:#434e79;--muted:#b4bddb;font-family:Inter,"Segoe UI",sans-serif}
+.clientes-perfill input,.clientes-perfill select,.clientes-perfill textarea,.clientes-perfill button {font-family:inherit}
+.clientes-perfill input:not([type=checkbox]):not([type=radio]),.clientes-perfill select,.clientes-perfill textarea {background:#1e2652;color:#f3f5fc;border:1px solid #434e79;border-radius:4px;padding:10px 12px}
+.clientes-perfill input::placeholder{color:#b4bddb}
+.clientes-perfill :is(.panel,.panel-header,.filters-box,.table-wrap,.table-container,.table-card,.card,.sync-card,.metric-card){background:#1e2652;border-color:#434e79;border-radius:5px;box-shadow:none}
+.clientes-perfill th{background:#252f5e;color:#bdc7e3;font-family:inherit}
+.clientes-perfill td{border-color:#414b73}
+.clientes-perfill tbody tr:hover{background:#2a3564}
+.clientes-perfill .global-nav{position:sticky;top:0;z-index:100;background:#f4f5fa;display:flex;justify-content:space-between;padding:12px 24px;min-height:64px;box-sizing:border-box}
+.clientes-perfill .nav-left,.clientes-perfill .nav-menu{display:flex;align-items:center;gap:20px}
+.clientes-perfill .nav-link{font:600 14px Inter,"Segoe UI",sans-serif;text-decoration:none;padding:10px 12px;border-radius:4px}
+.clientes-perfill .nav-dropdown{background:#f4f5fa;border-color:#dce0eb}
+.clientes-perfill .dropdown-link{color:#343e65}
+.clientes-perfill .logout-link{background:transparent;border:1px solid #d5dae7;color:#343e65;cursor:pointer}
+.hub-client-link{background:none;border:0;color:inherit;text-align:left;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.hub-client-picker{background:#1e2652;color:#f3f5fc;border:1px solid #434e79;border-radius:8px;max-width:640px;width:90%;max-height:75vh;overflow:auto}
+.hub-client-picker::backdrop{background:#080c1fcc}.hub-client-picker button{margin:6px;padding:10px;border:1px solid #434e79;border-radius:4px;background:#252f5e;color:#f3f5fc;cursor:pointer}
+.clientes-perfill .nav-actions{display:none!important}
+@media(max-width:760px){.clientes-perfill .global-nav,.clientes-perfill .nav-left,.clientes-perfill .nav-menu{flex-wrap:wrap;gap:6px}.clientes-perfill .global-nav{position:relative}}
+
+body.clientes-perfill{overflow:auto;background:#191f49}
+.clientes-perfill #root,.clientes-perfill .app{height:auto;min-height:calc(100vh - 72px)}
+.clientes-perfill .app{overflow:visible}

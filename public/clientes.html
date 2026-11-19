@@ -21,16 +21,19 @@
     <link rel="stylesheet" href="/css/point-modal.css" />
     <link rel="stylesheet" href="/css/new-point-model.css" />
 
+    <link rel="stylesheet" href="/css/clientes-perfill.css?v=20261117-2" />
+    <script defer src="/js/hub-client-modal.js"></script>
     <script defer src="/js/clientes.js"></script>
+<link rel="stylesheet" href="/css/perfill-shared.css">
 </head>
 
-<body>
+<body class="clientes-perfill">
 
     <!-- NAVBAR GLOBAL -->
     <nav class="global-nav">
         <div class="nav-left">
             <div class="nav-logo">
-                <div style="font-size: 18px; font-weight: bold; color: var(--accent);">🔧 Perfill</div>
+                <div class="perfill-wordmark">perfill<span>DATA HUB</span></div>
             </div>
             <div class="nav-menu">
                 <div class="nav-item">
@@ -56,13 +59,9 @@
         </div>
 
         <div class="nav-right">
-            <div class="live-status">
-                <div class="dot-cron"></div>
-                <span>Ao Vivo</span>
-            </div>
-            <button class="btn-refresh-nav" onclick="location.reload()">↻ Atualizar</button>
+
             <div class="nav-item">
-                <a class="nav-link logout-link" onclick="doLogout()" title="Sair do sistema">⏻ Sair</a>
+                <button type="button" class="nav-link logout-link" onclick="doLogout()" aria-label="Sair do sistema">Sair</button>
             </div>
         </div>
     </nav>
@@ -70,128 +69,18 @@
     <!-- PAGE -->
     <main class="page-wrapper">
 
-        <!-- SIDEBAR -->
-        <aside class="sidebar">
-
-            <div class="sidebar-header">
-                <h2>Projetos</h2>
-            </div>
-
-            <input class="project-search" id="projectSearch" type="text" placeholder="Buscar projeto..." />
-
-            <div class="projects-list" id="projectsList">
-                <!-- Injetado via JS -->
-            </div>
-
-            <button class="all-projects-btn" id="btnAllProjects">
-                Ver todos os projetos
-            </button>
-
-        </aside>
-
         <!-- CONTENT -->
         <section class="content-area">
 
-            <!-- HEADER -->
-            <div class="content-header">
-                <div>
-                    <div class="project-title-row">
-                        <div class="project-icon">
-                            🏢
-                        </div>
-                        <div>
-                            <h1 id="projectName">
-                                PI-NOVO
-                            </h1>
-                            <p>
-                                Projeto Integrado de Segurança Pública
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <button class="details-btn" id="btnProjectDetails">
-                    ⓘ Detalhes do Projeto
-                </button>
-            </div>
-
-            <!-- METRICS -->
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <span class="metric-label">
-                        Ativos Totais
-                    </span>
-                    <strong class="metric-value" id="metricTotal">
-                        182
-                    </strong>
-                    <small>
-                        100% online no cadastro
-                    </small>
-                </div>
-
-                <div class="metric-card danger">
-                    <span class="metric-label">
-                        Alertas Ativos
-                    </span>
-                    <strong class="metric-value" id="metricAlerts">
-                        12
-                    </strong>
-                    <small>
-                        ↑ 3 nas últimas 24h
-                    </small>
-                </div>
-
-                <div class="metric-card danger">
-                    <span class="metric-label">
-                        Críticos
-                    </span>
-                    <strong class="metric-value" id="metricCritical">
-                        4
-                    </strong>
-                    <small>
-                        ↑ 1 nas últimas 24h
-                    </small>
-                </div>
-
-                <div class="metric-card warning">
-                    <span class="metric-label">
-                        Tickets Abertos
-                    </span>
-                    <strong class="metric-value" id="metricTickets">
-                        9
-                    </strong>
-                    <small>
-                        ↑ 1 nas últimas 24h
-                    </small>
-                </div>
-            </div>
-
-            <!-- TABS -->
-            <div class="tabs">
-                <button class="tab active" data-tab="visao-geral">
-                    Visão Geral
-                </button>
-                <button class="tab" data-tab="ativos">
-                    Ativos
-                </button>
-                <button class="tab" data-tab="alertas">
-                    Alertas
-                </button>
-                <button class="tab" data-tab="tickets">
-                    Tickets
-                </button>
-            </div>
-
             <!-- FILTERS -->
             <div class="filters-row">
-                <input type="text" placeholder="Buscar ativo..." class="filter-input" id="searchAsset" />
+                <input type="search" placeholder="Buscar por nome, código ou ID..." aria-label="Buscar por nome, código ou ID" class="filter-input" id="searchAsset" />
 
-                <select class="filter-select" id="filterCity">
-                    <option value="">Latitude: Todas</option>
-                </select>
-
-                <select class="filter-select" id="filterUnit">
-                    <option value="">Longitude: Todas</option>
+                <select class="filter-select" id="filterCoordinates" aria-label="Coordenadas">
+                    <option value="all">Coordenadas: Todas</option>
+                    <option value="complete">Coordenadas: Completas</option>
+                    <option value="incomplete">Coordenadas: Incompletas</option>
+                    <option value="missing">Coordenadas: Ausentes</option>
                 </select>
 
                 <div class="tag-filter-panel" id="hubTagFilters">
@@ -239,7 +128,7 @@
 
     <!-- MODAL PONTO/CLIENTE -->
     <div class="point-modal-overlay" id="pointModalOverlay">
-        <div class="point-modal">
+        <div class="point-modal" role="dialog" aria-modal="true" aria-label="Ficha do cliente ou ponto">
             <!-- Header preenchido dinamicamente pelo JS (_renderHeader) -->
             <div class="point-modal-header"></div>
             <div class="point-modal-content">
@@ -249,8 +138,9 @@
     </div>
 
     <script src="/js/client-mock.js"></script>
-    <script src="/js/new-point-model.js"></script>
+    <script src="/js/new-point-model.js?v=20261117"></script>
     <script src="/js/glpi-point-history.js"></script>
+<script src="/js/perfill-navigation.js"></script>
 </body>
 
 </html>

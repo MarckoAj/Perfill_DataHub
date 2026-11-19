@@ -28,170 +28,10 @@
 
     .alerts-layout {
       display: grid;
-      grid-template-columns: 340px 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 24px;
       margin-top: 24px;
       min-height: calc(100vh - 140px);
-    }
-
-    /* =========================================
-       SIDEBAR (GLASSMORPHISM)
-    ========================================= */
-    .alerts-sidebar {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      height: fit-content;
-      position: sticky;
-      top: 96px;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    }
-
-    .sidebar-title h2 {
-      font-size: 20px;
-      margin: 0;
-      color: var(--text-primary);
-      font-weight: 700;
-    }
-
-    .alert-search {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 12px 14px;
-      color: var(--text-primary);
-      outline: none;
-      transition: all 0.2s;
-      font-size: 13px;
-    }
-
-    .alert-search:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 10px var(--accent-soft);
-    }
-
-    .alert-search::placeholder {
-      color: var(--text-muted);
-    }
-
-    .alert-type-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .alert-type-item {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      border-radius: 12px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .alert-type-item:hover {
-      border-color: var(--accent-soft);
-      background: rgba(255, 255, 255, 0.04);
-      transform: translateY(-2px);
-    }
-
-    .alert-type-item.active {
-      border-color: var(--accent);
-      background: var(--bg-tertiary);
-      box-shadow: 0 4px 15px rgba(20, 231, 197, 0.08);
-    }
-
-    /* Severity colors in Sidebar items */
-    .alert-type-item.sev-critico {
-      border-left: 4px solid var(--danger) !important;
-    }
-    .alert-type-item.sev-critico.active {
-      background: rgba(255, 77, 109, 0.08) !important;
-      border-color: var(--danger) !important;
-      box-shadow: 0 4px 15px rgba(255, 77, 109, 0.08) !important;
-    }
-    .alert-type-item.sev-critico .alert-count {
-      background: rgba(255, 77, 109, 0.15) !important;
-      color: var(--danger) !important;
-    }
-    .alert-type-item.sev-critico.active .alert-count {
-      background: var(--danger) !important;
-      color: #fff !important;
-    }
-
-    .alert-type-item.sev-atencao {
-      border-left: 4px solid var(--warning) !important;
-    }
-    .alert-type-item.sev-atencao.active {
-      background: rgba(255, 176, 32, 0.08) !important;
-      border-color: var(--warning) !important;
-      box-shadow: 0 4px 15px rgba(255, 176, 32, 0.08) !important;
-    }
-    .alert-type-item.sev-atencao .alert-count {
-      background: rgba(255, 176, 32, 0.15) !important;
-      color: var(--warning) !important;
-    }
-    .alert-type-item.sev-atencao.active .alert-count {
-      background: var(--warning) !important;
-      color: #000 !important;
-    }
-
-    .alert-type-item.sev-informativo {
-      border-left: 4px solid #38bdf8 !important;
-    }
-    .alert-type-item.sev-informativo.active {
-      background: rgba(56, 189, 248, 0.08) !important;
-      border-color: #38bdf8 !important;
-      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.08) !important;
-    }
-    .alert-type-item.sev-informativo .alert-count {
-      background: rgba(56, 189, 248, 0.15) !important;
-      color: #38bdf8 !important;
-    }
-    .alert-type-item.sev-informativo.active .alert-count {
-      background: #38bdf8 !important;
-      color: #000 !important;
-    }
-
-    .alert-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .alert-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .alert-count {
-      background: var(--accent-soft);
-      color: var(--accent);
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .alert-type-item.active .alert-count {
-      background: var(--accent);
-      color: var(--bg-primary);
-    }
-
-    .alert-meta {
-      margin-top: 10px;
-      font-size: 11px;
-      color: var(--text-muted);
-      display: flex;
-      justify-content: space-between;
-      font-weight: 500;
     }
 
     /* =========================================
@@ -609,15 +449,6 @@
       }
     }
 
-    @media (max-width: 1100px) {
-      .alerts-layout {
-        grid-template-columns: 1fr;
-      }
-      .alerts-sidebar {
-        position: relative;
-        top: 0;
-      }
-    }
 
     @media (max-width: 768px) {
       .metrics-grid {
@@ -680,49 +511,48 @@
       text-shadow: 0 0 10px rgba(20, 231, 197, 0.3) !important;
     }
   </style>
+<link rel="stylesheet" href="/css/clientes-perfill.css">
+<link rel="stylesheet" href="/css/perfill-shared.css">
 </head>
 
-<body>
+<body class="clientes-perfill">
 
   <!-- NAVBAR GLOBAL -->
   <nav class="global-nav">
-    <div class="nav-left">
-      <div class="nav-logo">
-        <div style="font-size: 18px; font-weight: bold; color: var(--accent);">🔧 Perfill</div>
-      </div>
-      <div class="nav-menu">
-        <div class="nav-item">
-          <a href="/noc" class="nav-link">NOC</a>
+        <div class="nav-left">
+            <div class="nav-logo">
+                <div class="perfill-wordmark">perfill<span>DATA HUB</span></div>
+            </div>
+            <div class="nav-menu">
+                <div class="nav-item">
+                    <a href="/noc" class="nav-link">NOC</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/alerts" class="nav-link active">Alertas</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/tickets" class="nav-link">Chamados</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/clientes" class="nav-link">Clientes</a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link">Admin ▾</a>
+                    <div class="nav-dropdown">
+                        <a href="/admin/sync" class="dropdown-link">Sincronização</a>
+                        <a href="/admin/tags" class="dropdown-link">Configuração e Cadastro de Tags</a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="nav-item">
-          <a href="/alerts" class="nav-link active">Alertas</a>
-        </div>
-        <div class="nav-item">
-          <a href="/tickets" class="nav-link">Chamados</a>
-        </div>
-        <div class="nav-item">
-          <a href="/clientes" class="nav-link">Clientes</a>
-        </div>
-        <div class="nav-item">
-          <a class="nav-link">Admin ▾</a>
-          <div class="nav-dropdown">
-            <a href="/admin/sync" class="dropdown-link">Sincronização</a>
-            <a href="/admin/tags" class="dropdown-link">Configuração e Cadastro de Tags</a>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div class="nav-right">
-      <div class="live-status">
-        <div class="dot-cron"></div>
-        <span>Ao Vivo</span>
-      </div>
-      <div class="nav-item">
-        <a class="nav-link logout-link" onclick="doLogout()">⏻ Sair</a>
-      </div>
-    </div>
-  </nav>
+        <div class="nav-right">
+
+            <div class="nav-item">
+                <button type="button" class="nav-link logout-link" onclick="doLogout()" aria-label="Sair do sistema">Sair</button>
+            </div>
+        </div>
+    </nav>
 
   <script>
     function doLogout() {
@@ -734,25 +564,6 @@
   <!-- PAGE CONTAINER -->
   <div class="page-container">
     <div class="alerts-layout">
-
-      <!-- SIDEBAR -->
-      <aside class="alerts-sidebar">
-        <div class="sidebar-title">
-          <h2>Tipos de Alertas</h2>
-        </div>
-
-        <input
-          type="text"
-          id="sidebarSearch"
-          class="alert-search"
-          placeholder="Buscar tipo de alerta..."
-          oninput="filterSidebarTypes()"
-        />
-
-        <div class="alert-type-list" id="sidebarTypeList">
-          <!-- Populado Dinamicamente por Regras de SLA -->
-        </div>
-      </aside>
 
       <!-- MAIN PANEL -->
       <main class="main-panel">
@@ -858,7 +669,6 @@
 
   <script>
     let allAlerts = [];
-    let currentRuleFilter = '';
     let activeTab = 'open';
 
     function switchTab(tab) {
@@ -867,7 +677,6 @@
       document.getElementById('tab_' + tab).classList.add('active');
       
       // Reset Rule filter on tab switch
-      currentRuleFilter = '';
       
       renderAlerts();
     }
@@ -885,7 +694,6 @@
 
         allAlerts = json.data || [];
         updateMetrics(allAlerts);
-        buildSidebarTypes(allAlerts);
         renderAlerts();
 
       } catch (err) {
@@ -931,128 +739,6 @@
       }
     }
 
-    function buildSidebarTypes(alerts) {
-      const sidebarContainer = document.getElementById('sidebarTypeList');
-      if (!sidebarContainer) return;
-
-      const tabAlerts = alerts.filter(a => a.state === activeTab);
-
-      // Group alerts by ruleId
-      const ruleGroups = {};
-      tabAlerts.forEach(a => {
-        const rule = a.ruleId || 'Outros';
-        if (!ruleGroups[rule]) {
-          ruleGroups[rule] = {
-            count: 0,
-            criticalCount: 0,
-            warningCount: 0,
-            infoCount: 0,
-            lastDetected: null
-          };
-        }
-        ruleGroups[rule].count++;
-        if (a.severity === 'critico') {
-          ruleGroups[rule].criticalCount++;
-        } else if (a.severity === 'atencao') {
-          ruleGroups[rule].warningCount++;
-        } else {
-          ruleGroups[rule].infoCount++;
-        }
-        const detected = new Date(a.first_detected_at);
-        if (!ruleGroups[rule].lastDetected || detected > ruleGroups[rule].lastDetected) {
-          ruleGroups[rule].lastDetected = detected;
-        }
-      });
-
-      // Clear list and render items
-      let html = '';
-      
-      // Default item "Todos os Alertas"
-      const totalCount = tabAlerts.length;
-      const totalCritical = tabAlerts.filter(a => a.severity === 'critico').length;
-      const totalWarning = tabAlerts.filter(a => a.severity === 'atencao').length;
-      const isActiveTotal = currentRuleFilter === '' ? 'active' : '';
-
-      let totalSeverityCls = 'sev-informativo';
-      if (totalCritical > 0) {
-        totalSeverityCls = 'sev-critico';
-      } else if (totalWarning > 0) {
-        totalSeverityCls = 'sev-atencao';
-      }
-
-      html += `
-        <div class="alert-type-item ${totalSeverityCls} ${isActiveTotal}" onclick="selectRuleFilter('')">
-          <div class="alert-top">
-            <div class="alert-name">Todos os Alertas</div>
-            <div class="alert-count">${totalCount}</div>
-          </div>
-          <div class="alert-meta">
-            <span>${totalCritical} críticos</span>
-            <span>Total geral</span>
-          </div>
-        </div>
-      `;
-
-      Object.entries(ruleGroups).forEach(([ruleName, meta]) => {
-        const isActive = currentRuleFilter === ruleName ? 'active' : '';
-        const timeStr = meta.lastDetected ? meta.lastDetected.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '—';
-        
-        let severityCls = 'sev-informativo';
-        if (meta.criticalCount > 0) {
-          severityCls = 'sev-critico';
-        } else if (meta.warningCount > 0) {
-          severityCls = 'sev-atencao';
-        }
-
-        html += `
-          <div class="alert-type-item ${severityCls} ${isActive}" data-rulename="${ruleName}" onclick="selectRuleFilter('${ruleName}')">
-            <div class="alert-top">
-              <div class="alert-name">${ruleName}</div>
-              <div class="alert-count">${meta.count}</div>
-            </div>
-            <div class="alert-meta">
-              <span>${meta.criticalCount} críticos</span>
-              <span>Último: ${timeStr}</span>
-            </div>
-          </div>
-        `;
-      });
-
-      sidebarContainer.innerHTML = html;
-    }
-
-    function selectRuleFilter(ruleName) {
-      currentRuleFilter = ruleName;
-      
-      // Visual update of active class
-      document.querySelectorAll('.alert-type-item').forEach(el => el.classList.remove('active'));
-      
-      // Update header details based on rule
-      if (ruleName) {
-        document.getElementById('panelTitleText').textContent = ruleName;
-        document.getElementById('panelSubtitleText').textContent = `Filtrado pelo motor de regras: ${ruleName}.`;
-      } else {
-        document.getElementById('panelTitleText').textContent = activeTab === 'open' ? 'Todos os Alertas' : (activeTab === 'justified' ? 'Alertas Justificados' : 'Alertas Resolvidos');
-        document.getElementById('panelSubtitleText').textContent = 'Visualização integrada de eventos operacionais.';
-      }
-
-      // Rebuild sidebar and render table
-      buildSidebarTypes(allAlerts);
-      renderAlerts();
-    }
-
-    function filterSidebarTypes() {
-      const searchVal = document.getElementById('sidebarSearch').value.toLowerCase();
-      document.querySelectorAll('#sidebarTypeList .alert-type-item').forEach(item => {
-        const name = item.querySelector('.alert-name').textContent.toLowerCase();
-        if (name.includes(searchVal)) {
-          item.style.display = 'block';
-        } else {
-          item.style.display = 'none';
-        }
-      });
-    }
-
     function calculateTimeAgo(dateStr) {
       const diffMs = new Date() - new Date(dateStr);
       const diffHrs = Math.floor(diffMs / 3600000);
@@ -1071,10 +757,7 @@
 
       const filteredByTab = allAlerts.filter(a => a.state === activeTab);
       
-      // Rule filter
-      let filtered = currentRuleFilter 
-        ? filteredByTab.filter(a => a.ruleId === currentRuleFilter)
-        : filteredByTab;
+      let filtered = filteredByTab;
 
       // Severity select filter
       const sevFilter = document.getElementById('filterSeverity').value;
@@ -1154,51 +837,7 @@
       const alert = allAlerts.find(a => a.id === alertId);
       if (!alert) return;
 
-      openPointModal({
-        clientId: alert.id,
-        ticketId: alert.Ticket,
-        pointId: alert.pointId,
-        address: alert.pointId || alert.Chamado || 'Ponto sem identificação',
-        type: alert.type || alert.ruleId || 'Alerta',
-        city: 'Salvador',
-        state: 'BA',
-        cicom: alert.assetCode || 'Projeto não informado',
-        unit: alert.assetCode || 'Não informado',
-        region: alert.source || 'DataHub',
-        latitude: 'N/A',
-        longitude: 'N/A',
-        network: {
-          ip: 'N/A',
-          gateway: 'N/A',
-          subnet: 'N/A',
-          wanIp: 'N/A',
-          circuit: alert.Ticket ? `GLPI #${alert.Ticket}` : 'N/A',
-          linkStatus: alert.statusPing || 'N/A',
-          uptime: alert.slaText || 'N/A',
-          availabilityDate: alert.first_detected_at ? new Date(alert.first_detected_at).toLocaleString('pt-BR') : 'N/A',
-        },
-        pointStatus: {
-          inspectionDate: 'N/A',
-          cameraInstallation: 'N/A',
-          cameraSubstitution: alert.slaStatus || 'N/A',
-          uninstallDate: 'N/A',
-          dedicatedPole: 'N/A',
-          boxType: alert.type || 'N/A',
-          boxInstallation: 'N/A',
-          boxInstallationDate: 'N/A',
-          armInstallation: 'N/A',
-          poleStatus: alert.severity || 'N/A',
-        },
-        operationalHistory: [
-          {
-            title: alert.ruleId || 'Alerta DataHub',
-            from: alert.source || 'DataHub',
-            to: alert.state || 'open',
-            date: alert.first_detected_at ? new Date(alert.first_detected_at).toLocaleString('pt-BR') : 'N/A',
-          },
-        ],
-        attendances: [],
-      });
+      openHubClientByName(alert.pointId);
     }
 
     function connectWebSocket() {
@@ -1386,5 +1025,8 @@
 
   <script src="/js/client-mock.js"></script>
   <script src="/js/new-point-model.js"></script>
+<script src="/js/perfill-navigation.js"></script>
+<script src="/js/glpi-point-history.js"></script>
+<script src="/js/hub-client-modal.js"></script>
 </body>
 </html>

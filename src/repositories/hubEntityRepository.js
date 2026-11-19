@@ -729,11 +729,13 @@ class HubEntityRepository {
     if (!normalizedSearch) return "";
 
     const like = `%${normalizedSearch}%`;
-    params.push(like, like, like, like, like, like);
+    params.push(like, like, like, like, like, like, like, like);
 
     return `
       AND (
         e.displayName LIKE ?
+        OR CAST(e.entityId AS CHAR) LIKE ?
+        OR CONCAT('HUB-', LPAD(e.entityId, 6, '0')) LIKE ?
         OR e.canonicalName LIKE ?
         OR src.sourceNativeId LIKE ?
         OR src.sourceExternalId LIKE ?
@@ -827,14 +829,25 @@ class HubEntityRepository {
     return this.mergeOperationalTags([...byLabel.values()], this.buildSystemOperationalTags(row, tagDefinitions), manualTags);
   }
 
-  passesOperationalTagFilters(tags, { includeTags = [], excludeTags = [] } = {}) {
+  passesOperationalTagFilters(tags, { includeTags = [], excludeTags = [], includeUntagged = false } = {}) {
     const normalizedTags = new Set(tags.map(tag => tag.normalizedLabel).filter(Boolean));
     const include = this.normalizeTagFilter(includeTags);
     const exclude = this.normalizeTagFilter(excludeTags);
 
-    if (include.size > 0 && ![...include].some(tag => normalizedTags.has(tag))) return false;
+    if ((include.size > 0 || includeUntagged) &&
+        ![...include].some(tag => normalizedTags.has(tag)) &&
+        !(includeUntagged && normalizedTags.size === 0)) return false;
     if (exclude.size > 0 && [...exclude].some(tag => normalizedTags.has(tag))) return false;
 
+    return true;
+  }
+
+  passesCoordinateFilter(entity, coordinates = "all") {
+    const present = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    const count = Number(present(entity.latitude)) + Number(present(entity.longitude));
+    if (coordinates === "complete") return count === 2;
+    if (coordinates === "incomplete") return count === 1;
+    if (coordinates === "missing") return count === 0;
     return true;
   }
 
@@ -926,7 +939,7 @@ class HubEntityRepository {
     return rows;
   }
 
-  async getFilteredListEntities({ search = "", includeTags = [], excludeTags = [] } = {}) {
+  async getFilteredListEntities({ search = "", includeTags = [], excludeTags = [], includeUntagged = false, coordinates = "all" } = {}) {
     const [rows, tagDefinitions] = await Promise.all([
       this.listEntityRows({ search }),
       hubOperationalTagService.listTags()
@@ -935,16 +948,17 @@ class HubEntityRepository {
 
     return rows
       .map(row => this.formatListEntityRow(row, tagDefinitions, manualTagsByEntity.get(row.entityId) || []))
-      .filter(entity => this.passesOperationalTagFilters(entity.operationalTags, { includeTags, excludeTags }));
+      .filter(entity => this.passesOperationalTagFilters(entity.operationalTags, { includeTags, excludeTags, includeUntagged }) &&
+        this.passesCoordinateFilter(entity, coordinates));
   }
 
-  async countEntities({ search = "", includeTags = [], excludeTags = [] } = {}) {
-    const entities = await this.getFilteredListEntities({ search, includeTags, excludeTags });
+  async countEntities(filters = {}) {
+    const entities = await this.getFilteredListEntities(filters);
     return entities.length;
   }
 
-  async listEntities({ limit = 100, offset = 0, search = "", includeTags = [], excludeTags = [] } = {}) {
-    const entities = await this.getFilteredListEntities({ search, includeTags, excludeTags });
+  async listEntities({ limit = 100, offset = 0, ...filters } = {}) {
+    const entities = await this.getFilteredListEntities(filters);
     return entities.slice(offset, offset + limit);
   }
 

@@ -13,50 +13,48 @@
   </script>
   <title>PerfillBI - Sincronizador de Entidades</title>
   <link rel="stylesheet" href="/css/sync.css">
+<link rel="stylesheet" href="/css/clientes-perfill.css">
+<link rel="stylesheet" href="/css/perfill-shared.css">
 </head>
 
-<body>
+<body class="clientes-perfill">
 
   <!-- NAVBAR GLOBAL -->
   <nav class="global-nav">
-    <div class="nav-left">
-      <div class="nav-logo">
-        <div style="font-size: 18px; font-weight: bold; color: #0ea5e9;">🔧 Perfill</div>
-      </div>
-      <div class="nav-menu">
-        <div class="nav-item">
-          <a href="/noc" class="nav-link">NOC</a>
+        <div class="nav-left">
+            <div class="nav-logo">
+                <div class="perfill-wordmark">perfill<span>DATA HUB</span></div>
+            </div>
+            <div class="nav-menu">
+                <div class="nav-item">
+                    <a href="/noc" class="nav-link">NOC</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/alerts" class="nav-link">Alertas</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/tickets" class="nav-link">Chamados</a>
+                </div>
+                <div class="nav-item">
+                    <a href="/clientes" class="nav-link">Clientes</a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link">Admin ▾</a>
+                    <div class="nav-dropdown">
+                        <a href="/admin/sync" class="dropdown-link">Sincronização</a>
+                        <a href="/admin/tags" class="dropdown-link">Configuração e Cadastro de Tags</a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="nav-item">
-          <a href="/alerts" class="nav-link">Alertas</a>
-        </div>
-        <div class="nav-item">
-          <a href="/tickets" class="nav-link">Chamados</a>
-        </div>
-        <div class="nav-item">
-          <a href="/clientes" class="nav-link">Clientes</a>
-        </div>
-        <div class="nav-item">
-          <a class="nav-link">Admin ▾</a>
-          <div class="nav-dropdown">
-            <a href="/admin/sync" class="dropdown-link">Sincronização</a>
-            <a href="/admin/tags" class="dropdown-link">Configuração e Cadastro de Tags</a>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div class="nav-right">
-      <div class="live-status">
-        <div class="dot-cron"></div>
-        <span>Ao Vivo</span>
-      </div>
-      <button class="btn-refresh-nav" onclick="loadStats()">↻ Atualizar</button>
-      <div class="nav-item">
-        <a class="nav-link logout-link" onclick="doLogout()" title="Sair do sistema">⏻ Sair</a>
-      </div>
-    </div>
-  </nav>
+        <div class="nav-right">
+
+            <div class="nav-item">
+                <button type="button" class="nav-link logout-link" onclick="doLogout()" aria-label="Sair do sistema">Sair</button>
+            </div>
+        </div>
+    </nav>
 
   <script>
     function doLogout() {
@@ -1410,6 +1408,7 @@
     </div>
   </div>
   <script src="/js/hub-bulk-matching.js"></script>
+<script src="/js/perfill-navigation.js"></script>
 </body>
 
 </html>

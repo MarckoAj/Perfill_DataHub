@@ -20,7 +20,12 @@ export const listHubEntities = asyncHandler(async (req, res) => {
   const includeTags = typeof req.query.includeTags === "string" ? req.query.includeTags : "";
   const excludeTags = typeof req.query.excludeTags === "string" ? req.query.excludeTags : undefined;
 
-  const result = await hubEntityService.listEntities({ refresh, limit, offset, search, includeTags, excludeTags });
+  const coordinates = req.query.coordinates ?? "all";
+  if (!["all", "complete", "incomplete", "missing"].includes(coordinates)) {
+    return res.status(400).json({ success: false, message: "Filtro de coordenadas inválido" });
+  }
+  const includeUntagged = req.query.includeUntagged === "true";
+  const result = await hubEntityService.listEntities({ refresh, limit, offset, search, includeTags, excludeTags, includeUntagged, coordinates });
 
   res.status(200).json({
     success: true,

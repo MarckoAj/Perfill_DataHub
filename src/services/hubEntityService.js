@@ -15,7 +15,9 @@ class HubEntityService {
     offset = 0,
     search = "",
     includeTags = "",
-    excludeTags = undefined
+    excludeTags = undefined,
+    includeUntagged = false,
+    coordinates = "all"
   } = {}) {
     let refreshMetrics = null;
 
@@ -43,11 +45,15 @@ class HubEntityService {
         limit,
         offset,
         search,
+        includeUntagged,
+        coordinates,
         includeTags: normalizedIncludeTags,
         excludeTags: normalizedExcludeTags
       }),
       hubEntityRepository.countEntities({
         search,
+        includeUntagged,
+        coordinates,
         includeTags: normalizedIncludeTags,
         excludeTags: normalizedExcludeTags
       })

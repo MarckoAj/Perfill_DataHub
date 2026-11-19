@@ -124,6 +124,7 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [x] Central de alertas em `/alerts`.
 - [x] Tabela de chamados em `/tickets`.
 - [x] Painel de clientes em `/clientes`.
+- [x] Filtros de clientes revisados (19/11/2026): inclusao de tags, Sem tags, ocultacoes separadas, chips, limpar/restaurar padrao e coordenadas no servidor. Ver `client-filters.md`.
 - [x] Modal de cliente consumindo detalhe real por entidade HUB.
 - [x] Abas de plataforma com `platformFields` e hover comparativo de vinculos.
 - [x] Painel de sync em `/admin/sync`.

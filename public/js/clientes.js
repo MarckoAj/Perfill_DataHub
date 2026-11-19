@@ -1,96 +1,4 @@
-let projects = [
-    {
-        name: 'PI-NOVO',
-        description: 'Projeto Integrado de Segurança Pública - Nova Infraestrutura',
-        total: 182,
-        alerts: 12,
-        critical: 4,
-        tickets: 9
-    },
-    {
-        name: 'LEGADO',
-        description: 'Pontos e Câmeras da Primeira Geração Operacional',
-        total: 96,
-        alerts: 8,
-        critical: 2,
-        tickets: 5
-    },
-    {
-        name: 'CFTV',
-        description: 'Circuito Fechado de Monitoramento de Prédios Públicos',
-        total: 74,
-        alerts: 6,
-        critical: 1,
-        tickets: 3
-    }
-];
-
-let assets = [
-    {
-        clientId: 1,
-        project: 'PI-NOVO',
-        point: 'RP 01 - CAJAZEIRAS',
-        city: 'Cajazeiras',
-        unit: '22º CIPM',
-        responsible: 'Adriano Santos'
-    },
-    {
-        clientId: 1,
-        project: 'PI-NOVO',
-        point: 'RP 02 - ENTRADA DA CIDADE',
-        city: 'Simões Filho',
-        unit: '22º CIPM',
-        responsible: 'Tiago Almeida'
-    },
-    {
-        clientId: 1,
-        project: 'PI-NOVO',
-        point: 'RP 03 - POSTO FISCAL',
-        city: 'Feira de Santana',
-        unit: '66º CIPM',
-        responsible: 'Marcos Lima'
-    },
-    {
-        clientId: 1,
-        project: 'PI-NOVO',
-        point: 'RP 04 - VIADUTO',
-        city: 'Salvador',
-        unit: '1º CIPM',
-        responsible: 'José Carlos'
-    },
-    {
-        clientId: 1,
-        project: 'LEGADO',
-        point: 'RP 05 - ATACADÃO',
-        city: 'Lauro de Freitas',
-        unit: '52º CIPM',
-        responsible: 'Fernanda Costa'
-    },
-    {
-        clientId: 1,
-        project: 'LEGADO',
-        point: 'RP 06 - ENTRADA NORTE',
-        city: 'Alagoinhas',
-        unit: '4º CIPM',
-        responsible: 'Carlos Eduardo'
-    },
-    {
-        clientId: 1,
-        project: 'CFTV',
-        point: 'RP 07 - CAMPO DO GADO',
-        city: 'Serrinha',
-        unit: '16º CIPM',
-        responsible: 'Rafael Nunes'
-    },
-    {
-        clientId: 1,
-        project: 'CFTV',
-        point: 'RP 08 - PRAÇA CENTRAL',
-        city: 'Jacaraci',
-        unit: '94º CIPM',
-        responsible: 'Luiz Henrique'
-    }
-];
+let assets = [];
 
 window.hubClients = [];
 const HUB_PAGE_LIMIT = 100;
@@ -109,6 +17,11 @@ let hubSearchTimer = null;
 let hubEntitiesRequestId = 0;
 let hubOperationalTags = [];
 let hubSelectedTags = new Set();
+let hubExcludedTags = new Set();
+let hubIncludeUntagged = false;
+let hubCoordinates = 'all';
+let hubTagsLoaded = false;
+let hubLoadError = '';
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -134,10 +47,11 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         });
         const normalizedSearch = String(searchText || '').trim();
         if (normalizedSearch) params.set('search', normalizedSearch);
-        params.set('excludeTags', hubOperationalTags
-            .map(tag => tag.normalizedLabel || tag.label)
-            .filter(label => !hubSelectedTags.has(label))
-            .join(','));
+        params.set('includeTags', [...hubSelectedTags].join(','));
+        params.set('includeUntagged', String(hubIncludeUntagged));
+        params.set('coordinates', hubCoordinates);
+        if (hubTagsLoaded) params.set('excludeTags', [...hubExcludedTags].join(','));
+        hubLoadError = '';
 
         const response = await fetch(`/api/hub/entities?${params.toString()}`, {
             headers: token ? { authorization: `Bearer ${token}` } : {}
@@ -153,15 +67,6 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         const total = Number(pagination.total) || entities.length;
         const limit = Number(pagination.limit) || HUB_PAGE_LIMIT;
         const currentOffset = Number(pagination.offset) || offset;
-
-        projects = [{
-            name: 'HUB',
-            description: 'Entidades canônicas sincronizadas a partir das fontes externas',
-            total,
-            alerts: 0,
-            critical: 0,
-            tickets: 0
-        }];
 
         hubPagination = {
             isHub: true,
@@ -179,7 +84,6 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         assets = entities.map((entity, index) => ({
             clientId: entity.entityId,
             modalIndex: index,
-            project: 'HUB',
             point: entity.name || `Entidade HUB ${entity.entityId}`,
             city: entity.latitude ?? 'N/A',
             unit: entity.longitude ?? 'N/A',
@@ -188,17 +92,9 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
         }));
     } catch (error) {
         if (requestId !== hubEntitiesRequestId) return;
-        hubPagination = {
-            isHub: false,
-            isLoading: false,
-            currentPage: 1,
-            limit: assets.length || HUB_PAGE_LIMIT,
-            offset: 0,
-            total: assets.length,
-            totalPages: 1,
-            hasMore: false
-        };
-        console.warn('[Clientes] Usando dados mockados. Falha ao carregar /api/hub/entities:', error.message);
+        hubPagination.isLoading = false;
+        hubLoadError = 'Não foi possível carregar os pontos. Tente novamente.';
+        console.warn('[Clientes] Falha ao carregar /api/hub/entities:', error.message);
     }
 }
 
@@ -212,9 +108,10 @@ async function loadHubOperationalTags() {
 
         const payload = await response.json();
         hubOperationalTags = Array.isArray(payload.data) ? payload.data : [];
-        hubSelectedTags = new Set(
+        hubTagsLoaded = true;
+        hubExcludedTags = new Set(
             hubOperationalTags
-                .filter(tag => !tag.hideByDefault)
+                .filter(tag => tag.hideByDefault)
                 .map(tag => tag.normalizedLabel || tag.label)
                 .filter(Boolean)
         );
@@ -229,57 +126,118 @@ async function loadHubOperationalTags() {
 function renderHubTagFilters() {
     const container = document.getElementById('hubTagFilters');
     if (!container) return;
+    const options = mode => hubOperationalTags.map(tag => `
+        <label class="tag-filter-option" data-tag-option="${mode}">
+          <input type="checkbox" data-${mode}-tag value="${escapeHtml(tag.normalizedLabel || tag.label)}">
+          ${escapeHtml(tag.label)}
+        </label>`).join('');
+    container.innerHTML = `
+      <div class="hub-filter-toolbar">
+        <details class="hub-filter-picker">
+          <summary>Tags <span id="hubTagCount"></span></summary>
+          <div class="hub-filter-picker-body">
+            <input type="search" id="hubTagSearch" class="filter-input" placeholder="Buscar tag..." aria-label="Buscar tag">
+            <div class="hub-filter-tag-options">
+              <label class="tag-filter-option" data-tag-option="include"><input type="checkbox" id="hubIncludeUntagged">Sem tags</label>
+              ${options('include')}
+            </div>
+            <small id="hubTagSearchEmpty" hidden>Nenhuma tag encontrada.</small>
+            <small class="tag-filter-help">Nenhuma selecionada: todas as tags. Várias selecionadas: qualquer uma delas.</small>
+          </div>
+        </details>
+        <details class="hub-filter-picker">
+          <summary>Mais filtros</summary>
+          <div class="hub-filter-picker-body">
+            <strong>Ocultar pontos com…</strong>
+            <div class="hub-filter-tag-options">${options('exclude')}</div>
+            <small class="tag-filter-help">A ocultação prevalece, mesmo quando o ponto possui outras tags selecionadas.</small>
+            <small class="tag-filter-help">Coordenadas incompletas: apenas latitude ou longitude. Ausentes: nenhuma das duas.</small>
+          </div>
+        </details>
+        <div class="hub-filter-actions">
+          <button type="button" class="tag-filter-show-all" data-reset="clear">Limpar filtros</button>
+          <button type="button" class="tag-filter-show-all" data-reset="default">Restaurar padrão</button>
+        </div>
+      </div>
+      <div id="hubSelectedFilterChips" class="hub-filter-chips" aria-label="Filtros selecionados"></div>
+      <div id="hubHiddenTagSummary" class="tag-filter-help" aria-live="polite"></div>
+      <div id="hubFilterConflict" class="tag-filter-help" role="status"></div>
+      ${!hubTagsLoaded ? '<small role="alert">Não foi possível carregar as tags. As ocultações padrão permanecem ativas. <button type="button" class="tag-filter-show-all" id="hubRetryTags">Tentar novamente</button></small>' : ''}
+    `;
+    container.addEventListener('change', handleHubFilterChange);
+    container.addEventListener('click', handleHubFilterClick);
+    document.getElementById('hubTagSearch').addEventListener('input', event => {
+        const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const query = normalize(event.target.value);
+        let visible = 0;
+        container.querySelectorAll('[data-tag-option="include"]').forEach(label => {
+            label.hidden = !normalize(label.textContent).includes(query);
+            if (!label.hidden) visible++;
+        });
+        document.getElementById('hubTagSearchEmpty').hidden = visible > 0;
+    });
+    updateHubFilterSummary();
+}
 
-    if (hubOperationalTags.length === 0) {
-        container.innerHTML = '<div class="tag-filter-empty">Nenhuma tag cadastrada</div>';
+function updateHubFilterSummary() {
+    const container = document.getElementById('hubTagFilters');
+    if (!container) return;
+    const labelFor = value => hubOperationalTags.find(tag => (tag.normalizedLabel || tag.label) === value)?.label || value;
+    const chip = (kind, value, label) => `<button type="button" class="hub-filter-chip" data-remove-filter="${kind}" data-value="${escapeHtml(value)}" aria-label="Remover filtro ${escapeHtml(label)}">${escapeHtml(label)} <span aria-hidden="true">×</span></button>`;
+    const coordinateLabels = { complete: 'Coordenadas completas', incomplete: 'Coordenadas incompletas', missing: 'Coordenadas ausentes' };
+    document.getElementById('hubSelectedFilterChips').innerHTML = [...hubSelectedTags].map(tag => chip('tag', tag, labelFor(tag))).join('') +
+        (hubIncludeUntagged ? chip('untagged', '', 'Sem tags') : '') +
+        (hubCoordinates !== 'all' ? chip('coordinates', '', coordinateLabels[hubCoordinates]) : '');
+    const count = hubSelectedTags.size + Number(hubIncludeUntagged);
+    document.getElementById('hubTagCount').textContent = count ? `(${count})` : '(Todas)';
+    document.getElementById('hubHiddenTagSummary').textContent = hubTagsLoaded
+        ? (hubExcludedTags.size ? `Ocultando: ${[...hubExcludedTags].map(labelFor).join(', ')}.` : 'Nenhuma tag oculta.')
+        : 'Ocultações padrão aplicadas pelo servidor.';
+    const conflicts = [...hubSelectedTags].filter(tag => hubExcludedTags.has(tag));
+    document.getElementById('hubFilterConflict').textContent = conflicts.length
+        ? `Tags selecionadas também estão ocultas: ${conflicts.map(labelFor).join(', ')}. Desmarque a ocultação em Mais filtros para exibi-las.` : '';
+    container.querySelectorAll('[data-include-tag]').forEach(input => { input.checked = hubSelectedTags.has(input.value); });
+    container.querySelectorAll('[data-exclude-tag]').forEach(input => { input.checked = hubExcludedTags.has(input.value); });
+    document.getElementById('hubIncludeUntagged').checked = hubIncludeUntagged;
+    document.getElementById('filterCoordinates').value = hubCoordinates;
+    container.querySelectorAll('[data-reset]').forEach(button => { button.disabled = !hubTagsLoaded; });
+}
+
+function refreshHubFilters() {
+    updateHubFilterSummary();
+    return runHubSearch(document.getElementById('searchAsset')?.value ?? hubSearchText);
+}
+
+function handleHubFilterChange(event) {
+    const input = event.target;
+    if (input.id === 'hubIncludeUntagged') hubIncludeUntagged = input.checked;
+    else if (input.matches('[data-include-tag], [data-exclude-tag]')) {
+        const selection = input.matches('[data-include-tag]') ? hubSelectedTags : hubExcludedTags;
+        if (input.checked) selection.add(input.value);
+        else selection.delete(input.value);
+    } else return;
+    refreshHubFilters();
+}
+
+function handleHubFilterClick(event) {
+    const button = event.target.closest('button');
+    if (!button) return;
+    if (button.id === 'hubRetryTags') {
+        loadHubOperationalTags().then(refreshHubFilters);
         return;
     }
-
-    container.innerHTML = `
-      <div class="tag-filter-group">
-        <div class="tag-filter-heading">
-          <span>Filtrar tags</span>
-          <button type="button" class="tag-filter-show-all" id="hubShowAllTags">Mostrar tudo</button>
-        </div>
-        <div class="tag-filter-options">
-          ${hubOperationalTags.map(tag => {
-            const normalized = tag.normalizedLabel || tag.label;
-            const checked = hubSelectedTags.has(normalized) ? 'checked' : '';
-            return `
-              <label class="tag-filter-option">
-                <input type="checkbox" data-tag-filter value="${escapeHtml(normalized)}" ${checked}>
-                ${escapeHtml(tag.label)}
-              </label>
-            `;
-          }).join('')}
-        </div>
-        <small class="tag-filter-help">Desmarque uma tag para ocultar os clientes com ela. Clientes sem tags continuam visíveis.</small>
-      </div>
-    `;
-
-    document.getElementById('hubShowAllTags')?.addEventListener('click', showAllHubTags);
-    container.querySelectorAll('input[data-tag-filter]').forEach(input => {
-        input.addEventListener('change', handleHubTagFilterChange);
-    });
-}
-
-function handleHubTagFilterChange(event) {
-    const value = event.target.value;
-
-    if (event.target.checked) hubSelectedTags.add(value);
-    else hubSelectedTags.delete(value);
-
-    runHubSearch(document.getElementById('searchAsset')?.value ?? hubSearchText).catch(error => {
-        console.warn('[Clientes] Falha ao aplicar filtro de tags:', error.message);
-    });
-}
-
-function showAllHubTags() {
-    hubSelectedTags = new Set(hubOperationalTags.map(tag => tag.normalizedLabel || tag.label));
-    renderHubTagFilters();
-    runHubSearch(document.getElementById('searchAsset')?.value ?? hubSearchText).catch(error => {
-        console.warn('[Clientes] Falha ao mostrar todas as tags:', error.message);
-    });
+    if (button.dataset.reset) {
+        hubSelectedTags.clear();
+        hubIncludeUntagged = false;
+        hubCoordinates = 'all';
+        hubExcludedTags = button.dataset.reset === 'default'
+            ? new Set(hubOperationalTags.filter(tag => tag.hideByDefault).map(tag => tag.normalizedLabel || tag.label)) : new Set();
+    } else if (button.dataset.removeFilter) {
+        if (button.dataset.removeFilter === 'tag') hubSelectedTags.delete(button.dataset.value);
+        if (button.dataset.removeFilter === 'untagged') hubIncludeUntagged = false;
+        if (button.dataset.removeFilter === 'coordinates') hubCoordinates = 'all';
+    } else return;
+    refreshHubFilters();
 }
 
 function renderOperationalTagChips(tags = []) {
@@ -288,192 +246,6 @@ function renderOperationalTagChips(tags = []) {
     return tags
         .map(tag => `<span class="hub-tag-chip">${escapeHtml(tag.label || tag.normalizedLabel || tag)}</span>`)
         .join('');
-}
-
-function mapHubEntityToModalClient(entity) {
-    const name = entity.name || `Entidade HUB ${entity.entityId}`;
-
-    return {
-        hubId: entity.entityId,
-        clientId: entity.entityId,
-        ticketId: entity.sourceRecordId || '',
-        pointId: name,
-        assetName: name,
-        address: name,
-        type: entity.entityType || 'HUB',
-        cicom: entity.sourceSystem || 'HUB',
-        city: 'N/A',
-        unit: entity.sourceSystem || 'HUB',
-        region: entity.sourceEntity || 'Fonte externa',
-        latitude: entity.latitude,
-        longitude: entity.longitude,
-        state: 'BA',
-        network: {
-            ip: 'N/A',
-            gateway: 'N/A',
-            subnet: 'N/A',
-            wanIp: 'N/A',
-            circuit: 'N/A',
-            linkStatus: 'N/A',
-            uptime: 'N/A',
-            availabilityDate: 'N/A'
-        },
-        pointStatus: {
-            currentStatus: 'N/A',
-            originatedFrom: 'N/A',
-            changedTo: 'N/A',
-            relatedEntityId: null,
-            inspectionDate: 'N/A',
-            cameraInstallation: 'N/A',
-            cameraSubstitution: 'N/A',
-            uninstallDate: 'N/A',
-            remanejadoDate: 'N/A',
-            dedicatedPole: 'N/A',
-            installationDate: 'N/A',
-            boxType: 'N/A',
-            boxInstallation: 'N/A',
-            boxInstallationDate: 'N/A',
-            armInstallation: 'N/A',
-            poleStatus: 'N/A'
-        },
-        operationalTags: entity.operationalTags || [],
-        operationalHistory: [],
-        attendances: []
-    };
-}
-
-function formatDateTime(value) {
-    if (!value) return 'N/A';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString('pt-BR');
-}
-
-function inferCityFromAddress(address) {
-    const text = String(address || '').trim();
-    const match = text.match(/,\s*([^,-]+)\s*-\s*BA\b/i);
-    return match ? match[1].trim() : 'N/A';
-}
-
-function mapTaskStatus(task) {
-    if (task.finished) return 'done';
-    if (String(task.statusDescription || '').toLowerCase().includes('desloc')) return 'moving';
-    return 'warning';
-}
-
-function mapHubEntityDetailsToModalClient(details, fallbackClient) {
-    const auvoCustomer = details.sources?.auvo?.customer || null;
-    const auvoTasks = details.sources?.auvo?.recentTasks || [];
-    const physicalStatus = details.physicalStatus || {};
-    const physicalSummary = details.sources?.auvo?.physicalStatusSummary || physicalStatus.summary || {};
-    const physicalHistory = details.sources?.auvo?.physicalStatusHistory || physicalStatus.history || [];
-    const lineageLink = physicalStatus.lineageLink || {};
-    const glpiTickets = details.sources?.glpi?.tickets || [];
-    const glpiDevice = details.sources?.glpi?.device || null;
-    const name = details.normalizedDisplayName || details.displayName || auvoCustomer?.description || fallbackClient?.assetName || `HUB ${details.entityId}`;
-    const address = auvoCustomer?.address || fallbackClient?.address || name;
-    const city = inferCityFromAddress(address);
-    const locationId = glpiTickets.find(ticket => ticket.idLocalizacaoPonto)?.idLocalizacaoPonto || null;
-
-    return {
-        ...(fallbackClient || {}),
-        hubId: details.entityId,
-        entityId: details.entityId,
-        clientId: details.entityId,
-        ticketId: glpiTickets[0]?.ticketId || fallbackClient?.ticketId || '',
-        pointId: details.deviceCode || name,
-        assetName: name,
-        address,
-        type: 'Dispositivo',
-        cicom: glpiTickets[0]?.projeto || fallbackClient?.cicom || 'HUB',
-        city,
-        unit: locationId ? `GLPI Localizacao ${locationId}` : (fallbackClient?.unit || 'N/A'),
-        region: auvoCustomer?.segmentName || glpiTickets[0]?.projeto || fallbackClient?.region || 'N/A',
-        latitude: auvoCustomer?.latitude ?? fallbackClient?.latitude ?? null,
-        longitude: auvoCustomer?.longitude ?? fallbackClient?.longitude ?? null,
-        state: 'BA',
-        platformLinks: {
-            hub: {
-                entityId: details.entityId,
-                canonicalKey: details.canonicalKey,
-                deviceCode: details.deviceCode
-            },
-            auvo: auvoCustomer ? {
-                customerId: auvoCustomer.customerId,
-                description: auvoCustomer.description,
-                lastSyncAt: auvoCustomer.lastSyncAt
-            } : null,
-            glpi: {
-                deviceId: glpiDevice?.deviceId || null,
-                locationId,
-                tickets: glpiTickets.map(ticket => ticket.ticketId)
-            }
-        },
-        sources: details.sources || {},
-        fieldValues: details.fieldValues || [],
-        platformFields: details.platformFields || {},
-        fieldRelations: details.fieldRelations || {},
-        operationalTags: details.operationalTags || [],
-        operationalTagDefinitions: details.operationalTagDefinitions || [],
-        normalizedDisplayName: details.normalizedDisplayName || name,
-        syncHistory: details.syncHistory || [],
-        network: fallbackClient?.network || {
-            ip: 'N/A',
-            gateway: 'N/A',
-            subnet: 'N/A',
-            wanIp: 'N/A',
-            circuit: 'N/A',
-            linkStatus: 'N/A',
-            uptime: 'N/A',
-            availabilityDate: 'N/A'
-        },
-        pointStatus: {
-            ...(fallbackClient?.pointStatus || {}),
-            currentStatus: physicalSummary.currentStatus || fallbackClient?.pointStatus?.currentStatus || 'N/A',
-            originatedFrom: lineageLink.relationType === 'originated_from'
-                ? (lineageLink.fromName || `AUVO ${lineageLink.fromCustomerId}`)
-                : fallbackClient?.pointStatus?.originatedFrom || 'N/A',
-            changedTo: lineageLink.relationType === 'changed_to'
-                ? (lineageLink.toName || `AUVO ${lineageLink.toCustomerId}`)
-                : fallbackClient?.pointStatus?.changedTo || 'N/A',
-            relatedEntityId: lineageLink.fromEntityId || lineageLink.toEntityId || null,
-            inspectionDate: formatDateTime(physicalSummary.inspectionDate) || fallbackClient?.pointStatus?.inspectionDate || 'N/A',
-            cameraInstallation: formatDateTime(physicalSummary.cameraInstallation) || fallbackClient?.pointStatus?.cameraInstallation || 'N/A',
-            cameraSubstitution: formatDateTime(physicalSummary.cameraSubstitution) || fallbackClient?.pointStatus?.cameraSubstitution || 'N/A',
-            uninstallDate: formatDateTime(physicalSummary.uninstallDate) || fallbackClient?.pointStatus?.uninstallDate || 'N/A',
-            remanejadoDate: formatDateTime(physicalSummary.remanejadoDate) || fallbackClient?.pointStatus?.remanejadoDate || 'N/A',
-            dedicatedPole: fallbackClient?.pointStatus?.dedicatedPole || 'N/A',
-            installationDate: formatDateTime(physicalSummary.cameraInstallation) || fallbackClient?.pointStatus?.installationDate || 'N/A',
-            boxType: fallbackClient?.pointStatus?.boxType || 'N/A',
-            boxInstallation: formatDateTime(physicalHistory.find(item => item.to === 'CAIXA INSTALADA')?.date) || fallbackClient?.pointStatus?.boxInstallation || 'N/A',
-            boxInstallationDate: formatDateTime(physicalHistory.find(item => item.to === 'CAIXA INSTALADA')?.date) || fallbackClient?.pointStatus?.boxInstallationDate || 'N/A',
-            armInstallation: formatDateTime(physicalHistory.find(item => item.to === 'BRACO INSTALADO')?.date) || fallbackClient?.pointStatus?.armInstallation || 'N/A',
-            poleStatus: physicalSummary.currentStatus || fallbackClient?.pointStatus?.poleStatus || 'N/A'
-        },
-        physicalStatus,
-        operationalHistory: physicalHistory.length > 0 ? physicalHistory : (fallbackClient?.operationalHistory || []),
-        glpiTickets,
-        attendances: auvoTasks.map(task => ({
-            taskId: task.taskId,
-            status: mapTaskStatus(task),
-            title: task.taskType || `Tarefa AUVO ${task.taskId}`,
-            technician: 'AUVO',
-            date: formatDateTime(task.dateLastUpdate || task.taskDate || task.taskCreationDate),
-            taskUrl: task.taskUrl
-        }))
-    };
-}
-
-async function fetchHubEntityDetails(entityId) {
-    const token = localStorage.getItem('authToken');
-    const response = await fetch(`/api/hub/entities/${entityId}`, {
-        headers: token ? { authorization: `Bearer ${token}` } : {}
-    });
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const payload = await response.json();
-    return payload.data;
 }
 
 async function openAssetModal(modalIndex, fallbackClientId = 1) {
@@ -506,11 +278,12 @@ function renderPaginationControls(visibleCount = assets.length) {
     const to = hubPagination.isHub
         ? Math.min(hubPagination.offset + visibleCount, total)
         : visibleCount;
-    const disabled = hubPagination.isLoading || !hubPagination.isHub;
+    const disabled = hubPagination.isLoading || !hubPagination.isHub || Boolean(hubLoadError);
     const prevDisabled = disabled || page <= 1;
     const nextDisabled = disabled || page >= totalPages;
     const summary = hubPagination.isLoading
         ? 'Carregando pagina...'
+        : hubLoadError ? 'Falha ao carregar os resultados.'
         : `${hubPagination.search ? `Busca "${escapeHtml(hubPagination.search)}" - ` : ''}Pagina ${page} de ${totalPages} - ${from}-${to} de ${total} itens`;
 
     const html = `
@@ -535,8 +308,7 @@ async function goToHubPage(page) {
     if (targetPage === hubPagination.currentPage) return;
 
     await loadHubEntities(targetPage, hubSearchText);
-    renderProjects(document.getElementById('projectSearch')?.value || '');
-    selectProject(0);
+    applyFilters();
     scrollClientesToTop();
 }
 
@@ -550,109 +322,16 @@ function scrollClientesToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Estado atual da aplicação no frontend
-let selectedProjectIndex = 0;
-let activeTab = 'visao-geral';
+
+
 
 // Inicializar e registrar os escutadores de eventos
 document.addEventListener('DOMContentLoaded', async () => {
     await loadHubOperationalTags();
     await loadHubEntities();
-    renderProjects();
-    selectProject(0);
-    setupFilters();
-    setupTabs();
-    setupProjectSearch();
-});
-
-// Renderizar a lista de projetos na sidebar
-function renderProjects(filterText = '') {
-    const container = document.getElementById('projectsList');
-    if (!container) return;
-
-    const filtered = projects.filter(p => p.name.toLowerCase().includes(filterText.toLowerCase()));
-
-    container.innerHTML = filtered
-        .map((project, index) => {
-            const originalIndex = projects.findIndex(p => p.name === project.name);
-            const isActive = originalIndex === selectedProjectIndex;
-            return `
-              <div class="project-card ${isActive ? 'active' : ''}" onclick="selectProject(${originalIndex})">
-                <div class="project-card-top">
-                  <h3>${project.name}</h3>
-                  <div class="project-total">${project.total}</div>
-                </div>
-                <div class="project-metrics">
-                  <div class="metric-small">
-                    <strong style="color: var(--danger);">${project.alerts}</strong>
-                    <span>alertas</span>
-                  </div>
-                  <div class="metric-small">
-                    <strong style="color: var(--warning);">${project.critical}</strong>
-                    <span>críticos</span>
-                  </div>
-                  <div class="metric-small">
-                    <strong style="color: var(--text-primary);">${project.tickets}</strong>
-                    <span>tickets</span>
-                  </div>
-                </div>
-              </div>
-            `;
-        })
-        .join('');
-}
-
-// Selecionar um projeto e carregar seus ativos e métricas correspondentes
-function selectProject(index) {
-    selectedProjectIndex = index;
-    const project = projects[index];
-    if (!project) return;
-
-    // Atualizar classe ativa na lista
-    renderProjects(document.getElementById('projectSearch')?.value || '');
-
-    // Atualizar Cabeçalho Principal do Conteúdo
-    const pName = document.getElementById('projectName');
-    const pDesc = pName?.nextElementSibling;
-    if (pName) pName.textContent = project.name;
-    if (pDesc) pDesc.textContent = project.description;
-
-    // Atualizar Cards de Métricas
-    const metricTotal = document.getElementById('metricTotal');
-    const metricAlerts = document.getElementById('metricAlerts');
-    const metricCritical = document.getElementById('metricCritical');
-    const metricTickets = document.getElementById('metricTickets');
-
-    if (metricTotal) metricTotal.textContent = project.total;
-    if (metricAlerts) metricAlerts.textContent = project.alerts;
-    if (metricCritical) metricCritical.textContent = project.critical;
-    if (metricTickets) metricTickets.textContent = project.tickets;
-
-    // Repopular e Resetar Filtros
-    populateFilterOptions();
     applyFilters();
-}
-
-// Preencher os selects de filtros de forma dinâmica baseados apenas nos ativos do projeto selecionado
-function populateFilterOptions() {
-    const project = projects[selectedProjectIndex];
-    const projectAssets = assets.filter(a => a.project === project.name);
-
-    const filterCity = document.getElementById('filterCity');
-    const filterUnit = document.getElementById('filterUnit');
-
-    if (filterCity) {
-        const cities = [...new Set(projectAssets.map(a => a.city))].sort();
-        filterCity.innerHTML = '<option value="">Latitude: Todas</option>' + 
-            cities.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-    }
-
-    if (filterUnit) {
-        const units = [...new Set(projectAssets.map(a => a.unit))].sort();
-        filterUnit.innerHTML = '<option value="">Longitude: Todas</option>' + 
-            units.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
-    }
-}
+    setupFilters();
+});
 
 // Obter classe CSS de status
 function getStatusClass(value) {
@@ -668,17 +347,15 @@ function getStatusClass(value) {
 
 // Aplicar filtros e renderizar ativos correspondentes na tabela
 function applyFilters() {
-    const project = projects[selectedProjectIndex];
     
     // Obter valores dos filtros
     const searchText = document.getElementById('searchAsset')?.value.toLowerCase() || '';
-    const cityVal = document.getElementById('filterCity')?.value || '';
-    const unitVal = document.getElementById('filterUnit')?.value || '';
 
-    // Filtrar ativos do projeto selecionado
-    let filtered = assets.filter(a => a.project === project.name);
 
-    if (searchText) {
+    // Resultados da API com filtros e paginação aplicados
+    let filtered = assets;
+
+    if (searchText && !hubPagination.isHub) {
         filtered = filtered.filter(a => 
             String(a.point).toLowerCase().includes(searchText) ||
             String(a.city).toLowerCase().includes(searchText) ||
@@ -687,18 +364,16 @@ function applyFilters() {
         );
     }
 
-    if (cityVal) {
-        filtered = filtered.filter(a => a.city === cityVal);
-    }
-
-    if (unitVal) {
-        filtered = filtered.filter(a => a.unit === unitVal);
-    }
-
     // Renderizar tabela
     const tbody = document.getElementById('assetsTableBody');
     if (!tbody) return;
     renderPaginationControls(filtered.length);
+
+    if (hubLoadError) {
+        tbody.innerHTML = `<tr><td colspan="5" role="alert" style="text-align:center;padding:24px">${escapeHtml(hubLoadError)} <button type="button" class="tag-filter-show-all" id="hubRetryEntities">Tentar novamente</button></td></tr>`;
+        document.getElementById('hubRetryEntities').addEventListener('click', refreshHubFilters);
+        return;
+    }
 
     if (filtered.length === 0) {
         tbody.innerHTML = `
@@ -728,8 +403,7 @@ async function runHubSearch(searchText) {
     clearTimeout(hubSearchTimer);
     hubSearchText = String(searchText || '').trim();
     await loadHubEntities(1, hubSearchText);
-    renderProjects(document.getElementById('projectSearch')?.value || '');
-    selectProject(0);
+    applyFilters();
 }
 
 function scheduleHubSearch(searchText) {
@@ -744,61 +418,9 @@ function scheduleHubSearch(searchText) {
 // Configurar escutadores para os filtros
 function setupFilters() {
     const searchAsset = document.getElementById('searchAsset');
-    const filterCity = document.getElementById('filterCity');
-    const filterUnit = document.getElementById('filterUnit');
-
-    searchAsset?.addEventListener('input', (event) => {
-        if (hubPagination.isHub) {
-            scheduleHubSearch(event.target.value);
-            return;
-        }
-
-        applyFilters();
-    });
-    filterCity?.addEventListener('change', applyFilters);
-    filterUnit?.addEventListener('change', applyFilters);
-}
-
-// Configurar navegação entre abas (comportamento de SPA premium)
-function setupTabs() {
-    const tabsList = document.querySelectorAll('.tabs .tab');
-    const tableCard = document.querySelector('.table-card');
-    const mainGrid = document.querySelector('.main-grid');
-
-    tabsList.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabsList.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            activeTab = tab.getAttribute('data-tab');
-
-            // Controlar exibição no Grid principal baseado na aba ativa (mapa removido)
-            if (activeTab === 'visao-geral' || activeTab === 'ativos') {
-                mainGrid.style.gridTemplateColumns = '1fr';
-                tableCard.style.display = 'block';
-            } else if (activeTab === 'alertas' || activeTab === 'tickets') {
-                mainGrid.style.gridTemplateColumns = '1fr';
-                tableCard.style.display = 'block';
-                
-                const tbody = document.getElementById('assetsTableBody');
-                if (tbody) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 32px;">
-                                Não há registros de ${activeTab} ativos no momento para este projeto.
-                            </td>
-                        </tr>
-                    `;
-                }
-            }
-        });
-    });
-}
-
-// Busca na barra lateral de projetos
-function setupProjectSearch() {
-    const projectSearch = document.getElementById('projectSearch');
-    projectSearch?.addEventListener('input', (e) => {
-        renderProjects(e.target.value);
+    searchAsset?.addEventListener('input', event => scheduleHubSearch(event.target.value));
+    document.getElementById('filterCoordinates')?.addEventListener('change', event => {
+        hubCoordinates = event.target.value;
+        refreshHubFilters();
     });
 }

@@ -894,49 +894,17 @@ function _renderHeader(client, overlay) {
   const hubId = _formatHubId(client);
 
   header.innerHTML = `
-    <!-- Esquerda: Título + Metadados -->
     <div class="pm-header-left">
-      <div class="pm-title-row">
-        <h2 class="pm-title" title="${_escapeHtml(fullName)}">${_escapeHtml(displayName)}</h2>
-        <span class="pm-badge online">ONLINE</span>
-      </div>
-      <div class="pm-meta-row">
-        <span class="pm-meta-item">${pmIcons.pin} ${client.city} / ${client.state || "BA"}</span>
-        <span class="pm-meta-item">${pmIcons.shield} ${client.cicom || client.unit}</span>
-        <span class="pm-meta-item">ID Hub: <strong style="color:var(--accent)">${hubId}</strong></span>
-      </div>
-    </div>
-
-    <!-- Direita: pills de sync + botão de ações + fechar -->
-    <div class="pm-header-right">
-      <div class="pm-sync-box">
-        <div class="pm-sync-label">Situação de sincronização</div>
-        <div class="pm-sync-pills">
-          ${_syncPill("HUB",    pmIcons.hub,    "success", null)}
-          ${_syncPill("GLPI",   pmIcons.glpi,   _countPlatformDivergences(client, "glpi") ? "warning" : "success", _countPlatformDivergences(client, "glpi"))}
-          ${_syncPill("ZABBIX", pmIcons.zabbix, "success", null)}
-          ${_syncPill("AUVO",   pmIcons.auvo,   _countPlatformDivergences(client, "auvo") ? "warning" : "success", _countPlatformDivergences(client, "auvo"))}
-        </div>
-      </div>
-      <div class="pm-header-actions">
-        <button class="point-btn-auvo">Adicionar nova tarefa AUVO</button>
-        <div class="pm-header-btns-row">
-          <!-- Botão de opções (substitui sidebar) -->
-          <div class="pm-options-wrapper">
-            <button id="pmSidebarToggleBtn" class="pm-options-btn" onclick="toggleSidebarPopover()" title="Opções do Ponto">
-              ${pmIcons.sliders}
-              <span>Opções</span>
-            </button>
-            <div id="pmSidebarPopover" class="pm-sidebar-popover">
-              <div class="pm-popover-header">Painel de Controle</div>
-              ${_sidebarDivergences()}
-              ${_sidebarSync()}
-              ${_sidebarActions()}
-            </div>
-          </div>
-        </div>
+      <div class="pm-breadcrumb">Clientes / Pontos &nbsp; / &nbsp; Ficha do ponto</div>
+      <div class="pm-title-row"><h2 class="pm-title" title="${_escapeHtml(fullName)}">${_escapeHtml(fullName)}</h2></div>
+      <div class="pm-meta-row"><span class="pm-meta-item">${_escapeHtml(client.city || 'Município não informado')} / ${_escapeHtml(client.state || 'N/A')}</span><span class="pm-meta-item">${_escapeHtml(client.cicom || client.unit || 'Unidade não informada')}</span></div>
+      <div class="pm-source-ids" aria-label="Identificadores por plataforma">
+        <span>HUB <strong>${_escapeHtml(hubId)}</strong></span>
+        <span>AUVO <strong>${_escapeHtml(client.platformLinks?.auvo?.customerId ?? 'Não vinculado')}</strong></span>
+        <span>GLPI <strong>${_escapeHtml(client.platformLinks?.glpi?.deviceId ?? 'Não vinculado')}</strong></span>
       </div>
     </div>
+    <div class="pm-header-right"><button type="button" class="point-btn-auvo" disabled>+ Nova tarefa AUVO · Em breve</button></div>
     <button onclick="closePointModal()" class="ticket-modal-close" aria-label="Fechar modal">x</button>
   `;
 }
@@ -1006,8 +974,8 @@ function _renderBody(client) {
           </button>
           <div id="pmSidebarPopover" class="pm-sidebar-popover">
             <div class="pm-popover-header">Painel de Controle</div>
-            ${_sidebarDivergences()}
-            ${_sidebarSync()}
+
+            <p class="pm-attendance-message">Consulte as fontes e os vínculos do ponto. Monitoramento Zabbix ainda não disponível.</p>
             ${_sidebarActions()}
           </div>
         </div>
@@ -1202,19 +1170,28 @@ function _subTabContent(client) {
     const fields = client.platformFields?.[currentPlatformTab] || {};
     const value = key => fields[key] ?? 'N/A';
     const id = currentPlatformTab === 'hub' ? _formatHubId(client) : value('id');
+    const latitude = Number(fields.latitude);
+    const longitude = Number(fields.longitude);
+    const hasCoordinates = fields.latitude !== null && fields.latitude !== undefined && String(fields.latitude).trim() !== '' && fields.longitude !== null && fields.longitude !== undefined && String(fields.longitude).trim() !== '' && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+    const optionalFields = [['Tipo', 'deviceType'], ['Localização', 'locationName'], ['Município', 'city'], ['Projeto', 'project']].filter(([, key]) => fields[key] !== undefined && fields[key] !== null && fields[key] !== '');
     return `
-      <div class="pm-fields-grid pm-general-fields">
-        <div>
-          ${_field('Nome do ativo', value('name'), null, value('name'), client, 'name')}
-          ${_field('ID do ativo', id, null, null, client, 'id')}
-        </div>
-        <div>
-          ${_field('Latitude', value('latitude'), null, null, client, 'latitude')}
-          ${_field('Longitude', value('longitude'), null, null, client, 'longitude')}
-        </div>
+      <div class="pm-general-layout">
+        <section><h3 class="pm-section-heading">Identificação e localização</h3>
+          <div class="pm-fields-grid pm-general-fields"><div>
+            ${_field('Nome do ativo', value('name'), null, value('name'), client, 'name')}
+            ${_field('ID do ativo', id, null, null, client, 'id')}
+            ${optionalFields.map(([label, key]) => _field(label, value(key), null, null, client, key)).join('')}
+          </div><div>
+            ${_field('Latitude', value('latitude'), null, null, client, 'latitude')}
+            ${_field('Longitude', value('longitude'), null, null, client, 'longitude')}
+          </div></div>
+        </section>
+        <section class="pm-location-section"><h3 class="pm-section-heading">Localização do ponto</h3>
+          <div class="pm-location-preview"><div>${pmIcons.pin}<strong>${hasCoordinates ? 'Coordenadas disponíveis' : 'Localização não informada'}</strong><span>${hasCoordinates ? `${_escapeHtml(fields.latitude)}, ${_escapeHtml(fields.longitude)}` : 'Esta fonte não possui coordenadas válidas.'}</span>${hasCoordinates ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(latitude + ',' + longitude)}" target="_blank" rel="noopener noreferrer">Abrir no mapa ↗</a>` : ''}</div></div>
+          <p class="pm-location-note">Fonte selecionada: ${pointPlatformLabels[currentPlatformTab]}. O mapa é aberto somente ao clicar.</p>
+        </section>
       </div>`;
   }
-
   if (currentPointTab === "network") {
     return `
       <div class="pm-network-layout">
@@ -1235,31 +1212,14 @@ function _subTabContent(client) {
         </div>
         <!-- CMD: 1/3 direita -->
 
-        <div class="pm-cmd-terminal">
-          <div class="pm-cmd-titlebar">
-            <div class="pm-cmd-titlebar-dots">
-              <span class="cmd-dot red"></span>
-              <span class="cmd-dot yellow"></span>
-              <span class="cmd-dot green"></span>
-            </div>
-            <span class="pm-cmd-title">${pmIcons.terminal} Terminal de Rede — ${client.network.ip}</span>
-          </div>
-          <div class="pm-cmd-output" id="pmCmdOutput"><span class="cmd-prompt">C:\\Windows\\System32&gt; </span><span class="cmd-text cmd-cursor">_</span></div>
-          <div class="pm-cmd-actions">
-            <button class="pm-cmd-btn ping" disabled title="Diagnóstico de rede ainda indisponível">
-              ${pmIcons.ping}
-              <span>Ping -t</span>
-            </button>
-            <button class="pm-cmd-btn tracert" disabled title="Diagnóstico de rede ainda indisponível">
-              ${pmIcons.route}
-              <span>Tracert -d</span>
-            </button>
-            <button class="pm-cmd-btn clear" onclick="document.getElementById('pmCmdOutput').innerHTML='<span class=\\'cmd-prompt\\'>C:\\\\Windows\\\\System32&gt; </span><span class=\\'cmd-text cmd-cursor\\'>_</span>'">
-              Limpar
-            </button>
-          </div>
-        </div>
-      </div>`;
+        <div class="pm-network-unavailable">
+          ${pmIcons.ping}
+          <strong>Sem monitoramento</strong>
+          <div class="pm-network-track"></div>
+          <span>Integração Zabbix · Em breve</span>
+          <small>Disponibilidade e uptime ainda não medidos.</small>
+          <div class="pm-future-actions"><button type="button" disabled>Ping · Em breve</button><button type="button" disabled>Tracert · Em breve</button></div>
+        </div>      </div>`;
   }
 
   /* ── ESTADO DO PONTO ── */
@@ -1415,7 +1375,7 @@ function _sidebarHubSyncActions() {
       <div class="pm-actions">
         <button class="pm-action-btn cyan" onclick="requestHubSync('auvo')" ${canSyncFromAuvo ? "" : "disabled"}>${pmIcons.refresh} <span>Sincronizar HUB com AUVO</span></button>
         <button class="pm-action-btn cyan" onclick="openHubGlpiMatchModal('both')" ${canReviewGlpi ? "" : "disabled"}>${pmIcons.glpi} <span>Revisar associacao GLPI</span></button>
-        <button class="pm-action-btn orange">${pmIcons.warn} <span>Resolver divergencias pendentes</span></button>
+        <button class="pm-action-btn orange" disabled>${pmIcons.warn} <span>Resolver divergências · Em breve</span></button>
       </div>
     </div>`;
 }
