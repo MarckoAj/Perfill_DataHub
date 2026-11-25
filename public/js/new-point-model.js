@@ -50,6 +50,7 @@ function openPointModal(clientOrId = 1) {
 
   if (!client) return;
 
+  resetPointOperation();
   currentClientId = client.clientId;
   window.__currentPointModalClient = client;
   currentPlatformTab = "hub";
@@ -71,6 +72,7 @@ function openPointModal(clientOrId = 1) {
 }
 
 function closePointModal() {
+  if (!leavePointOperation()) return;
   const overlay = document.getElementById("pointModalOverlay");
   if (!overlay) return;
   overlay.classList.remove("active");
@@ -85,6 +87,7 @@ function closePointModal() {
 
 function changePlatformTab(tab) {
   if (tab !== 'history' && !pointPlatformSections[tab]) return;
+  if (tab !== currentPlatformTab && !leavePointOperation()) return;
   currentPlatformTab = tab;
   if (tab !== 'history' && !pointPlatformSections[tab].includes(currentPointTab)) currentPointTab = 'general';
   const client = _getCurrentClient();
@@ -94,6 +97,7 @@ function changePlatformTab(tab) {
 
 function changePointTab(tab) {
   if (!pointPlatformSections[currentPlatformTab]?.includes(tab)) return;
+  if (tab !== currentPointTab && !leavePointOperation()) return;
   currentPointTab = tab;
   const client = _getCurrentClient();
   if (!client) return;
@@ -293,6 +297,7 @@ function _getPlatformGeneralValue(client, fieldKey, fallback = "N/A") {
 }
 
 function _countPlatformDivergences(client, platform) {
+  if (client.divergences?.enabled) return client.divergences.platforms?.[platform]?.count || 0;
   if (platform === "glpi") return client.sources?.glpi?.device ? 0 : 1;
   if (platform === "auvo") return client.sources?.auvo?.customer ? 0 : 1;
   return 0;
@@ -986,11 +991,13 @@ function _renderBody(client) {
         <div class="pm-info-card-header">
           <div>
             <div class="pm-info-card-title">${pointPlatformLabels[currentPlatformTab]}</div>
+            ${renderPlatformSyncTime(client)}
             <div class="pm-info-card-subtitle">${currentPlatformTab === 'hub' ? 'Informações consolidadas do ponto.' : currentPlatformTab === 'spreadsheet' ? (client.platformFields?.spreadsheet?.importedSections ? 'Dados importados da planilha base. Campos vazios permanecem N/A.' : 'Dados da planilha ainda não importados para este ponto.') : currentPlatformTab === 'zabbix' ? 'Integração ainda não disponível. Campos sem dados exibem N/A.' : 'Dados disponíveis nesta fonte. Campos sem dados exibem N/A.'}</div>
           </div>
         </div>
 
         <div class="pm-info-card-body">
+          ${renderPointOperationBar(client)}
           ${_subTabContent(client)}
         </div>
 
@@ -999,7 +1006,7 @@ function _renderBody(client) {
             <span>Status operacional</span>
             <span>N/A</span>
           </div>
-          <span class="pm-readonly-label">Modo de visualização (somente leitura)</span>
+          <span class="pm-readonly-label">${pointOperation.mode === "view" ? "Modo de visualização (somente leitura)" : "Alterações aplicadas somente após confirmação"}</span>
         </div>
       </div>
 
@@ -1178,7 +1185,7 @@ function _subTabContent(client) {
     const latitude = Number(fields.latitude);
     const longitude = Number(fields.longitude);
     const hasCoordinates = fields.latitude !== null && fields.latitude !== undefined && String(fields.latitude).trim() !== '' && fields.longitude !== null && fields.longitude !== undefined && String(fields.longitude).trim() !== '' && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
-    const optionalFields = [['Tipo', 'deviceType'], ['Localização', 'locationName'], ['Município', 'city'], ['CICOM', 'cicom'], ['Unidade', 'unit'], ['Técnico de campo', 'fieldTechnician'], ['Técnico NOC', 'nocTechnician'], ['Projeto', 'project']].filter(([, key]) => fields[key] !== undefined && fields[key] !== null && fields[key] !== '');
+    const optionalFields = [['Endereço', 'address'], ['Tipo', 'deviceType'], ['Localização', 'locationName'], ['Município', 'city'], ['CICOM', 'cicom'], ['Unidade', 'unit'], ['Técnico de campo', 'fieldTechnician'], ['Técnico NOC', 'nocTechnician'], ['Projeto', 'project']].filter(([, key]) => !(currentPlatformTab === 'glpi' && ['deviceType','cicom'].includes(key))).filter(([, key]) => (fields[key] !== undefined && fields[key] !== null && fields[key] !== '') || pilotFieldDifferences(client,key).length);
     return `
       <div class="pm-general-layout">
         <section><h3 class="pm-section-heading">Identificação e localização</h3>
@@ -1381,7 +1388,8 @@ function _sidebarHubSyncActions() {
     <div class="pm-sidebar-card">
       <div class="pm-sidebar-title">Acoes rapidas</div>
       <div class="pm-actions">
-        <button class="pm-action-btn cyan" onclick="requestHubSync('auvo')" ${canSyncFromAuvo ? "" : "disabled"}>${pmIcons.refresh} <span>Sincronizar HUB com AUVO</span></button>
+        ${renderPointOperationMenu(client)}
+        <button class="pm-action-btn cyan" onclick="requestHubSync('auvo')" ${canSyncFromAuvo && !client.divergences?.enabled ? "" : "disabled"}>${pmIcons.refresh} <span>${client.divergences?.enabled ? "Aplicar valores ao HUB · Em breve" : "Sincronizar HUB com AUVO"}</span></button>
         <button class="pm-action-btn cyan" onclick="openHubGlpiMatchModal('both')" ${canReviewGlpi ? "" : "disabled"}>${pmIcons.glpi} <span>Revisar associacao GLPI</span></button>
         <button class="pm-action-btn orange" disabled>${pmIcons.warn} <span>Resolver divergências · Em breve</span></button>
       </div>
@@ -1473,14 +1481,16 @@ function _field(label, value, badge = null, title = null, client = null, fieldKe
     const cls = badge.type === "critical" ? "pm-badge-critical" : `divergence-badge ${badge.type}`;
     badgeHTML = `<span class="${cls}">${badge.label}</span>`;
   }
-  const titleAttr = title ? ` title="${_escapeHtml(title)}"` : "";
+  const fullValueTitle = title || (fieldKey === "address" ? value : null);
+  const titleAttr = fullValueTitle ? ` title="${_escapeHtml(fullValueTitle)}"` : "";
   const relationHTML = client && fieldKey ? _relationHint(client, fieldKey) : "";
+  const operation = pointOperationField(client, fieldKey, label, value);
   return `
-    <div class="info-block">
-      <div class="info-label">${label}${relationHTML}</div>
+    <div class="info-block${operation.className ? " " + operation.className : ""}"${operation.attribute ? " " + operation.attribute : ""}>
+      <div class="info-label">${operation.checkbox}${label}${relationHTML}</div>
       <div class="info-value-wrapper">
-        <span class="info-value"${titleAttr}>${_escapeHtml(value ?? "N/A")}</span>
-        ${badgeHTML}
+        ${operation.input || `<span class="info-value"${titleAttr}>${_escapeHtml(value ?? "N/A")}</span>`}
+        ${badgeHTML}${pointOperation.mode === "edit" ? "" : renderFieldDivergence(client, fieldKey)}${operation.comparison}
       </div>
     </div>`;
 }
@@ -1494,4 +1504,362 @@ function importedHubExtras(client, section, displayed) {
  if(currentPlatformTab !== 'hub') return '';
  const entries=client.platformFields?.hub?.importedSections?.[section] || [];
  return entries.filter(item=>item.value!==null && item.value!==undefined && !displayed.includes(item.key)).map(item=>_field(item.label,item.value)).join('');
+}
+
+function pilotFieldDifferences(client, fieldKey) {
+ if (!client?.divergences?.enabled || !fieldKey) return [];
+ const keys = ['auvo','glpi'].includes(currentPlatformTab) ? [currentPlatformTab] : [];
+ return keys.flatMap(platform => (client.divergences.platforms?.[platform]?.items || [])
+  .filter(item => item.fieldKey === fieldKey).map(item => ({...item,platform})));
+}
+function renderFieldDivergence(client, fieldKey) {
+ const differences=pilotFieldDifferences(client,fieldKey);
+ if (!differences.length) return '';
+ const description=differences.map(item=>'HUB: '+(item.hubValue ?? 'N/A')+' | '+item.platform.toUpperCase()+': '+(item.sourceValue ?? 'N/A')).join('\n');
+ return '<span class="pm-field-difference" role="button" onclick="startPointOperation(\'sync\',\''+fieldKey+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();startPointOperation(\'sync\',\''+fieldKey+'\')}" tabindex="0" aria-label="'+_escapeHtml('Divergência. '+description)+'"><span aria-hidden="true">!</span><span class="pm-field-difference-tooltip" role="tooltip">'+_escapeHtml(description)+'</span></span>';
+}
+function renderPlatformSyncTime(client) {
+ const source=client.divergences?.platforms?.[currentPlatformTab];
+ const record=currentPlatformTab==='auvo' ? client.sources?.auvo?.customer : currentPlatformTab==='glpi' ? client.sources?.glpi?.device : null;
+ if (!['auvo','glpi'].includes(currentPlatformTab)) return '';
+ const time=source?.lastSyncAt || record?.lastSyncAt;
+ return '<div class="pm-platform-sync-time">Última sincronização: '+_escapeHtml(time ? _formatDateTime(time) : 'Não informada')+'</div>';
+}
+
+// Stage 1: local presentation only. These drafts never update source records.
+let pointOperation = {mode:'view',direction:'out',draft:{},selected:new Set(),destinations:new Set()};
+const pointEditableFields = new Set(['address','name','latitude','longitude','city','cicom','unit','fieldTechnician','nocTechnician','deviceType','locationName','project']);
+function resetPointOperation() { closePointReview(); pointOperation={mode:'view',direction:'out',draft:{},selected:new Set(),destinations:new Set()}; }
+function canPreviewPointOperation(client) {
+ return Number(_getHubId(client || {}))===12130 && !!localStorage.getItem('authToken');
+}
+function leavePointOperation() {
+ if(pointOperation.mode!=='view' && !confirm('Descartar a edição ou seleção atual?')) return false;
+ resetPointOperation();return true;
+}
+function startPointOperation(mode,fieldKey=null) {
+ const client=_getCurrentClient();
+ if(!canPreviewPointOperation(client))return;
+ if(mode==='edit' && currentPlatformTab!=='hub')return;
+ if(mode==='sync' && !['auvo','glpi'].includes(currentPlatformTab))return;
+ if(pointOperation.mode!==mode) {
+  resetPointOperation();pointOperation.mode=mode;
+  pointOperation.draft={...(client.platformFields?.hub || {})};
+ }
+ currentPointTab='general';_sidebarOpen=false;
+ if(fieldKey && eligiblePointFields(client).includes(fieldKey))pointOperation.selected.add(fieldKey);
+ _renderBody(client);
+}
+function cancelPointOperation() {resetPointOperation();const client=_getCurrentClient();if(client)_renderBody(client);}
+function pointSyncEndpoints() {
+ const external=currentPlatformTab;
+ return pointOperation.direction==='out' ? {origin:'hub',target:external} : {origin:external,target:'hub'};
+}
+function pointFieldEligibility(client,item) {
+ if(!canPreviewPointOperation(client)||!['auvo','glpi'].includes(currentPlatformTab))return {eligible:false,reason:'Operação indisponível'};
+ const {origin,target}=pointSyncEndpoints();
+ if(!client.platformFields?.[currentPlatformTab]?.id)return {eligible:false,reason:'Plataforma sem cadastro correlacionado'};
+ const key=item.fieldKey,value=origin==='hub'?item.hubValue:item.sourceValue;
+ if(target!=='hub')return pointOutgoingCompatibility(client,key,value,target);
+ if(!pointEditableFields.has(key))return {eligible:false,reason:'Identificador ou campo somente leitura'};
+ if(value==null||['','N/A','NA','NÃO INFORMADO','NAO INFORMADO'].includes(String(value).trim().toUpperCase()))return {eligible:false,reason:'Origem sem valor válido'};
+ if(['latitude','longitude'].includes(key)) {
+  const number=Number(String(value).trim().replace(',', '.'));
+  if(!Number.isFinite(number)||Math.abs(number)>(key==='latitude'?90:180))return {eligible:false,reason:'Coordenada inválida na origem'};
+ }
+ // Only semantically established mappings are offered in this preview.
+ const incoming=['name','latitude','longitude','address'];
+ const outgoing=currentPlatformTab==='auvo' ? ['name','latitude','longitude','address'] : ['name','address'];
+ if(!(target==='hub'?incoming:outgoing).includes(key))return {eligible:false,reason:currentPlatformTab==='glpi'&&['latitude','longitude'].includes(key)?'Coordenadas pertencem à localização GLPI; escrita depende de validação própria':'Campo sem mapeamento de escrita compatível no destino'};
+ if(client.previewWriteFields?.[target] && !client.previewWriteFields[target].includes(key))return {eligible:false,reason:'Campo indisponível para o destino'};
+ return {eligible:true,reason:''};
+}
+function eligiblePointFields(client) {
+ return (client?.divergences?.platforms?.[currentPlatformTab]?.items || [])
+  .filter(item=>pointFieldEligibility(client,item).eligible).map(item=>item.fieldKey);
+}
+function flipPointSyncDirection() {
+ const client=_getCurrentClient();
+ if(pointOperation.mode!=='sync'||!canPreviewPointOperation(client))return;
+ pointOperation.direction=pointOperation.direction==='in'?'out':'in';
+ const valid=new Set(eligiblePointFields(client));
+ pointOperation.selected=new Set([...pointOperation.selected].filter(key=>valid.has(key)));
+ _renderBody(client);
+}
+
+function togglePointField(key) {
+ const client=_getCurrentClient();if(pointOperation.mode!=='sync'||!eligiblePointFields(client).includes(key))return;
+ if(pointOperation.selected.has(key))pointOperation.selected.delete(key);else pointOperation.selected.add(key);
+ _renderBody(client);
+}
+function toggleAllPointFields() {
+ const keys=eligiblePointFields(_getCurrentClient());
+ pointOperation.selected=new Set(keys.every(key=>pointOperation.selected.has(key)) ? [] : keys);
+ _renderBody(_getCurrentClient());
+}
+function pointChangedFields() {
+ const base=_getCurrentClient()?.platformFields?.hub || {};
+ return Object.keys(pointOperation.draft).filter(key=>pointEditableFields.has(key) && !pointValuesEqual(key,pointOperation.draft[key],base[key]));
+}
+function updatePointDraft(key,value) {
+ if(pointOperation.mode!=='edit'||!pointEditableFields.has(key))return;
+ pointOperation.draft[key]=value;
+ reconcilePointPropagation(_getCurrentClient());
+ document.getElementById('pm-operation-field-'+key)?.classList.toggle('pm-operation-selected',pointChangedFields().includes(key));
+ const count=document.getElementById('pm-operation-count');if(count)count.textContent=pointChangedFields().length+' campos modificados';
+ const propagation=document.getElementById('pm-point-propagation');if(propagation)propagation.innerHTML=pointPropagationContent(_getCurrentClient());
+ const reviewButton=document.getElementById('pm-operation-review-button');if(reviewButton)reviewButton.disabled=!canReviewPointOperation(_getCurrentClient());
+}
+function renderPointOperationMenu(client) {
+ if(Number(_getHubId(client || {}))!==12130)return '';
+ const unavailable=canPreviewPointOperation(client)?'':'disabled title="Entre novamente no Data Hub para editar informações" ';
+ if(currentPlatformTab==='hub')return '<button type="button" class="pm-action-btn cyan" '+unavailable+'onclick="startPointOperation(\'edit\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 16-1 5 5-1L20 8l-4-4Z"/><path d="m14 6 4 4"/></svg><span>Editar informações</span></button>';
+ if(['auvo','glpi'].includes(currentPlatformTab))return '<button type="button" class="pm-action-btn cyan" '+unavailable+'onclick="startPointOperation(\'sync\')"><span aria-hidden="true">⇄</span><span>Sincronizar campos</span></button>';
+ return '';
+}
+
+function renderPointOperationBar(client) {
+ if(pointOperation.mode==='view')return '';
+ let controls='<small>Edite os campos diretamente na ficha. Identificadores permanecem somente leitura.</small>';
+ if(pointOperation.mode==='sync') {
+  const keys=eligiblePointFields(client),route=pointSyncEndpoints();
+  controls='<div class="pm-sync-direction"><div class="pm-sync-endpoint"><small>Origem</small><strong>'+pointPlatformLabels[route.origin]+'</strong></div><button type="button" class="pm-sync-flip" onclick="flipPointSyncDirection()" aria-label="Inverter origem e destino" title="Inverter direção"><span aria-hidden="true">⇄</span></button><div class="pm-sync-endpoint"><small>Destino</small><strong>'+pointPlatformLabels[route.target]+'</strong></div><small>Selecione os campos diretamente na ficha.</small><label class="pm-sync-all"><input type="checkbox" '+(keys.length&&keys.every(key=>pointOperation.selected.has(key))?'checked ':'')+(!keys.length?'disabled ':'')+'onchange="toggleAllPointFields()"> Todos divergentes</label></div>';
+ }
+ return '<div class="pm-operation-bar"><div class="pm-operation-bar-title"><strong>'+(pointOperation.mode==='edit'?'Edição de informações':'Sincronização de informações')+'</strong></div><p>Revise as alterações antes de confirmar.</p>'+controls+(pointOperation.mode==='edit'?renderPointPropagation(client):'')+renderPointOperationFooter()+'</div>';
+}
+
+function renderPointOperationFooter() {
+ if(pointOperation.mode==='view')return '';
+ const edit=pointOperation.mode==='edit';
+ const canReview=canReviewPointOperation(_getCurrentClient());
+ return '<div class="pm-operation-footer"><span id="pm-operation-count">'+(edit?pointChangedFields().length+' campos modificados':pointOperation.selected.size+' campos selecionados')+'</span><div><button type="button" class="pm-match-secondary" onclick="cancelPointOperation()">Cancelar</button><button type="button" id="pm-operation-review-button" class="pm-match-primary" '+(!canReview?'disabled ':'')+'onclick="openPointReview()" title="Revisar valores antes da confirmação">'+(edit?'Salvar alterações':'Sincronizar')+'</button></div></div>';
+}
+function pointOperationField(client,key,label,value) {
+ const result={className:'',attribute:'',checkbox:'',input:'',comparison:''};
+ if(!canPreviewPointOperation(client)||!key||pointOperation.mode==='view')return result;
+ if(pointOperation.mode==='edit'&&currentPlatformTab==='hub'&&pointEditableFields.has(key)) {
+  result.attribute='id="pm-operation-field-'+key+'"';
+  result.className=pointChangedFields().includes(key)?'pm-operation-selected':'';
+  const coordinate=['latitude','longitude'].includes(key);
+  result.input='<input class="pm-operation-input" aria-label="'+_escapeHtml(label)+'" type="'+(coordinate?'number':'text')+'" '+(coordinate?'step="any" min="'+(key==='latitude'?-90:-180)+'" max="'+(key==='latitude'?90:180)+'" ':'')+'value="'+_escapeHtml(pointOperation.draft[key] ?? '')+'" oninput="updatePointDraft(\''+key+'\',this.value)">';
+ }
+ if(pointOperation.mode==='sync') {
+  const item=pilotFieldDifferences(client,key)[0];
+  result.className='pm-operation-discreet';
+  if(item) {
+   const eligibility=pointFieldEligibility(client,item);
+   const eligible=eligibility.eligible;
+   result.className=pointOperation.selected.has(key)?'pm-operation-selected':'pm-operation-discreet';
+   result.checkbox='<input class="pm-operation-check" type="checkbox" aria-label="Selecionar '+_escapeHtml(label)+'" '+(pointOperation.selected.has(key)?'checked ':'')+(!eligible?'disabled title="'+_escapeHtml(eligibility.reason)+'" ':'')+'onchange="togglePointField(\''+key+'\')">';
+   const route=pointSyncEndpoints();
+   const next=route.origin==='hub'?item.hubValue:item.sourceValue;
+   result.comparison='<div class="pm-operation-comparison">HUB: '+_escapeHtml(item.hubValue ?? 'N/A')+'<br>Novo valor em '+pointPlatformLabels[route.target]+': '+_escapeHtml(next ?? 'N/A')+(!eligible?'<br><span class="pm-sync-unavailable">'+_escapeHtml(eligibility.reason)+'</span>':'')+'</div>';
+  }
+ }
+ return result;
+}
+
+function pointDraftValidation(key,value) {
+ if(!pointEditableFields.has(key))return 'Identificador ou campo somente leitura';
+ if(value==null||['','N/A','NA','NÃO INFORMADO','NAO INFORMADO'].includes(String(value).trim().toUpperCase()))return 'Informe um valor válido';
+ if(['latitude','longitude'].includes(key)) {
+  const number=Number(String(value).trim().replace(',', '.'));
+  if(!Number.isFinite(number)||Math.abs(number)>(key==='latitude'?90:180))return 'Coordenada fora do intervalo válido';
+ }
+ return '';
+}
+function pointOutgoingCompatibility(client,key,value,target) {
+ if(!['auvo','glpi'].includes(target)||!client?.platformFields?.[target]?.id)return {eligible:false,reason:'Plataforma sem cadastro correlacionado'};
+ const invalid=pointDraftValidation(key,value);if(invalid)return {eligible:false,reason:invalid};
+ const mapping=target==='auvo'?{name:'description',latitude:'latitude',longitude:'longitude',address:'address'}:{name:'name',address:'Location.address'};
+ if(!mapping[key])return {eligible:false,reason:target==='glpi'&&['latitude','longitude'].includes(key)?'Coordenadas pertencem à localização GLPI; escrita depende de validação própria':'Campo sem mapeamento de escrita compatível no destino'};
+ if(client.previewWriteFields?.[target]&&!client.previewWriteFields[target].includes(key))return {eligible:false,reason:'Campo indisponível para o destino'};
+ return {eligible:true,reason:'',nativeField:mapping[key]};
+}
+function pointEditProposal(client) {
+ if(pointOperation.mode!=='edit'||!canPreviewPointOperation(client))return [];
+ reconcilePointPropagation(client);
+ const proposals=[];
+ for(const key of pointChangedFields()) {
+  const value=pointOperation.draft[key],reason=pointDraftValidation(key,value);
+  proposals.push({target:'hub',fieldKey:key,oldValue:client.platformFields?.hub?.[key]??null,newValue:value,eligible:!reason,reason});
+  for(const target of pointOperation.destinations) {
+   const current=client.platformFields?.[target]?.[key]??null;
+   if(pointValuesEqual(key,current,value))continue;
+   const rule=pointOutgoingCompatibility(client,key,value,target);
+   proposals.push({target,fieldKey:key,oldValue:current,newValue:value,...rule});
+  }
+ }
+ return proposals;
+}
+function pointPropagationFields(client,target) {
+ if(pointOperation.mode!=='edit'||!canPreviewPointOperation(client))return [];
+ return pointChangedFields().filter(key=>{
+  const value=pointOperation.draft[key];
+  return pointOutgoingCompatibility(client,key,value,target).eligible &&
+   !pointValuesEqual(key,client.platformFields?.[target]?.[key],value);
+ });
+}
+function reconcilePointPropagation(client) {
+ for(const target of pointOperation.destinations) {
+  if(!pointPropagationFields(client,target).length)pointOperation.destinations.delete(target);
+ }
+}
+function setPointPropagation(target,checked) {
+ const client=_getCurrentClient();
+ if(pointOperation.mode!=='edit'||!canPreviewPointOperation(client)||!['auvo','glpi'].includes(target))return;
+ if(checked&&pointPropagationFields(client,target).length)pointOperation.destinations.add(target);
+ else pointOperation.destinations.delete(target);
+ reconcilePointPropagation(client);
+ _renderBody(client);
+}
+function pointPropagationContent(client) {
+ reconcilePointPropagation(client);
+ const proposals=pointEditProposal(client);
+ return '<h3>Propagar alterações para</h3><div class="pm-propagation-targets">'+['auvo','glpi'].map(target=>{
+  const linked=!!client.platformFields?.[target]?.id;
+  const fields=pointPropagationFields(client,target),available=fields.length>0;
+  const description=!linked?'Sem cadastro correlacionado':!available?'Nenhum campo compatível alterado':fields.length+' campo(s) compatível(is)';
+  return '<label><input type="checkbox" '+(pointOperation.destinations.has(target)?'checked ':'')+(!available?'disabled ':'')+'title="'+_escapeHtml(description)+'" onchange="setPointPropagation(\''+target+'\',this.checked)"> '+pointPlatformLabels[target]+' <small>'+_escapeHtml(description)+'</small></label>';
+ }).join('')+'</div><p>'+(pointOperation.destinations.size?'Somente os campos modificados e compatíveis serão propostos para cada plataforma.':'Sem seleção, as alterações serão destinadas somente ao HUB.')+'</p>'+proposals.filter(item=>!item.eligible).map(item=>'<p class="pm-sync-unavailable">'+pointPlatformLabels[item.target]+' · '+_escapeHtml(pointEditFieldLabel(item.fieldKey))+': '+_escapeHtml(item.reason)+'</p>').join('');
+}
+
+function pointEditFieldLabel(key) {
+ return {address:'Endereço',name:'Nome',latitude:'Latitude',longitude:'Longitude',city:'Município',cicom:'CICOM',unit:'Unidade',fieldTechnician:'Técnico de campo',nocTechnician:'Técnico NOC',deviceType:'Tipo',locationName:'Localização',project:'Projeto'}[key]||key;
+}
+function renderPointPropagation(client) {
+ if(pointOperation.mode!=='edit'||currentPlatformTab!=='hub'||!canPreviewPointOperation(client))return '';
+ return '<section class="pm-point-propagation" id="pm-point-propagation">'+pointPropagationContent(client)+'</section>';
+}
+
+function pointValuesEqual(key,left,right) {
+ if(['latitude','longitude'].includes(key)&&left!=null&&right!=null&&String(left).trim()!==''&&String(right).trim()!=='') {
+  const a=Number(String(left).trim().replace(',','.')),b=Number(String(right).trim().replace(',','.'));
+  if(Number.isFinite(a)&&Number.isFinite(b))return a===b;
+ }
+ return String(left??'').trim()===String(right??'').trim();
+}
+
+// Stage 4: confirmation review. Execution remains disabled until backend integration.
+let pointReviewFocus = null;
+function pointReviewPlan(client) {
+ if(!canPreviewPointOperation(client)||pointOperation.mode==='view')return {items:[],warnings:[],invalid:true};
+ if(pointOperation.mode==='edit') {
+  const proposals=pointEditProposal(client);
+  return {mode:'edit',entityId:_getHubId(client),origin:'Edição manual do HUB',
+   items:proposals.filter(item=>item.eligible),warnings:proposals.filter(item=>!item.eligible),
+   invalid:proposals.some(item=>item.target==='hub'&&!item.eligible)};
+ }
+ const route=pointSyncEndpoints(),all=client.divergences?.platforms?.[currentPlatformTab]?.items||[];
+ const items=[],warnings=[];
+ for(const key of pointOperation.selected) {
+  const item=all.find(candidate=>candidate.fieldKey===key);
+  if(!item){warnings.push({target:route.target,fieldKey:key,reason:'Campo não está mais divergente'});continue;}
+  const eligibility=pointFieldEligibility(client,item);
+  if(!eligibility.eligible){warnings.push({target:route.target,fieldKey:key,reason:eligibility.reason});continue;}
+  items.push({target:route.target,fieldKey:key,oldValue:route.target==='hub'?item.hubValue:item.sourceValue,newValue:route.origin==='hub'?item.hubValue:item.sourceValue});
+ }
+ return {mode:'sync',entityId:_getHubId(client),origin:pointPlatformLabels[route.origin],items,warnings,invalid:warnings.length>0};
+}
+function canReviewPointOperation(client) {
+ const plan=pointReviewPlan(client);
+ return !plan.invalid && plan.items.length>0;
+}
+function renderPointReviewMarkup(plan) {
+ const edit=plan.mode==='edit',title=edit?'Confirmar alterações':'Confirmar sincronização';
+ const targets=[...new Set(plan.items.map(item=>pointPlatformLabels[item.target]))].join(' + ');
+ const warnings=plan.warnings.length?'<div class="pm-review-warning" role="note">Não serão enviados:<ul>'+plan.warnings.map(item=>'<li>'+_escapeHtml(pointPlatformLabels[item.target]+' · '+pointEditFieldLabel(item.fieldKey)+': '+item.reason)+'</li>').join('')+'</ul></div>':'';
+ return '<header class="pm-review-head"><h2 id="pm-point-review-title"><span aria-hidden="true">'+(edit?'✎':'⇄')+'</span> '+title+'</h2></header><p>'+plan.items.length+' alteração(ões) de campos serão aplicadas após confirmação.</p><div class="pm-review-route">'+_escapeHtml(plan.origin)+' → '+_escapeHtml(targets)+'</div><div class="pm-review-scroll"><table><thead><tr><th>Campo / destino</th><th>Valor atual</th><th>Novo valor</th></tr></thead><tbody>'+plan.items.map(item=>'<tr><td>'+_escapeHtml(pointEditFieldLabel(item.fieldKey))+'<br><small>'+_escapeHtml(pointPlatformLabels[item.target])+'</small></td><td class="pm-review-old">'+_escapeHtml(item.oldValue??'N/A')+'</td><td class="pm-review-new">'+_escapeHtml(item.newValue??'N/A')+'</td></tr>').join('')+'</tbody></table>'+warnings+'</div><p class="pm-review-history">Esta operação será registrada no histórico de alterações, permitindo consultar e restaurar os valores anteriores, quando permitido.</p><p class="pm-review-warning" id="pm-review-state">Validando a operação antes da confirmação…</p><footer class="pm-review-actions"><button type="button" class="pm-match-secondary" onclick="closePointReview()">Cancelar</button><button type="button" id="pm-review-confirm" class="pm-match-primary" disabled onclick="executePointReview()" title="Confirmar a operação revisada">'+title+'</button></footer>';
+}
+function openPointReview() {
+ const client=_getCurrentClient();
+ if(!canReviewPointOperation(client))return;
+ const plan=pointReviewPlan(client);
+ // A detached display snapshot; it is never treated as authorization or a write payload.
+ const snapshot=JSON.parse(JSON.stringify(plan));
+ closePointReview();pointReviewFocus=document.activeElement;
+ const dialog=document.createElement('dialog');dialog.id='pmPointOperationReview';dialog.className='pm-operation-review';
+ dialog.setAttribute('aria-labelledby','pm-point-review-title');dialog.innerHTML=renderPointReviewMarkup(snapshot);
+ dialog.addEventListener('cancel',event=>{event.preventDefault();closePointReview();});
+ dialog.addEventListener('click',event=>{if(event.target===dialog){const box=dialog.getBoundingClientRect();if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)closePointReview();}});
+ document.body.appendChild(dialog);dialog.showModal();
+ dialog.querySelector('button:not([disabled])')?.focus();
+ pointReviewBackend={dialog,snapshot,client,prepared:null,busy:false};
+ preparePointReview(pointReviewBackend);
+}
+function closePointReview() {
+ if(pointReviewBackend?.busy)return;
+ pointReviewBackend=null;
+ const dialog=document.getElementById('pmPointOperationReview');
+ if(dialog){dialog.close();dialog.remove();pointReviewFocus?.focus?.();}
+ pointReviewFocus=null;
+}
+
+let pointReviewBackend=null;
+async function pointOperationApi(entityId,path,body) {
+ const response=await fetch('/api/hub/entities/'+entityId+'/operations/'+path,{
+  method:body?'POST':'GET',headers:{'Content-Type':'application/json',authorization:'Bearer '+localStorage.getItem('authToken'),'X-Hub-Session':localStorage.getItem('hubOperationSession')||''},...(body?{body:JSON.stringify(body)}:{})});
+ const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.message||'Operação indisponível.'),{status:response.status});return data;
+}
+function pointBackendRequest(state) {
+ return {mode:state.snapshot.mode,origin:state.snapshot.mode==='edit'?'hub':pointSyncEndpoints().origin,items:state.snapshot.items.map(item=>{
+  const old= item.target==='hub' ? state.client.fieldValues?.find(row=>row.sourceSystem==='HUB'&&row.isCanonical&&row.fieldKey===item.fieldKey) : null;
+  return {target:item.target,fieldKey:item.fieldKey,oldValue:old?(old.valueNumber??old.valueText??null):item.oldValue??null,newValue:item.newValue};
+ })};
+}
+function pointReviewMessage(state,message) {const node=state.dialog.querySelector('#pm-review-state');if(node)node.textContent=message;}
+async function preparePointReview(state) {
+ const session=localStorage.getItem('hubOperationSession');
+ if(!session||!/^[a-f0-9]{64}$/.test(session)){pointReviewMessage(state,'Entre novamente no Data Hub para identificar o operador e habilitar a confirmação.');return;}
+ try {
+  const pending=localStorage.getItem('hubPendingPointOperation');
+  if(pending){state.prepared={operationId:pending};await checkPointOperationStatus();return;}
+  const prepared=await pointOperationApi(state.snapshot.entityId,'prepare',pointBackendRequest(state));
+  if(pointReviewBackend!==state)return;
+  state.prepared=prepared;
+  state.dialog.innerHTML=renderPointReviewMarkup({...state.snapshot,items:prepared.plan.items});
+  pointReviewMessage(state,'Valores conferidos no servidor. Confirme para gravar e registrar no histórico.');
+  const button=state.dialog.querySelector('#pm-review-confirm');if(button)button.disabled=false;
+  state.dialog.querySelector('button:not([disabled])')?.focus();
+ }catch(error){if(pointReviewBackend===state){if(error.status===404)localStorage.removeItem('hubPendingPointOperation');pointReviewMessage(state,error.message);}}
+}
+async function executePointReview() {
+ const state=pointReviewBackend;if(!state?.prepared||state.busy)return;
+ state.busy=true;state.dialog.querySelectorAll('button').forEach(button=>button.disabled=true);
+ pointReviewMessage(state,'Aplicando a operação. Aguarde a confirmação de cada destino.');
+ try {localStorage.setItem('hubPendingPointOperation',state.prepared.operationId);const result=await pointOperationApi(state.snapshot.entityId,'confirm',{operationId:state.prepared.operationId,confirmed:true});await showPointOperationResult(state,result);}
+ catch(error){state.busy=false;if([400,401,403,404,409,410,503].includes(error.status)){localStorage.removeItem('hubPendingPointOperation');state.prepared=null;pointReviewMessage(state,error.message);const cancel=state.dialog.querySelector('button.pm-match-secondary');if(cancel)cancel.disabled=false;}else{pointReviewMessage(state,'Não foi possível confirmar o resultado. Consulte o andamento antes de tentar outra operação.');pointStatusButton(state);}}
+}
+function pointStatusButton(state) {
+ const button=state.dialog.querySelector('#pm-review-confirm');if(button){button.disabled=false;button.textContent='Consultar resultado';button.onclick=checkPointOperationStatus;}
+ const cancel=state.dialog.querySelector('button.pm-match-secondary');if(cancel)cancel.disabled=false;
+}
+async function checkPointOperationStatus() {
+ const state=pointReviewBackend;if(!state?.prepared||state.busy)return;
+ try{state.busy=true;const result=await pointOperationApi(state.snapshot.entityId,'status/'+state.prepared.operationId);await showPointOperationResult(state,result);}
+ catch(error){state.busy=false;pointReviewMessage(state,error.message);if(error.status===404){localStorage.removeItem('hubPendingPointOperation');state.prepared=null;const cancel=state.dialog.querySelector('button.pm-match-secondary');if(cancel)cancel.disabled=false;}else pointStatusButton(state);}
+}
+async function showPointOperationResult(state,result) {
+ state.busy=false;if(pointReviewBackend!==state)return;
+ if(['RUNNING','PREPARED'].includes(result.state)){
+  if(result.state==='PREPARED'){
+   if(result.plan){state.snapshot={...state.snapshot,mode:result.plan.mode,origin:result.plan.mode==='edit'?'Edição manual do HUB':pointPlatformLabels[result.plan.origin],items:result.plan.items,warnings:[]};state.dialog.innerHTML=renderPointReviewMarkup(state.snapshot);}
+   if(result.expiresAt&&new Date(result.expiresAt).getTime()<Date.now()){localStorage.removeItem('hubPendingPointOperation');state.prepared=null;pointReviewMessage(state,'Revisão expirada. Feche esta revisão e prepare novamente.');return;}
+   pointReviewMessage(state,'A operação ainda não iniciou. Você pode confirmar a mesma revisão, sem criar outra operação.');
+   const button=state.dialog.querySelector('#pm-review-confirm');if(button){button.disabled=false;button.textContent='Confirmar operação';button.onclick=executePointReview;}
+   const cancel=state.dialog.querySelector('button.pm-match-secondary');if(cancel)cancel.disabled=false;
+  }else{const content=state.dialog.querySelector('.pm-review-scroll');if(content)content.textContent='Operação '+result.operationId+' · aguardando resultado confirmado.';pointReviewMessage(state,'Operação em andamento ou interrompida. Consulte o resultado; não inicie outra tentativa.');pointStatusButton(state);}return;
+ }
+ localStorage.removeItem('hubPendingPointOperation');
+ const labels={succeeded:'Concluído',failed:'Falhou',conflict:'Conflito: valor ou vínculo alterado',uncertain:'Resultado incerto: confira a plataforma antes de tentar novamente'};
+ state.dialog.innerHTML='<header class="pm-review-head"><h2>Resultado da operação</h2></header><div class="pm-review-scroll"><p>'+_escapeHtml(result.state==='COMPLETED'?'Operação concluída.':'A operação não foi concluída integralmente.')+'</p><ul>'+result.results.map(item=>'<li>'+_escapeHtml(pointPlatformLabels[item.target]+': '+(labels[item.status]||item.status))+'</li>').join('')+'</ul></div><footer class="pm-review-actions"><button type="button" class="pm-match-secondary" onclick="closePointReview()">Fechar</button></footer>';
+ pointOperation={mode:'view',direction:'out',draft:{},selected:new Set(),destinations:new Set()};
+ try{
+  const details=await fetchHubEntityDetails(state.snapshot.entityId);
+  if(pointReviewBackend!==state)return;
+  window.__currentPointModalClient=mapHubEntityDetailsToModalClient(details,state.client);
+  _renderBody(window.__currentPointModalClient);
+  const overlay=document.getElementById('pointModalOverlay');if(overlay)_renderHeader(window.__currentPointModalClient,overlay);
+ }catch(error){const note=document.createElement('p');note.textContent='Resultado registrado. Reabra a ficha para atualizar os dados exibidos.';state.dialog.querySelector('.pm-review-scroll')?.appendChild(note);}
+ state.dialog.querySelector('button')?.focus();
 }

@@ -1,3 +1,4 @@
+import {createPointOperationsTable} from './migrations/pointOperationsTable.js';
 import pool from "./connection.js";
 import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
@@ -239,6 +240,7 @@ export async function runMigrations() {
         // Tabelas canonicas do HUB
         await createHubCoreTables();
         await createHubOperationalLinksTables();
+        await createPointOperationsTable();
         await runHubOperationalTagSeeds();
         await createPowerBiTicketsView();
 

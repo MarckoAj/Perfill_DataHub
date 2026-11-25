@@ -150,3 +150,7 @@ O Perfill Data Hub esta em estado funcional como hub GLPI/AUVO com dashboard ope
 - [ ] Expandir cobertura para HUB canonico alem do matching.
 - [ ] Expandir cobertura para scheduler dinamico.
 - [ ] Expandir cobertura para regras do Alert Engine.
+
+## Encerramento validado pelo usuário — 25/11/2026
+
+Implementação da ficha do piloto validada integralmente pelo usuário na aplicação; publicação na main autorizada. Edição, sincronização, propagação e endereço encerrados no escopo aprovado. Propagação segue ativa no servidor local; padrão de novas inicializações continua false e requer configuração explícita. Este estado substitui pendências de validação visual e indicações históricas de envio desativado. Evidências, limites e itens futuros em [Validação final](./point-modal-validation-final.md).

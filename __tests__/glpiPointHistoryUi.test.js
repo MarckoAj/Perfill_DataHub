@@ -119,3 +119,15 @@ test('planilha base mostra campos originais por seção e não empresta dados da
  const status=vm.runInContext("currentPointTab='status';_subTabContent(client)",context);
  expect(status).toContain('2022-05-30');
 });
+
+
+test('exclamação aparece somente no campo divergente, com valores escapados',()=>{
+ context.client={divergences:{enabled:true,platforms:{auvo:{available:true,count:1,lastSyncAt:'2026-11-25T12:00:00Z',items:[{fieldKey:'name',hubValue:'<HUB>',sourceValue:'<AUVO>',status:'different'}]},glpi:{available:true,count:0,items:[]}}}};
+ const html=vm.runInContext("currentPlatformTab='auvo';_field('Nome','Atual',null,null,client,'name')",context);
+ expect(html).toContain('pm-field-difference');expect(html).toContain('&lt;HUB&gt;');expect(html).toContain('&lt;AUVO&gt;');
+ expect(vm.runInContext("_field('Latitude',0,null,null,client,'latitude')",context)).not.toContain('pm-field-difference');
+ expect(vm.runInContext("currentPlatformTab='glpi';_field('Nome','Atual',null,null,client,'name')",context)).not.toContain('pm-field-difference');
+ expect(vm.runInContext("currentPlatformTab='auvo';renderPlatformSyncTime(client)",context)).toContain('Última sincronização:');
+ expect(vm.runInContext("currentPlatformTab='hub';_field('Nome','Atual',null,null,client,'name')",context)).not.toContain('pm-field-difference');
+ expect(vm.runInContext("renderPlatformSyncTime(client)",context)).toBe('');
+});

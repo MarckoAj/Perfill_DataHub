@@ -1,3 +1,4 @@
+import { buildPilotDivergences } from '../services/hubDivergenceService.js';
 import { spreadsheetBaseFields } from '../config/spreadsheetBaseFields.js';
 import pool from "../database/connection.js";
 import hubOperationalTagRepository from "./hubOperationalTagRepository.js";
@@ -54,7 +55,7 @@ class HubEntityRepository {
     await pool.query(
       `
         UPDATE hub_entities
-        SET canonicalName = ?, displayName = ?, status = ?, isActive = ?
+        SET canonicalName = IF(entityId = 12130, canonicalName, ?), displayName = IF(entityId = 12130, displayName, ?), status = ?, isActive = ?
         WHERE entityId = ?
       `,
       [name, name, status, isActive, entityId]
@@ -106,9 +107,9 @@ class HubEntityRepository {
           valueText, valueNumber, normalizedValue, isCanonical, lastSeenAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE
-          valueText = VALUES(valueText),
-          valueNumber = VALUES(valueNumber),
-          normalizedValue = VALUES(normalizedValue),
+          valueText = IF(hub_entity_field_values.entityId = 12130 AND hub_entity_field_values.sourceSystem = 'HUB' AND hub_entity_field_values.isCanonical = 1 AND NULLIF(TRIM(hub_entity_field_values.normalizedValue), '') IS NOT NULL, valueText, VALUES(valueText)),
+          valueNumber = IF(hub_entity_field_values.entityId = 12130 AND hub_entity_field_values.sourceSystem = 'HUB' AND hub_entity_field_values.isCanonical = 1 AND NULLIF(TRIM(hub_entity_field_values.normalizedValue), '') IS NOT NULL, valueNumber, VALUES(valueNumber)),
+          normalizedValue = IF(hub_entity_field_values.entityId = 12130 AND hub_entity_field_values.sourceSystem = 'HUB' AND hub_entity_field_values.isCanonical = 1 AND NULLIF(TRIM(hub_entity_field_values.normalizedValue), '') IS NOT NULL, normalizedValue, VALUES(normalizedValue)),
           isCanonical = VALUES(isCanonical),
           lastSeenAt = NOW()
       `,
@@ -260,56 +261,21 @@ class HubEntityRepository {
   async upsertGlpiDevice(device) {
     if (!device?.deviceId) return;
 
+    // Only supplied fields participate in updates; explicit null still clears a value.
+    const allowed = ['name','auvoCustomerId','locationId','locationName','status',
+      'deviceType','manufacturer','model','hardwareTechnician','cicom','region',
+      'userName','project','comments','updateSource','latitude','longitude','rawJson'];
+    const fields = allowed.filter(key => device[key] !== undefined);
+    const values = fields.map(key => key === 'rawJson' && device[key] !== null
+      ? JSON.stringify(device[key]) : device[key]);
+    const updates = fields.map(key => key === 'rawJson'
+      ? 'rawJson = JSON_MERGE_PATCH(COALESCE(rawJson, JSON_OBJECT()), VALUES(rawJson))'
+      : `${key} = VALUES(${key})`);
     await pool.query(
-      `
-        INSERT INTO glpi_devices (
-          deviceId, name, auvoCustomerId, locationId, locationName, status,
-          deviceType, manufacturer, model, hardwareTechnician, cicom, region,
-          userName, project, comments, updateSource, latitude, longitude, rawJson,
-          lastSyncAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-          name = VALUES(name),
-          auvoCustomerId = VALUES(auvoCustomerId),
-          locationId = VALUES(locationId),
-          locationName = VALUES(locationName),
-          status = VALUES(status),
-          deviceType = VALUES(deviceType),
-          manufacturer = VALUES(manufacturer),
-          model = VALUES(model),
-          hardwareTechnician = VALUES(hardwareTechnician),
-          cicom = VALUES(cicom),
-          region = VALUES(region),
-          userName = VALUES(userName),
-          project = VALUES(project),
-          comments = VALUES(comments),
-          updateSource = VALUES(updateSource),
-          latitude = VALUES(latitude),
-          longitude = VALUES(longitude),
-          rawJson = VALUES(rawJson),
-          lastSyncAt = NOW()
-      `,
-      [
-        device.deviceId,
-        device.name || null,
-        device.auvoCustomerId || null,
-        device.locationId || null,
-        device.locationName || null,
-        device.status || null,
-        device.deviceType || null,
-        device.manufacturer || null,
-        device.model || null,
-        device.hardwareTechnician || null,
-        device.cicom || null,
-        device.region || null,
-        device.userName || null,
-        device.project || null,
-        device.comments || null,
-        device.updateSource || null,
-        device.latitude ?? null,
-        device.longitude ?? null,
-        device.rawJson ? JSON.stringify(device.rawJson) : null
-      ]
+      `INSERT INTO glpi_devices (deviceId, ${fields.length ? fields.join(', ') + ', ' : ''}lastSyncAt)
+       VALUES (?, ${fields.map(() => '?').join(', ')}${fields.length ? ', ' : ''}NOW())
+       ON DUPLICATE KEY UPDATE ${updates.length ? updates.join(', ') + ', ' : ''}lastSyncAt = NOW()`,
+      [device.deviceId, ...values]
     );
   }
 
@@ -349,6 +315,9 @@ class HubEntityRepository {
       latitude: row.latitude !== null ? Number(row.latitude) : null,
       longitude: row.longitude !== null ? Number(row.longitude) : null,
       rawJson: typeof row.rawJson === "string" ? JSON.parse(row.rawJson) : row.rawJson,
+      city: (typeof row.rawJson === "string" ? JSON.parse(row.rawJson) : row.rawJson)?.location?.town ?? null,
+      address: (typeof row.rawJson === "string" ? JSON.parse(row.rawJson) : row.rawJson)?.location?.address ?? null,
+      locationCicom: (typeof row.rawJson === "string" ? JSON.parse(row.rawJson) : row.rawJson)?.location?.state ?? null,
       lastSyncAt: this.formatDate(row.lastSyncAt)
     };
   }
@@ -620,8 +589,8 @@ class HubEntityRepository {
       FROM customers_auvo c
       WHERE c.customerId IS NOT NULL
       ON DUPLICATE KEY UPDATE
-        canonicalName = VALUES(canonicalName),
-        displayName = VALUES(displayName),
+        canonicalName = IF(entityId = 12130, canonicalName, VALUES(canonicalName)),
+        displayName = IF(entityId = 12130, displayName, VALUES(displayName)),
         status = VALUES(status),
         isActive = VALUES(isActive)
     `);
@@ -717,9 +686,9 @@ class HubEntityRepository {
       JOIN hub_entities e ON e.canonicalKey = CONCAT('AUVO:customer:', c.customerId)
       WHERE c.customerId IS NOT NULL
       ON DUPLICATE KEY UPDATE
-        valueText = VALUES(valueText),
-        valueNumber = VALUES(valueNumber),
-        normalizedValue = VALUES(normalizedValue),
+        valueText = IF(hub_entity_field_values.entityId = 12130 AND hub_entity_field_values.sourceSystem = 'HUB' AND hub_entity_field_values.isCanonical = 1 AND NULLIF(TRIM(hub_entity_field_values.normalizedValue), '') IS NOT NULL, valueText, VALUES(valueText)),
+        valueNumber = IF(hub_entity_field_values.entityId = 12130 AND hub_entity_field_values.sourceSystem = 'HUB' AND hub_entity_field_values.isCanonical = 1 AND NULLIF(TRIM(hub_entity_field_values.normalizedValue), '') IS NOT NULL, valueNumber, VALUES(valueNumber)),
+        normalizedValue = IF(hub_entity_field_values.entityId = 12130 AND hub_entity_field_values.sourceSystem = 'HUB' AND hub_entity_field_values.isCanonical = 1 AND NULLIF(TRIM(hub_entity_field_values.normalizedValue), '') IS NOT NULL, normalizedValue, VALUES(normalizedValue)),
         isCanonical = VALUES(isCanonical),
         lastSeenAt = NOW()
     `, [fieldKey, sourceSystem, sourceEntity, isCanonical ? 1 : 0]);
@@ -1703,6 +1672,9 @@ class HubEntityRepository {
       id: glpiDevice?.deviceId,
       name: glpiDevice?.name,
       normalizedName: glpiNameTags.cleanName,
+      address: glpiDevice?.address,
+      city: glpiDevice?.city,
+      locationCicom: glpiDevice?.locationCicom,
       locationId: glpiDevice?.locationId,
       locationName: glpiDevice?.locationName,
       status: glpiDevice?.status,
@@ -1943,7 +1915,7 @@ class HubEntityRepository {
       originalEntityType: first.entityType,
       canonicalName: first.canonicalName,
       displayName: first.displayName,
-      normalizedDisplayName: auvoNameTags.cleanName || first.displayName,
+      normalizedDisplayName: Number(entityId) === 12130 ? platformFields.hub.name : auvoNameTags.cleanName || first.displayName,
       operationalTags,
       operationalTagDefinitions,
       status: first.status,
@@ -1980,6 +1952,7 @@ class HubEntityRepository {
         manualHistory: manualPhysicalHistory
       },
       platformFields,
+      divergences: buildPilotDivergences({ entityId, platformFields, auvoCustomer, glpiDevice }),
       fieldRelations: this.buildFieldRelations({
         entityId: first.entityId,
         auvoCustomer,

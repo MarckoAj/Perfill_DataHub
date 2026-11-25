@@ -39,15 +39,65 @@ class GlpiDeviceSyncService {
     const deviceId = this.parseInteger(this.extractField(row, ["2", "id", "ID"]));
     if (!deviceId) return null;
 
-    return {
-      deviceId,
-      name: this.extractField(row, ["1", "name", "Name", "Nome"]),
-      auvoCustomerId: this.parseInteger(this.extractField(row, ["8", "contact_num", "Peripheral.contact_num"])),
-      locationId: null,
-      locationName: this.extractField(row, ["3", "3_display", "locationName"]),
-      updateSource: "glpi_peripheral_sync",
-      rawJson: row
+    const device = { deviceId, rawJson: { search: row } };
+    for (const [field, keys, numeric] of [
+      ['name', ['1','name','Name','Nome'], false],
+      ['auvoCustomerId', ['8','contact_num','Peripheral.contact_num'], true],
+      ['locationName', ['3','3_display','locationName'], false]
+    ]) {
+      if (keys.some(key => Object.hasOwn(row, key))) {
+        const value = this.extractField(row, keys);
+        device[field] = numeric ? this.parseInteger(value) : value;
+      }
+    }
+    return device;
+  }
+
+  async syncDeviceDetails(deviceId) {
+    const read = async (type, id) => {
+      const data = (await glpiClient.glpiRequestData(type, 'GET', undefined, Number(id)))?.data;
+      if (!data || Number(data.id) !== Number(id)) throw new Error(`GLPI: resposta inválida de ${type}/${id}`);
+      return data;
     };
+    const peripheral = await read('Peripheral', deviceId);
+    const device = { deviceId: Number(deviceId), rawJson: { peripheral } };
+    for (const [source, target] of [['name','name'],['contact_num','auvoCustomerId'],
+      ['locations_id','locationId'],['comment','comments']]) {
+      if (Object.hasOwn(peripheral, source)) device[target] = source.endsWith('_id') || source === 'contact_num'
+        ? (Number(peripheral[source]) || null) : peripheral[source];
+    }
+    const catalogs = [
+      ['states_id','State','status'], ['peripheraltypes_id','PeripheralType','deviceType'],
+      ['manufacturers_id','Manufacturer','manufacturer'], ['peripheralmodels_id','PeripheralModel','model'],
+      ['users_id_tech','User','hardwareTechnician'], ['groups_id_tech','Group','cicom'],
+      ['users_id','User','userName']
+    ];
+    device.rawJson.catalogs = {};
+    for (const [foreignKey, type, field] of catalogs) {
+      if (!Object.hasOwn(peripheral, foreignKey)) continue;
+      const id = Number(peripheral[foreignKey]);
+      if (!id) { device[field] = null; continue; }
+      const item = await read(type, id);
+      device.rawJson.catalogs[field] = { type, id };
+      device[field] = type === 'User'
+        ? [item.firstname, item.realname].filter(Boolean).join(' ') || item.name || null
+        : item.completename || item.name || null;
+    }
+    if (Object.hasOwn(peripheral, 'locations_id')) {
+      const location = device.locationId ? await read('Location', device.locationId) : null;
+      device.rawJson.location = location;
+      device.locationName = location?.completename || location?.name || null;
+      for (const key of ['latitude','longitude']) {
+        if (!location || Object.hasOwn(location, key)) {
+          const value = location?.[key];
+          device[key] = value === null || value === undefined || value === '' ? null : Number(value);
+          if (device[key] !== null && !Number.isFinite(device[key])) throw new Error('GLPI: coordenada inválida');
+        }
+      }
+    }
+    // Persist only after every required related record has been validated.
+    await hubEntityRepository.upsertGlpiDevice(device);
+    return device;
   }
 
   getTotalFromHeaders(headers) {
@@ -115,6 +165,9 @@ class GlpiDeviceSyncService {
         currentRange += rows.length;
       }
     }
+
+    // Detailed collection remains restricted to the approved pilot. No fleet-wide N+1 calls.
+    await this.syncDeviceDetails(4412);
 
     return {
       inserts: 0,

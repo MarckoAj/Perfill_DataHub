@@ -111,6 +111,7 @@
                     passwordChangeView.style.display = 'block';
                 } else if (data.token) {
                     localStorage.setItem('authToken', data.token);
+                    if(data.pointOperationSession) localStorage.setItem('hubOperationSession',data.pointOperationSession); else localStorage.removeItem('hubOperationSession');
                     localStorage.setItem('username', user);
                     window.location.href = '/tickets';
                 }
@@ -164,6 +165,7 @@
 
                 if (data.token) {
                     localStorage.setItem('authToken', data.token);
+                    if(data.pointOperationSession) localStorage.setItem('hubOperationSession',data.pointOperationSession); else localStorage.removeItem('hubOperationSession');
                     setTimeout(() => window.location.href = '/tickets', 1500);
                 }
 

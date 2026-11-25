@@ -99,3 +99,6 @@ npm test
 - [Dashboard e Alert Engine](./dashboard-alert-engine.md)
 - [Plano UI/UX](./UI_UX_REFACTOR_PLAN.md)
 - [Guia de trabalho dos agentes](./AGENTS.md)
+
+- [Ficha do ponto — validação final e escopo entregue](./point-modal-validation-final.md)
+- [Coleta GLPI de dispositivo e localização](./glpi-pilot-source-extraction.md)

@@ -1,3 +1,4 @@
+import {issuePointSession} from '../services/pointOperationSessions.js';
 import express from "express";
 import dotenv from "dotenv";
 import bcryptjs from "bcryptjs";
@@ -27,8 +28,8 @@ router.post("/login", async (req, res) => {
     }
 
     const secretToken = process.env.API_AUTH_TOKEN || "PerfillDataHubSecureToken2026";
-    console.log('Tentativa de Login - Token Utilizado:', `"${secretToken}"`);
-    return res.status(200).json({ token: secretToken });
+
+    return res.status(200).json({ token: secretToken, pointOperationSession: issuePointSession(user) });
 
   } catch (error) {
     console.error("Erro no Login:", error);
@@ -86,7 +87,7 @@ router.post("/change-password", async (req, res) => {
     await userRepository.updatePassword(user.id, hash);
 
     const secretToken = process.env.API_AUTH_TOKEN || "PerfillDataHubSecureToken2026";
-    return res.status(200).json({ message: "Senha atualizada com sucesso", token: secretToken });
+    return res.status(200).json({ message: "Senha atualizada com sucesso", token: secretToken, pointOperationSession: issuePointSession({...user, requires_password_change:false}) });
 
   } catch (error) {
     console.error("Erro ao alterar senha:", error);

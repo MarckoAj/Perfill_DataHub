@@ -121,6 +121,7 @@ function mapHubEntityDetailsToModalClient(details, fallbackClient) {
         sources: details.sources || {},
         fieldValues: details.fieldValues || [],
         platformFields: details.platformFields || {},
+        divergences: details.divergences || null,
         fieldRelations: details.fieldRelations || {},
         operationalTags: details.operationalTags || [],
         operationalTagDefinitions: details.operationalTagDefinitions || [],

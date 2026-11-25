@@ -168,3 +168,27 @@ npm test
 - 19/11/2026: importacao local das duas copias XLSX aplicada somente ao piloto 06-014/HUB 12130. Gerenciamento tem prioridade; preencher apenas HUB vazio, manter fontes separadas e historico transacional. Cidade, CICOM, Unidade e tecnicos importados. Sem IP, Graph ou propagacao externa. CLI e criterios em spreadsheet-pilot-import.md. 143 testes aprovados; validar piloto antes de expandir.
 
 - 25/11/2026: usuário confirmou validação visual da página Clientes e do piloto 06-014/HUB-012130. Publicação autorizada na main. Suíte completa: 147 testes aprovados em 26 suítes. Expansão da importação para demais pontos permanece pendente.
+
+- 25/11/2026: comparação real de divergências habilitada apenas no piloto HUB 12130/06-014. Nome e coordenadas canônicos preservados durante refresh AUVO; modal mostra contadores e valores HUB/fonte. Atualização após coleta manual no painel de plataformas e reabertura do modal. Sem webhook, resolução ou propagação externa nesta etapa.
+
+- Apresentação do piloto simplificada: exclamação nos campos divergentes com tooltip HUB/fonte; removida tabela adicional. Última sincronização no cabeçalho da plataforma AUVO/GLPI selecionada.
+
+- Etapa 1 visual de edição/sincronização da ficha: implementada no piloto 12130 conforme protótipo V4. Rascunho HUB e seleção AUVO/GLPI sem escrita; salvar/aplicar desabilitados. Dependência de permissões individuais documentada em point-modal-operation-stage1.md. Aguardar validação do usuário antes da Etapa 2.
+
+- Etapa 2 visual da ficha piloto: origem/destino e inversão implementados; seleção recalculada por direção, sem gravar. HUB→GLPI limitado ao nome; coordenadas vinculadas à localização e tipos de catálogo dependem de validação específica. Ver point-modal-operation-stage2.md. Aguardar aprovação antes da Etapa 3.
+
+- Etapa 3 da ficha piloto: destinos AUVO/GLPI opcionais na edição HUB e plano local por campo/destino, sem gravação até confirmação e serviços (etapas 4/5). Direção inicial alterada para HUB → plataforma selecionada. Equivalência de tipos adiada pelo usuário. Ver point-modal-operation-stage3.md.
+
+- Etapa 4: Salvar/Sincronizar abrem revisão centralizada com valores atuais/novos por destino, sem escrita. Cancelar preserva rascunho. Botão final Confirmar bloqueado até integração backend/histórico na Etapa 5. Ver point-modal-operation-stage4.md. Aguardar validação do usuário.
+
+- Etapa 5 implementada no piloto: revisão no servidor, sessão individual do login (todos autenticados autorizados), confirmação, gravação HUB transacional e histórico existente; adaptadores AUVO/GLPI com testes simulados. Envio externo desabilitado por padrão durante homologação (HUB_POINT_EXTERNAL_WRITES=false). Necessário entrar novamente após reinício. Ver point-modal-operation-stage5.md.
+
+- 25/11/2026: usuário autorizou homologação com APIs reais. Nome do piloto validado em AUVO 8561713 e GLPI 4412, sempre restaurando HUB e fontes aos nomes originais. GLPI exige input objeto no PUT de item único; adaptador corrigido. Repetição bloqueada e histórico preservado. Envio externo voltou a false. Ver point-modal-live-validation.md.
+
+- Após a homologação, o usuário solicitou reativar o envio real para validação manual. Servidor local reiniciado com HUB_POINT_EXTERNAL_WRITES=true, mantendo escopo exclusivo do piloto 12130/06-014. Sessões individuais anteriores invalidadas pelo reinício; necessário novo login.
+
+- 25/11/2026: coleta detalhada GLPI do piloto 4412 passa a consultar Peripheral, Location e catálogos (tipo, status, fabricante, modelo, técnico, usuário e grupo técnico/CICOM). Coordenadas e município vêm de Location; CICOM do dispositivo e Location.state são separados. Cache parcial preserva propriedades ausentes; nulo explícito limpa. Sem equivalências ou novas permissões de escrita. Ver glpi-pilot-source-extraction.md.
+
+## Encerramento validado pelo usuário — 25/11/2026
+
+Implementação da ficha do piloto validada integralmente pelo usuário na aplicação; publicação na main autorizada. Edição, sincronização, propagação e endereço encerrados no escopo aprovado. Propagação segue ativa no servidor local; padrão de novas inicializações continua false e requer configuração explícita. Este estado substitui pendências de validação visual e indicações históricas de envio desativado. Evidências, limites e itens futuros em [Validação final](./point-modal-validation-final.md).

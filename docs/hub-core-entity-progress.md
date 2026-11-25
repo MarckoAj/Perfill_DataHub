@@ -182,3 +182,21 @@ Teste por lote:
 ## Observacao Para Continuidade Em Novo Chat
 
 Retomar daqui: o painel de associacao HUB x GLPI foi validado visualmente em `/admin/sync` com confirmacao de vinculo real em `hub_entity_links` e historico em `hub_entity_history`. A propagacao para AUVO/GLPI externo/Zabbix segue bloqueada. `glpi_devices` foi populada com 6501 `Peripheral`; 24 possuem ID AUVO e ja geram matches `ID + Nome`. A fila inicial de revisao de ambiguidades e baixo score ja existe no painel. O proximo passo e avaliar persistencia de decisoes pendentes/recusadas ou iniciar a inclusao de Zabbix.
+
+## Piloto de divergências — 25/11/2026
+
+HUB 12130 / 06-014: API de detalhe compara campos gerais do HUB com o cache atual AUVO e GLPI. Compara nomes sem tags operacionais, caixa, acentos e espaços; coordenadas numericamente, incluindo zero. Campos ausentes têm situação própria; ausência de plataforma não conta como diferença de campo. IDs de plataformas não são comparados entre si. Contadores das abas e tabela do modal usam o resultado real da API.
+
+Nome e coordenadas canônicos preenchidos do piloto são preservados nos caminhos de atualização AUVO, inclusive refresh em lote. As fontes continuam sendo atualizadas; outros pontos mantêm o comportamento anterior. Complementação de campos ausentes e seu histórico continuam existentes. Divergências são calculadas ao consultar, sem persistir eventos repetidos a cada abertura.
+
+Teste operacional: alterar um campo no AUVO/GLPI; no painel de sincronização coletar Clientes AUVO ou Dispositivos GLPI; reabrir o piloto para comparar. Não há webhook ou propagação externa nesta etapa. O botão que antes simulava aplicação AUVO no modal fica desabilitado no piloto. Resolução manual e envio de valores às plataformas permanecem próximos passos.
+
+Validação: 152 testes em 27 suítes aprovados; teste MySQL com tabelas temporárias confirmou preservação nos caminhos individual e em lote, atualização da fonte e comportamento anterior fora do piloto. API local retornou HTTP 200: AUVO sem divergências; GLPI com quatro campos ausentes (latitude, longitude, tipo e CICOM). Ponto HUB 14446 retornou comparação desabilitada. Servidor reiniciado na porta 3002; conferência visual desta nova etapa aguarda operador.
+
+Ajuste visual solicitado pelo operador: removida a tabela adicional de comparação. Divergências aparecem como exclamação junto ao valor no campo existente, com valores HUB/fonte em hover ou foco; campos iguais não recebem marca. Na aba HUB a marca reúne fontes divergentes; AUVO/GLPI mostram apenas sua comparação e data/hora da última coleta no cabeçalho. Campos opcionais ausentes mas divergentes continuam visíveis para exibir N/A e o alerta. Testes focados: 14 aprovados em duas suítes.
+
+Refinamento: aba HUB permanece sem marcações de divergência; exclamações aparecem somente nos campos das abas AUVO e GLPI.
+
+## Encerramento validado pelo usuário — 25/11/2026
+
+Implementação da ficha do piloto validada integralmente pelo usuário na aplicação; publicação na main autorizada. Edição, sincronização, propagação e endereço encerrados no escopo aprovado. Propagação segue ativa no servidor local; padrão de novas inicializações continua false e requer configuração explícita. Este estado substitui pendências de validação visual e indicações históricas de envio desativado. Evidências, limites e itens futuros em [Validação final](./point-modal-validation-final.md).

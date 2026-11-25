@@ -1,3 +1,5 @@
+import pointOperationAuth from '../middlewares/pointOperationAuth.js';
+import {pointOperationAccess,preparePointOperation,confirmPointOperation,getPointOperationStatus} from '../controllers/pointOperationController.js';
 import express from "express";
 import {
   assignHubEntityOperationalTag,
@@ -25,6 +27,10 @@ import { listGlpiPointHistory, getGlpiPointHistoryTicket, syncGlpiPointHistory }
 const router = express.Router();
 
 router.use(authMiddleware);
+router.get('/entities/:entityId/operations/access',pointOperationAuth,pointOperationAccess);
+router.post('/entities/:entityId/operations/prepare',pointOperationAuth,preparePointOperation);
+router.post('/entities/:entityId/operations/confirm',pointOperationAuth,confirmPointOperation);
+router.get('/entities/:entityId/operations/status/:operationId',pointOperationAuth,getPointOperationStatus);
 
 router.get("/entities", listHubEntities);
 router.get("/tags", listHubOperationalTags);
