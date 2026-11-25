@@ -85,9 +85,12 @@ async function loadHubEntities(page = 1, searchText = hubSearchText) {
             clientId: entity.entityId,
             modalIndex: index,
             point: entity.name || `Entidade HUB ${entity.entityId}`,
-            city: entity.latitude ?? 'N/A',
-            unit: entity.longitude ?? 'N/A',
-            responsible: entity.sourceSystem || 'HUB',
+            city: entity.city || null,
+            fieldTechnician: entity.fieldTechnician || null,
+            nocTechnician: entity.nocTechnician || null,
+            cityBySource: entity.cityBySource || {},
+            platformIds: entity.platformIds || { hub: entity.entityId, auvo: [entity.sourceRecordId].filter(Boolean), glpi: [] },
+            cicom: entity.cicom || null,
             operationalTags: entity.operationalTags || []
         }));
     } catch (error) {
@@ -327,10 +330,12 @@ function scrollClientesToTop() {
 
 // Inicializar e registrar os escutadores de eventos
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadHubOperationalTags();
-    await loadHubEntities();
-    applyFilters();
     setupFilters();
+    await loadHubOperationalTags();
+    hubSearchText = document.getElementById('searchAsset')?.value.trim() || '';
+    await loadHubEntities(1, hubSearchText);
+    applyFilters();
+    setupHubColumns();
 });
 
 // Obter classe CSS de status
@@ -355,22 +360,14 @@ function applyFilters() {
     // Resultados da API com filtros e paginação aplicados
     let filtered = assets;
 
-    if (searchText && !hubPagination.isHub) {
-        filtered = filtered.filter(a => 
-            String(a.point).toLowerCase().includes(searchText) ||
-            String(a.city).toLowerCase().includes(searchText) ||
-            String(a.unit).toLowerCase().includes(searchText) ||
-            String(a.responsible).toLowerCase().includes(searchText)
-        );
-    }
-
     // Renderizar tabela
     const tbody = document.getElementById('assetsTableBody');
     if (!tbody) return;
     renderPaginationControls(filtered.length);
+    renderHubColumnHeaders();
 
     if (hubLoadError) {
-        tbody.innerHTML = `<tr><td colspan="5" role="alert" style="text-align:center;padding:24px">${escapeHtml(hubLoadError)} <button type="button" class="tag-filter-show-all" id="hubRetryEntities">Tentar novamente</button></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${visibleHubColumns().length}" role="alert" style="text-align:center;padding:24px">${escapeHtml(hubLoadError)} <button type="button" class="tag-filter-show-all" id="hubRetryEntities">Tentar novamente</button></td></tr>`;
         document.getElementById('hubRetryEntities').addEventListener('click', refreshHubFilters);
         return;
     }
@@ -378,7 +375,7 @@ function applyFilters() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 24px;">
+                <td colspan="${visibleHubColumns().length}" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 24px;">
                     Nenhum ativo localizado com os filtros selecionados.
                 </td>
             </tr>
@@ -386,17 +383,7 @@ function applyFilters() {
         return;
     }
 
-    tbody.innerHTML = filtered
-        .map(asset => `
-          <tr style="cursor: pointer;" onclick="openAssetModal(${Number.isInteger(asset.modalIndex) ? asset.modalIndex : 'null'}, ${asset.clientId || 1})">
-            <td style="font-weight: 600; text-align: left; padding-left: 24px;">${escapeHtml(asset.point)}</td>
-            <td style="text-align: center;">${escapeHtml(asset.city)}</td>
-            <td style="text-align: center;">${escapeHtml(asset.unit)}</td>
-            <td style="text-align: center;"><div class="hub-tag-chip-list">${renderOperationalTagChips(asset.operationalTags)}</div></td>
-            <td style="text-align: center; padding-right: 24px;">${escapeHtml(asset.responsible)}</td>
-          </tr>
-        `)
-        .join('');
+    tbody.innerHTML = filtered.map(asset => `<tr onclick="openAssetModal(${asset.modalIndex}, ${asset.clientId})">${visibleHubColumns().map(key => renderHubCell(key, asset)).join('')}</tr>`).join('');
 }
 
 async function runHubSearch(searchText) {
@@ -419,8 +406,62 @@ function scheduleHubSearch(searchText) {
 function setupFilters() {
     const searchAsset = document.getElementById('searchAsset');
     searchAsset?.addEventListener('input', event => scheduleHubSearch(event.target.value));
+    searchAsset?.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || event.isComposing) return;
+        event.preventDefault();
+        runHubSearch(event.target.value);
+    });
     document.getElementById('filterCoordinates')?.addEventListener('change', event => {
         hubCoordinates = event.target.value;
         refreshHubFilters();
     });
+}
+
+const hubColumnLabels = { id: 'ID do ponto', name: 'Nome', city: 'Cidade', cicom: 'Unidade CICOM', ip: 'IP', fieldTechnician: 'Técnico de campo', nocTechnician: 'Técnico NOC', tags: 'Tags' };
+const hubColumnDefaults = Object.keys(hubColumnLabels);
+let hubColumnOrder = [...hubColumnDefaults];
+let hubColumnVisible = new Set(hubColumnDefaults);
+function visibleHubColumns() { return hubColumnOrder.filter(key => hubColumnVisible.has(key)); }
+function renderHubColumnHeaders() {
+ const head = document.getElementById('hubColumnHeaders');
+ if(head)head.innerHTML = visibleHubColumns().map(key => '<th scope="col" class="hub-col-'+key+'">'+hubColumnLabels[key]+'</th>').join('');
+}
+function renderHubCell(key, asset) {
+ let content = '<span class="hub-no-data" aria-label="Não disponível">—</span>';
+ if(key==='id') {
+  const ids=asset.platformIds||{};
+  const info='HUB: '+asset.clientId+'\nAUVO: '+((ids.auvo||[]).join(', ')||'Não vinculado')+'\nGLPI: '+((ids.glpi||[]).join(', ')||'Não vinculado');
+  content='<span tabindex="0" class="hub-value-hint" aria-describedby="hub-tip-'+key+'-'+asset.clientId+'">HUB-'+String(asset.clientId).padStart(6,'0')+'<span class="hub-value-tooltip" id="hub-tip-'+key+'-'+asset.clientId+'" role="tooltip">'+escapeHtml(info)+'</span></span>';
+ }
+ if(key==='name')content='<button type="button" class="hub-client-link" onclick="event.stopPropagation();openAssetModal('+asset.modalIndex+','+asset.clientId+')">'+escapeHtml(asset.point)+'</button>';
+ if(key==='city') {
+  const source=asset.cityBySource||{};
+  const values=key => (source[key]||[]).map(item => (item.sourceRecordId ? '#'+item.sourceRecordId+': ' : '')+(item.value||'—')).join('; ')||'—';
+  const info='HUB: '+(asset.city||'—')+'\nGLPI: '+values('glpi')+'\nZabbix: '+values('zabbix')+'\nPlanilha base: '+values('spreadsheet')+'\nAUVO: campo não disponível';
+  content='<span tabindex="0" class="hub-value-hint" aria-describedby="hub-tip-'+key+'-'+asset.clientId+'">'+escapeHtml(asset.city||'—')+'<span class="hub-value-tooltip" id="hub-tip-'+key+'-'+asset.clientId+'" role="tooltip">'+escapeHtml(info)+'</span></span>';
+ }
+ if(['cicom','fieldTechnician','nocTechnician'].includes(key)&&asset[key])content=escapeHtml(asset[key]);
+ if(key==='tags')content='<div class="hub-tag-chip-list">'+renderOperationalTagChips(asset.operationalTags)+'</div>';
+ return '<td class="hub-col-'+key+'">'+content+'</td>';
+}
+function saveHubColumns() {
+ try {localStorage.setItem('hub.operationalColumns.v1',JSON.stringify({order:hubColumnOrder,visible:[...hubColumnVisible]}));} catch {}
+}
+function renderHubColumnOptions() {
+ const container=document.getElementById('hubColumnOptions');if(!container)return;
+ container.innerHTML=hubColumnOrder.map((key,index)=>'<div class="hub-column-option"><label><input type="checkbox" data-column="'+key+'" '+(hubColumnVisible.has(key)?'checked ':'')+(['id','name'].includes(key)?'disabled ':'')+'>'+hubColumnLabels[key]+'</label><button type="button" data-move="'+key+'" data-direction="-1" aria-label="Mover '+hubColumnLabels[key]+' para esquerda" '+(index===0?'disabled':'')+'>←</button><button type="button" data-move="'+key+'" data-direction="1" aria-label="Mover '+hubColumnLabels[key]+' para direita" '+(index===hubColumnOrder.length-1?'disabled':'')+'>→</button></div>').join('');
+}
+function setupHubColumns() {
+ try {
+  const saved=JSON.parse(localStorage.getItem('hub.operationalColumns.v1'));
+  if(saved&&Array.isArray(saved.order)&&Array.isArray(saved.visible)){
+   hubColumnOrder=[...new Set([...saved.order.filter(key=>hubColumnDefaults.includes(key)),...hubColumnDefaults])];
+   hubColumnVisible=new Set([...saved.visible.filter(key=>hubColumnDefaults.includes(key)),'id','name']);
+  }
+ } catch {}
+ const container=document.getElementById('hubColumnOptions');
+ container?.addEventListener('change',event=>{const key=event.target.dataset.column;if(!hubColumnDefaults.includes(key)||['id','name'].includes(key))return;if(event.target.checked)hubColumnVisible.add(key);else hubColumnVisible.delete(key);saveHubColumns();applyFilters();});
+ container?.addEventListener('click',event=>{const button=event.target.closest('[data-move]');if(!button)return;const index=hubColumnOrder.indexOf(button.dataset.move),next=index+Number(button.dataset.direction);if(index<0||next<0||next>=hubColumnOrder.length)return;[hubColumnOrder[index],hubColumnOrder[next]]=[hubColumnOrder[next],hubColumnOrder[index]];saveHubColumns();renderHubColumnOptions();applyFilters();});
+ document.getElementById('hubResetColumns')?.addEventListener('click',()=>{hubColumnOrder=[...hubColumnDefaults];hubColumnVisible=new Set(hubColumnDefaults);saveHubColumns();renderHubColumnOptions();applyFilters();});
+ renderHubColumnOptions();applyFilters();
 }

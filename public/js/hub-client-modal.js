@@ -81,7 +81,7 @@ function mapHubEntityDetailsToModalClient(details, fallbackClient) {
     const glpiDevice = details.sources?.glpi?.device || null;
     const name = details.normalizedDisplayName || details.displayName || auvoCustomer?.description || fallbackClient?.assetName || `HUB ${details.entityId}`;
     const address = auvoCustomer?.address || fallbackClient?.address || name;
-    const city = inferCityFromAddress(address);
+    const city = details.platformFields?.hub?.city || 'N/A';
     const locationId = glpiTickets.find(ticket => ticket.idLocalizacaoPonto)?.idLocalizacaoPonto || null;
 
     return {
@@ -94,7 +94,7 @@ function mapHubEntityDetailsToModalClient(details, fallbackClient) {
         assetName: name,
         address,
         type: 'Dispositivo',
-        cicom: glpiTickets[0]?.projeto || fallbackClient?.cicom || 'HUB',
+        cicom: details.platformFields?.hub?.cicom || 'N/A',
         city,
         unit: locationId ? `GLPI Localizacao ${locationId}` : (fallbackClient?.unit || 'N/A'),
         region: auvoCustomer?.segmentName || glpiTickets[0]?.projeto || fallbackClient?.region || 'N/A',

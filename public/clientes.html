@@ -23,7 +23,7 @@
 
     <link rel="stylesheet" href="/css/clientes-perfill.css?v=20261117-2" />
     <script defer src="/js/hub-client-modal.js"></script>
-    <script defer src="/js/clientes.js"></script>
+    <script defer src="/js/clientes.js?v=20261119-search-enter"></script>
 <link rel="stylesheet" href="/css/perfill-shared.css">
 </head>
 
@@ -88,26 +88,22 @@
                 </div>
             </div>
 
+            <details class="hub-columns-picker"><summary>Colunas</summary><div id="hubColumnOptions"></div><button type="button" id="hubResetColumns" class="tag-filter-show-all">Restaurar colunas padrão</button></details>
+
             <!-- MAIN GRID -->
             <div class="main-grid">
 
                 <!-- TABLE -->
                 <div class="table-card">
                     <div class="hub-pagination" data-pagination="top"></div>
-                    <table>
+                    <div class="hub-table-scroll"><table class="hub-operational-table">
                         <thead>
-                            <tr>
-                                <th style="text-align: left; padding-left: 24px;">Nome</th>
-                                <th style="text-align: center;">Latitude</th>
-                                <th style="text-align: center;">Longitude</th>
-                                <th style="text-align: center;">Tags</th>
-                                <th style="text-align: center; padding-right: 24px;">Fonte</th>
-                            </tr>
+                            <tr id="hubColumnHeaders"></tr>
                         </thead>
                         <tbody id="assetsTableBody">
                             <!-- Injetado via JS -->
                         </tbody>
-                    </table>
+                    </table></div>
                     <div class="hub-pagination" data-pagination="bottom"></div>
                 </div>
 

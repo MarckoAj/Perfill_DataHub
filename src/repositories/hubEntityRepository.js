@@ -1,3 +1,4 @@
+import { spreadsheetBaseFields } from '../config/spreadsheetBaseFields.js';
 import pool from "../database/connection.js";
 import hubOperationalTagRepository from "./hubOperationalTagRepository.js";
 import hubOperationalTagService from "../services/hubOperationalTagService.js";
@@ -957,9 +958,43 @@ class HubEntityRepository {
     return entities.length;
   }
 
+  async enrichOperationalRows(entities) {
+    if (!entities.length) return entities;
+    const ids = entities.map(entity => entity.entityId);
+    const placeholders = ids.map(() => '?').join(',');
+    const [[links], [cities]] = await Promise.all([
+      pool.query(`SELECT l.entityId, l.sourceSystem, l.sourceEntity, l.sourceNativeId, d.cicom
+        FROM hub_entity_links l LEFT JOIN glpi_devices d
+        ON l.sourceSystem = 'GLPI' AND l.sourceEntity = 'device' AND d.deviceId = l.sourceNativeId
+        WHERE l.isActive = 1 AND l.entityId IN (${placeholders})`, ids),
+      pool.query(`SELECT entityId, fieldKey, sourceSystem, sourceRecordId, valueText, isCanonical
+        FROM hub_entity_field_values WHERE fieldKey IN ('city','cicom','unit','fieldTechnician','nocTechnician') AND entityId IN (${placeholders})
+        ORDER BY sourceSystem, sourceRecordId`, ids)
+    ]);
+    return entities.map(entity => {
+      const ownLinks = links.filter(link => Number(link.entityId) === Number(entity.entityId));
+      const cityValues = cities.filter(row => Number(row.entityId) === Number(entity.entityId));
+      const cityBySource = { hub: null, glpi: [], zabbix: [], spreadsheet: [] };
+      for (const row of cityValues.filter(row => row.fieldKey === 'city')) {
+        const source = String(row.sourceSystem).toLowerCase();
+        if (source === 'hub' && row.isCanonical) cityBySource.hub = row.valueText || null;
+        else if (Array.isArray(cityBySource[source])) cityBySource[source].push({ sourceRecordId: row.sourceRecordId, value: row.valueText || null });
+      }
+      const canonical = field => cityValues.find(row => row.fieldKey === field && row.sourceSystem === 'HUB' && row.isCanonical)?.valueText || null;
+      return { ...entity, city: cityBySource.hub, cityBySource, unit: canonical('unit'), fieldTechnician: canonical('fieldTechnician'), nocTechnician: canonical('nocTechnician'),
+        platformIds: {
+          hub: entity.entityId,
+          auvo: [...new Set([entity.sourceRecordId, ...ownLinks.filter(l => l.sourceSystem === 'AUVO').map(l => l.sourceNativeId)].filter(Boolean).map(String))],
+          glpi: [...new Set(ownLinks.filter(l => l.sourceSystem === 'GLPI' && l.sourceEntity === 'device').map(l => String(l.sourceNativeId)))]
+        },
+        cicom: canonical('cicom') || [...new Set(ownLinks.map(l => l.cicom).filter(Boolean))].join(' / ') || null
+      };
+    });
+  }
+
   async listEntities({ limit = 100, offset = 0, ...filters } = {}) {
     const entities = await this.getFilteredListEntities(filters);
-    return entities.slice(offset, offset + limit);
+    return this.enrichOperationalRows(entities.slice(offset, offset + limit));
   }
 
   extractDeviceCode(value) {
@@ -1691,6 +1726,11 @@ class HubEntityRepository {
 
     const hub = omitEmpty({
       id: entityId,
+      city: getHubValue("city"),
+      cicom: getHubValue("cicom"),
+      unit: getHubValue("unit"),
+      fieldTechnician: getHubValue("fieldTechnician"),
+      nocTechnician: getHubValue("nocTechnician"),
       name: cleanHubName,
       normalizedName: cleanHubName,
       address: getHubValue("address") || auvo.address,
@@ -1707,7 +1747,23 @@ class HubEntityRepository {
       longitude: getHubValue("longitude") ?? auvo.longitude ?? glpi.longitude
     });
 
-    return { hub, auvo, glpi, zabbix: {} };
+    const baseRows = fieldValues.filter(row => row.sourceSystem === 'SPREADSHEET' && row.sourceRecordId?.startsWith('base:'));
+    const baseValue = key => baseRows.find(row => row.fieldKey === key)?.valueText ?? null;
+    const buildImported = getter => Object.fromEntries(['general','network','status'].map(section => [section,
+      spreadsheetBaseFields.filter(([, , group]) => group === section).map(([label,key])=>({label,key,value:getter(key)}))]));
+    const networkKeys = spreadsheetBaseFields.filter(([, , group])=>group==='network').map(([,key])=>key);
+    const statusKeys = spreadsheetBaseFields.filter(([, , group])=>group==='status').map(([,key])=>key);
+    hub.network = Object.fromEntries(networkKeys.map(key=>[key,getHubValue(key)]));
+    hub.physicalStatus = Object.fromEntries(statusKeys.map(key=>[key,getHubValue(key)]));
+    hub.importedSections = buildImported(getHubValue);
+    const spreadsheet = baseRows.length ? {
+      id: baseRows[0].sourceRecordId,
+      ...Object.fromEntries(spreadsheetBaseFields.filter(([, , group])=>group==='general').map(([,key])=>[key,baseValue(key)])),
+      network: Object.fromEntries(networkKeys.map(key=>[key,baseValue(key)])),
+      physicalStatus: Object.fromEntries(statusKeys.map(key=>[key,baseValue(key)])),
+      importedSections: buildImported(baseValue)
+    } : {};
+    return { hub, auvo, glpi, zabbix: {}, spreadsheet };
   }
 
   buildFieldRelations({ entityId, auvoCustomer, glpiTickets, glpiDevice }) {

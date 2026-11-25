@@ -163,3 +163,8 @@ npm test
 - A correlacao de IDs entre HUB/GLPI/AUVO deve considerar apenas clientes AUVO operacionalmente ativos (`active = 1`) para evitar vincular novos relacionamentos em cadastros antigos/inativos.
 
 - 19/11/2026: identidade de Clientes compartilhada nas seis paginas internas via clientes-perfill.css e perfill-shared.css; navegacao uniforme. Mapeadores de ficha HUB centralizados em hub-client-modal.js. Chamados/Alertas/NOC buscam cadastro por nome/codigo, permitem escolher entre resultados e abrem detalhe real; sem resultado exibem aviso. Backend preservado. Verificacao visual ainda pendente.
+
+- 19/11/2026: listagem operacional com oito colunas configuraveis; ID HUB com IDs AUVO/GLPI em hover. Cidade preparada por fonte em hub_entity_field_values, sem inferencia nem novas sincronizacoes. Fonte e coordenadas removidas das colunas por orientacao do usuario; filtro de coordenadas preservado. Ver operational-list-stage1.md.
+- 19/11/2026: importacao local das duas copias XLSX aplicada somente ao piloto 06-014/HUB 12130. Gerenciamento tem prioridade; preencher apenas HUB vazio, manter fontes separadas e historico transacional. Cidade, CICOM, Unidade e tecnicos importados. Sem IP, Graph ou propagacao externa. CLI e criterios em spreadsheet-pilot-import.md. 143 testes aprovados; validar piloto antes de expandir.
+
+- 25/11/2026: usuário confirmou validação visual da página Clientes e do piloto 06-014/HUB-012130. Publicação autorizada na main. Suíte completa: 147 testes aprovados em 26 suítes. Expansão da importação para demais pontos permanece pendente.

@@ -109,3 +109,13 @@ test('resposta de navegacao atrasada nao reabre o modal que foi fechado', async 
   await pending;
   expect(context.open).not.toHaveBeenCalled();
 });
+
+
+test('planilha base mostra campos originais por seção e não empresta dados da rede HUB', () => {
+ context.client={clientId:12130,network:{ip:'IP do HUB'},platformFields:{spreadsheet:{importedSections:{network:[{key:'circuit',label:'CIRCUITO',value:'ONN5011194'},{key:'ip',label:'IP',value:null}],status:[{key:'inspectionDate',label:'DATA DA VISTORIA',value:'2022-05-30'}]}}}};
+ const html=vm.runInContext("currentPlatformTab='spreadsheet';currentPointTab='network';_subTabContent(client)",context);
+ expect(html).toContain('ONN5011194');
+ expect(html).not.toContain('IP do HUB');
+ const status=vm.runInContext("currentPointTab='status';_subTabContent(client)",context);
+ expect(status).toContain('2022-05-30');
+});

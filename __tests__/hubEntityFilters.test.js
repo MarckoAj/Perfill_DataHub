@@ -3,6 +3,7 @@ import express from 'express';
 import request from 'supertest';
 
 jest.unstable_mockModule('../src/database/connection.js', () => ({ default: { query: jest.fn() } }));
+const { default: pool } = await import('../src/database/connection.js');
 const { default: repository } = await import('../src/repositories/hubEntityRepository.js');
 const { default: service } = await import('../src/services/hubEntityService.js');
 const { default: tagsService } = await import('../src/services/hubOperationalTagService.js');
@@ -35,6 +36,7 @@ test.each([
 });
 
 test('filtra antes de paginar e usa os mesmos critérios no total', async () => {
+  pool.query.mockResolvedValue([[]]);
   jest.spyOn(repository, 'listEntityRows').mockResolvedValue([
     { entityId: 1, name: 'Um', latitude: null, longitude: null },
     { entityId: 2, name: 'Dois', latitude: 0, longitude: 0 },
@@ -72,4 +74,42 @@ test('busca aceita ID HUB formatado e usa parâmetros SQL', () => {
   expect(clause).toContain("CONCAT('HUB-', LPAD(e.entityId, 6, '0')) LIKE ?");
   expect(params).toHaveLength((clause.match(/\?/g) || []).length);
   expect(params.every(value => value === '%HUB-012130%')).toBe(true);
+});
+
+
+test('enriquece apenas a página e separa cidade canônica de cada fonte sem inferir', async () => {
+ pool.query.mockReset().mockResolvedValueOnce([[{entityId:12130,sourceSystem:'GLPI',sourceEntity:'device',sourceNativeId:'4412',cicom:'Unidade real'}]])
+ .mockResolvedValueOnce([[{entityId:12130,fieldKey:'city',sourceSystem:'HUB',sourceRecordId:'12130',valueText:'Cidade HUB',isCanonical:1},{entityId:12130,fieldKey:'city',sourceSystem:'GLPI',sourceRecordId:'4412',valueText:'Cidade GLPI',isCanonical:0}]]);
+ const [result]=await repository.enrichOperationalRows([{entityId:12130,sourceRecordId:'99',name:'Nome sem cidade'}]);
+ expect(result.city).toBe('Cidade HUB');
+ expect(result.cityBySource.glpi).toEqual([{sourceRecordId:'4412',value:'Cidade GLPI'}]);
+ expect(result.platformIds).toEqual({hub:12130,auvo:['99'],glpi:['4412']});
+ expect(result.cicom).toBe('Unidade real');
+ expect(pool.query.mock.calls.every(call=>JSON.stringify(call[1])==='[12130]')).toBe(true);
+ pool.query.mockReset().mockResolvedValue([[]]);
+ const [empty]=await repository.enrichOperationalRows([{entityId:2,name:'Salvador'}]);
+ expect(empty.city).toBeNull();
+ expect(empty.cicom).toBeNull();
+});
+
+
+test('detalhe mapeia rede e estado da base sem copiar gerenciamento para a fonte base', () => {
+ const fields=[
+ {fieldKey:'city',sourceSystem:'HUB',isCanonical:1,valueText:'Cidade HUB'},
+ {fieldKey:'circuit',sourceSystem:'HUB',isCanonical:1,valueText:'Circuito HUB'},
+ {fieldKey:'city',sourceSystem:'SPREADSHEET',sourceRecordId:'base:auvo:1',valueText:'Cidade base'},
+ {fieldKey:'circuit',sourceSystem:'SPREADSHEET',sourceRecordId:'base:auvo:1',valueText:'Circuito base'},
+ {fieldKey:'cameraInstallationStatus',sourceSystem:'SPREADSHEET',sourceRecordId:'base:auvo:1',valueText:'CONCLUIDA'},
+ {fieldKey:'cameraInstallation',sourceSystem:'SPREADSHEET',sourceRecordId:'base:auvo:1',valueText:'2022-08-29'},
+ {fieldKey:'city',sourceSystem:'SPREADSHEET',sourceRecordId:'management:auvo:1',valueText:'Cidade gerenciamento'}
+ ];
+ const result=repository.buildPlatformFields({entityId:12130,fieldValues:fields,auvoCustomer:null,glpiDevice:null});
+ expect(result.hub.city).toBe('Cidade HUB');
+ expect(result.spreadsheet.city).toBe('Cidade base');
+ expect(result.hub.network.circuit).toBe('Circuito HUB');
+ expect(result.spreadsheet.network.circuit).toBe('Circuito base');
+ expect(result.spreadsheet.network.ip).toBeNull();
+ expect(result.spreadsheet.physicalStatus.cameraInstallation).toBe('2022-08-29');
+ expect(result.spreadsheet.physicalStatus.cameraInstallationStatus).toBe('CONCLUIDA');
+ expect(result.spreadsheet.physicalStatus.currentStatus).toBeUndefined();
 });

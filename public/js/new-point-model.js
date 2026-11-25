@@ -986,7 +986,7 @@ function _renderBody(client) {
         <div class="pm-info-card-header">
           <div>
             <div class="pm-info-card-title">${pointPlatformLabels[currentPlatformTab]}</div>
-            <div class="pm-info-card-subtitle">${currentPlatformTab === 'hub' ? 'Informações consolidadas do ponto.' : currentPlatformTab === 'spreadsheet' ? 'Layout preparado. Dados da planilha ainda não importados.' : currentPlatformTab === 'zabbix' ? 'Integração ainda não disponível. Campos sem dados exibem N/A.' : 'Dados disponíveis nesta fonte. Campos sem dados exibem N/A.'}</div>
+            <div class="pm-info-card-subtitle">${currentPlatformTab === 'hub' ? 'Informações consolidadas do ponto.' : currentPlatformTab === 'spreadsheet' ? (client.platformFields?.spreadsheet?.importedSections ? 'Dados importados da planilha base. Campos vazios permanecem N/A.' : 'Dados da planilha ainda não importados para este ponto.') : currentPlatformTab === 'zabbix' ? 'Integração ainda não disponível. Campos sem dados exibem N/A.' : 'Dados disponíveis nesta fonte. Campos sem dados exibem N/A.'}</div>
           </div>
         </div>
 
@@ -1038,9 +1038,9 @@ function pointClientForSource(client) {
     'boxInstallation', 'boxInstallationDate', 'armInstallation', 'poleStatus'];
   const isHub = currentPlatformTab === 'hub';
   return { ...client, __renderedGeneralFieldKeys: new Set(),
-    network: Object.fromEntries(networkKeys.map(key => [key, (isHub ? client.network?.[key] : fields.network?.[key]) ?? 'N/A'])),
+    network: Object.fromEntries(networkKeys.map(key => [key, (isHub ? fields.network?.[key] ?? client.network?.[key] : fields.network?.[key]) ?? 'N/A'])),
     pointStatus: Object.fromEntries(statusKeys.map(key => [key,
-      (isHub ? client.pointStatus?.[key] : fields.physicalStatus?.[key] ?? (key === 'currentStatus' && currentPlatformTab === 'glpi' ? fields.status : null)) ?? 'N/A'])),
+      (isHub ? fields.physicalStatus?.[key] ?? client.pointStatus?.[key] : fields.physicalStatus?.[key] ?? (key === 'currentStatus' && currentPlatformTab === 'glpi' ? fields.status : null)) ?? 'N/A'])),
     operationalHistory: isHub ? client.operationalHistory || [] : [],
     operationalTags: isHub ? client.operationalTags || [] : []
   };
@@ -1163,6 +1163,11 @@ function renderPointAttendances(client) {
 }
 
 function _subTabContent(client) {
+  const imported = client.platformFields?.[currentPlatformTab]?.importedSections?.[currentPointTab];
+  if (currentPlatformTab === 'spreadsheet' && imported) {
+    return '<section class="pm-fields-grid">'+imported.map(item => _field(item.label, item.value ?? 'N/A')).join('')+'</section>';
+  }
+
   // Keep every field in its own source; unavailable values remain visible as N/A.
   client = pointClientForSource(client);
   /* ── INFORMAÇÕES GERAIS ── */
@@ -1173,7 +1178,7 @@ function _subTabContent(client) {
     const latitude = Number(fields.latitude);
     const longitude = Number(fields.longitude);
     const hasCoordinates = fields.latitude !== null && fields.latitude !== undefined && String(fields.latitude).trim() !== '' && fields.longitude !== null && fields.longitude !== undefined && String(fields.longitude).trim() !== '' && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
-    const optionalFields = [['Tipo', 'deviceType'], ['Localização', 'locationName'], ['Município', 'city'], ['Projeto', 'project']].filter(([, key]) => fields[key] !== undefined && fields[key] !== null && fields[key] !== '');
+    const optionalFields = [['Tipo', 'deviceType'], ['Localização', 'locationName'], ['Município', 'city'], ['CICOM', 'cicom'], ['Unidade', 'unit'], ['Técnico de campo', 'fieldTechnician'], ['Técnico NOC', 'nocTechnician'], ['Projeto', 'project']].filter(([, key]) => fields[key] !== undefined && fields[key] !== null && fields[key] !== '');
     return `
       <div class="pm-general-layout">
         <section><h3 class="pm-section-heading">Identificação e localização</h3>
@@ -1181,6 +1186,7 @@ function _subTabContent(client) {
             ${_field('Nome do ativo', value('name'), null, value('name'), client, 'name')}
             ${_field('ID do ativo', id, null, null, client, 'id')}
             ${optionalFields.map(([label, key]) => _field(label, value(key), null, null, client, key)).join('')}
+            ${importedHubExtras(client,'general',['name','latitude','longitude','city','cicom','unit','deviceType'])}
           </div><div>
             ${_field('Latitude', value('latitude'), null, null, client, 'latitude')}
             ${_field('Longitude', value('longitude'), null, null, client, 'longitude')}
@@ -1208,6 +1214,7 @@ function _subTabContent(client) {
             ${_field("Data disponibilidade",      client.network.availabilityDate)}
             ${_field("Uptime do Link",            client.network.uptime)}
             ${_field("Estado do Link",            client.network.linkStatus)}
+            ${importedHubExtras(client,"network",["ip","subnet","gateway","circuit","availabilityDate"])}
           </div>
         </div>
         <!-- CMD: 1/3 direita -->
@@ -1254,6 +1261,7 @@ function _subTabContent(client) {
             ${_field("Data Instalacao Caixa",  client.pointStatus.boxInstallationDate)}
             ${_field("Instalacao de Braco",    client.pointStatus.armInstallation)}
             ${_field("Estado do poste",        client.pointStatus.poleStatus)}
+            ${importedHubExtras(client,"status",["inspectionDate","cameraInstallation","cameraSubstitution","uninstallDate","dedicatedPole","boxType","boxInstallation","boxInstallationDate","armInstallation","poleStatus"])}
           </div>
         </div>
 
@@ -1480,4 +1488,10 @@ function _field(label, value, badge = null, title = null, client = null, fieldKe
 /* Alias para compatibilidade com código legado */
 function infoBlock(label, value, divergence = null) {
   return _field(label, value, divergence);
+}
+
+function importedHubExtras(client, section, displayed) {
+ if(currentPlatformTab !== 'hub') return '';
+ const entries=client.platformFields?.hub?.importedSections?.[section] || [];
+ return entries.filter(item=>item.value!==null && item.value!==undefined && !displayed.includes(item.key)).map(item=>_field(item.label,item.value)).join('');
 }
